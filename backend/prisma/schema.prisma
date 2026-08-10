@@ -1,0 +1,192 @@
+﻿generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum Role {
+  LEARNER
+  SKILL_SHARER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum CourseStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  CHANGES_REQUESTED
+  APPROVED
+  PUBLISHED
+  REJECTED
+  SUSPENDED
+  ARCHIVED
+}
+
+enum DifficultyLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+// ============================================================
+// SKIL-4: Admin (Member 4)
+// ============================================================
+
+model User {
+  id            String      @id @default(uuid())
+  email         String      @unique
+  passwordHash  String
+  name          String
+  role          Role        @default(LEARNER)
+  status        UserStatus  @default(ACTIVE)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  profiles      Profile?
+  courses       Course[]    @relation("CreatorCourses")
+  enrollments   Enrollment[]
+  certificates  Certificate[]
+
+  @@map("users")
+}
+
+// ============================================================
+// SKIL-1: Skill Sharer (Member 1)
+// ============================================================
+
+model Profile {
+  id            String      @id @default(uuid())
+  userId        String      @unique
+  user          User        @relation(fields: [userId], references: [id])
+  bio           String?
+  skills        String[]    @default([])
+  experience    String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  qualifications Qualification[]
+
+  @@map("profiles")
+}
+
+model Qualification {
+  id            String      @id @default(uuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id])
+  profileId     String
+  profile       Profile     @relation(fields: [profileId], references: [id])
+  title         String
+  institution   String
+  year          Int
+  status        String      @default("PENDING")
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  documents     QualificationDocument[]
+
+  @@map("qualifications")
+}
+
+model QualificationDocument {
+  id              String    @id @default(uuid())
+  qualificationId String
+  qualification   Qualification @relation(fields: [qualificationId], references: [id])
+  fileUrl         String
+  fileName        String
+  fileType        String
+  fileSize        Int
+  uploadedAt      DateTime  @default(now())
+
+  @@map("qualification_documents")
+}
+
+model Course {
+  id              String      @id @default(uuid())
+  title           String
+  description     String
+  categoryId      String
+  category        Category    @relation(fields: [categoryId], references: [id])
+  difficulty      DifficultyLevel @default(BEGINNER)
+  duration        String?
+  status          CourseStatus @default(DRAFT)
+  creatorId       String
+  creator         User        @relation("CreatorCourses", fields: [creatorId], references: [id])
+  enrolledCount   Int         @default(0)
+  rating          Float?      @default(0)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  enrollments     Enrollment[]
+
+  @@map("courses")
+}
+
+// ============================================================
+// SKIL-2: Learner (Member 2)
+// ============================================================
+
+model Enrollment {
+  id            String    @id @default(uuid())
+  courseId      String
+  course        Course    @relation(fields: [courseId], references: [id])
+  learnerId     String
+  learner       User      @relation(fields: [learnerId], references: [id])
+  enrolledAt    DateTime  @default(now())
+  status        String    @default("ACTIVE")
+  progress      Float     @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([courseId, learnerId])
+  @@map("enrollments")
+}
+
+// ============================================================
+// SKIL-3: Assessment (Member 3)
+// ============================================================
+
+model Certificate {
+  id            String    @id @default(uuid())
+  certificateId String    @unique
+  courseId      String
+  course        Course    @relation(fields: [courseId], references: [id])
+  learnerId     String
+  learner       User      @relation(fields: [learnerId], references: [id])
+  issueDate     DateTime  @default(now())
+  verificationCode String @unique
+  status        String    @default("ACTIVE")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("certificates")
+}
+
+// ============================================================
+// SKIL-4: Admin (Member 4) - Additional Tables
+// ============================================================
+
+model Category {
+  id            String    @id @default(uuid())
+  name          String    @unique
+  description   String?
+  courseCount   Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  courses       Course[]
+
+  @@map("categories")
+}
