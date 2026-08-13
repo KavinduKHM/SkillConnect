@@ -46,7 +46,7 @@ const router = express.Router();
 router.use(isAuthenticated, isAdmin);
 
 // ============================================================
-// USER MANAGEMENT
+// USER MANAGEMENT ROUTES
 // ============================================================
 
 router.get('/users', getUsers);
@@ -64,7 +64,7 @@ router.put('/users/:id/badge/remove', userIdParamValidator, validate, removeVeri
 router.get('/skill-sharers/verified', getVerifiedSharersList);
 
 // ============================================================
-// QUALIFICATION VERIFICATION
+// QUALIFICATION VERIFICATION ROUTES
 // ============================================================
 
 router.get('/qualifications/pending', getPendingQuals);
