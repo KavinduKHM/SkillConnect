@@ -1,15 +1,26 @@
-﻿import React from 'react';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
-import { StatusBar } from 'expo-status-bar';
+import { createStackNavigator } from '@react-navigation/stack';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AuthNavigator } from './src/navigation/AuthNavigator';
+import { AdminNavigator } from './src/navigation/AdminNavigator';
+import { LearnerNavigator } from './src/navigation/LearnerNavigator';
+import { SkillSharerNavigator } from './src/navigation/SkillSharerNavigator';
+
+const queryClient = new QueryClient();
+const Stack = createStackNavigator();
 
 export default function App() {
   return (
-    <SafeAreaProvider>
+    <QueryClientProvider client={queryClient}>
       <NavigationContainer>
-        <StatusBar style="auto" />
-        {/* TODO: Add Navigation */}
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="Auth" component={AuthNavigator} />
+          <Stack.Screen name="Admin" component={AdminNavigator} />
+          <Stack.Screen name="Learner" component={LearnerNavigator} />
+          <Stack.Screen name="SkillSharer" component={SkillSharerNavigator} />
+        </Stack.Navigator>
       </NavigationContainer>
-    </SafeAreaProvider>
+    </QueryClientProvider>
   );
 }
