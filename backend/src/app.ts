@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware.js';
 import authRoutes from './routes/auth.routes.js';
 import adminRoutes from './routes/admin.routes.js';
+import learnerRoutes from './routes/learner.routes.js';
 
 dotenv.config();
 
@@ -34,6 +35,7 @@ app.get('/health', (req, res) => {
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/learner', learnerRoutes);
 
 // Error handling
 app.use(notFoundHandler);
@@ -44,6 +46,7 @@ app.listen(PORT, () => {
   console.log(`📍 Health check: http://localhost:${PORT}/health`);
   console.log(`🔐 Auth: http://localhost:${PORT}/api/auth`);
   console.log(`👑 Admin: http://localhost:${PORT}/api/admin`);
+  console.log(`📚 Learner: http://localhost:${PORT}/api/learner`);
 });
 
 export default app;
