@@ -9,6 +9,9 @@ import authRoutes from './routes/auth.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import learnerRoutes from './routes/learner.routes.js';
 import assessmentRoutes from './routes/assessment.routes.js';
+import assignmentRoutes from './routes/assignment.routes.js';
+import certificateRoutes from './routes/certificate.routes.js';
+import recognitionRoutes from './routes/recognition.routes.js';
 
 dotenv.config();
 
@@ -44,6 +47,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/learner', learnerRoutes);
 app.use('/api/assessments', assessmentRoutes);
+app.use('/api/assignments', assignmentRoutes);
+app.use('/api/certificates', certificateRoutes);
+app.use('/api/recognition', recognitionRoutes);
 
 // Error handling
 
