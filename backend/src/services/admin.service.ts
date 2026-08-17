@@ -3,13 +3,13 @@ import { logger } from '../utils/logger.js';
 import { CourseStatus, QualificationStatus, Role, UserStatus } from '@prisma/client';
 
 // ============================================================
-// USER MANAGEMENT
+// USER MANAGEMENT (Add these if not already present)
 // ============================================================
 
 export const getAllUsers = async (filters: {
   search?: string;
-  role?: Role;
-  status?: UserStatus;
+  role?: string;
+  status?: string;
   page?: number;
   limit?: number;
 }) => {
@@ -82,7 +82,7 @@ export const getUserById = async (userId: string) => {
         },
       },
       courses: {
-        where: { status: CourseStatus.PUBLISHED },
+        where: { status: 'PUBLISHED' },
         select: {
           id: true,
           title: true,
@@ -109,7 +109,7 @@ export const suspendUser = async (userId: string, reason: string, adminId: strin
   const user = await prisma.user.update({
     where: { id: userId },
     data: {
-      status: UserStatus.SUSPENDED,
+      status: 'SUSPENDED',
       suspendedReason: reason,
       suspendedAt: new Date(),
     },
@@ -134,7 +134,7 @@ export const restoreUser = async (userId: string, adminId: string) => {
   const user = await prisma.user.update({
     where: { id: userId },
     data: {
-      status: UserStatus.ACTIVE,
+      status: 'ACTIVE',
       suspendedReason: null,
       suspendedAt: null,
     },
@@ -155,10 +155,10 @@ export const restoreUser = async (userId: string, adminId: string) => {
   return user;
 };
 
-export const changeUserRole = async (userId: string, role: Role, adminId: string) => {
+export const changeUserRole = async (userId: string, role: string, adminId: string) => {
   const user = await prisma.user.update({
     where: { id: userId },
-    data: { role },
+    data: { role: role as any },
   });
 
   await prisma.adminAction.create({
@@ -249,7 +249,7 @@ export const getVerifiedSharers = async () => {
 export const getPendingQualifications = async () => {
   return prisma.qualification.findMany({
     where: {
-      status: QualificationStatus.PENDING_VERIFICATION,
+      status: 'PENDING_VERIFICATION',
     },
     include: {
       user: {
@@ -270,7 +270,7 @@ export const verifyQualification = async (qualificationId: string, adminId: stri
   const qualification = await prisma.qualification.update({
     where: { id: qualificationId },
     data: {
-      status: QualificationStatus.VERIFIED,
+      status: 'VERIFIED',
       verifiedAt: new Date(),
       verifiedBy: adminId,
     },
@@ -286,7 +286,7 @@ export const verifyQualification = async (qualificationId: string, adminId: stri
     data: {
       qualificationId,
       adminId,
-      status: QualificationStatus.VERIFIED,
+      status: 'VERIFIED',
       comments: 'Qualification verified',
     },
   });
@@ -310,7 +310,7 @@ export const rejectQualification = async (qualificationId: string, reason: strin
   const qualification = await prisma.qualification.update({
     where: { id: qualificationId },
     data: {
-      status: QualificationStatus.REJECTED,
+      status: 'REJECTED',
       rejectionReason: reason,
     },
   });
@@ -319,7 +319,7 @@ export const rejectQualification = async (qualificationId: string, reason: strin
     data: {
       qualificationId,
       adminId,
-      status: QualificationStatus.REJECTED,
+      status: 'REJECTED',
       comments: reason,
     },
   });

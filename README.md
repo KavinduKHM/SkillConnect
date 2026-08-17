@@ -22,7 +22,7 @@
 1. Clone the repository
 2. Copy .env.example to .env in backend folder
 3. Run 
-pm install in both ackend/ and mobile/ folders
+pm install in both backend/ and mobile/ folders
 4. Run 
 px prisma migrate dev in backend
 5. Start backend: 

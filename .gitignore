@@ -1,46 +1,37 @@
-# Dependencies
+# Node modules
 node_modules/
 **/node_modules/
 
 # Environment files
 .env
-.env.*
-!.env.example
-!**/env.example
+*.env
+.env.local
+.env.production
 
-# Build outputs & caches
+# Build outputs
 dist/
 build/
-.expo/
-.next/
-web-build/
-*.tsbuildinfo
-
-# Logs
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-lerna-debug.log*
+backend/src/**/*.js
+backend/src/**/*.js.map
+backend/src/**/*.d.ts
+backend/src/**/*.d.ts.map
 
-# Uploads & temporary media
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+
+# Uploads
 uploads/
-**/uploads/
 
 # Coverage
 coverage/
 .nyc_output/
 
-# OS files
-.DS_Store
-Thumbs.db
-desktop.ini
-
-# IDE & Editor files
-.vscode/
-.idea/
-*.swp
-*.swo
+# Temporary files
 *.tmp
-*.bak
-
+*.swp

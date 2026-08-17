@@ -8,8 +8,8 @@ export const registerValidator = [
   body('name').notEmpty().withMessage('Name is required'),
   body('role')
     .optional()
-    .isIn(['LEARNER', 'SKILL_SHARER'])
-    .withMessage('Role must be LEARNER or SKILL_SHARER'),
+    .isIn(['LEARNER', 'SKILL_SHARER', 'ADMIN'])
+    .withMessage('Role must be LEARNER, SKILL_SHARER, or ADMIN'),
 ];
 
 export const loginValidator = [
