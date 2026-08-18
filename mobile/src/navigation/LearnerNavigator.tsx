@@ -9,7 +9,7 @@ const Stack = createStackNavigator();
 
 export default function LearnerNavigator() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator initialRouteName="MyLearning" screenOptions={{ headerShown: false }}>
       <Stack.Screen name="CourseList" component={CourseListScreen} />
       <Stack.Screen name="CourseDetail" component={CourseDetailScreen} />
       <Stack.Screen name="MyLearning" component={MyLearningScreen} />

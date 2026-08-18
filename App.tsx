@@ -6,6 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import AuthNavigator from './mobile/src/navigation/AuthNavigator';
 import LearnerNavigator from './mobile/src/navigation/LearnerNavigator';
 import { AdminNavigator } from './mobile/src/navigation/AdminNavigator';
+import { SkillSharerNavigator } from './mobile/src/navigation/SkillSharerNavigator';
 
 const RootStack = createStackNavigator();
 
@@ -18,6 +19,7 @@ export default function App() {
           <RootStack.Screen name="Auth" component={AuthNavigator} />
           <RootStack.Screen name="Learner" component={LearnerNavigator} />
           <RootStack.Screen name="Admin" component={AdminNavigator} />
+          <RootStack.Screen name="SkillSharer" component={SkillSharerNavigator} />
         </RootStack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>

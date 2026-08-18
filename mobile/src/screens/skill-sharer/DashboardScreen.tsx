@@ -164,6 +164,20 @@ export const DashboardScreen = ({ navigation }: any) => {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.actionCard}
+            onPress={() => navigation.navigate('Assessments')}
+          >
+            <Text style={styles.actionIcon}>📝</Text>
+            <Text style={styles.actionLabel}>Assessments</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={() => navigation.navigate('Assignments')}
+          >
+            <Text style={styles.actionIcon}>📋</Text>
+            <Text style={styles.actionLabel}>Assignments</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionCard}
             onPress={() => navigation.navigate('Profile')}
           >
             <Text style={styles.actionIcon}>👤</Text>

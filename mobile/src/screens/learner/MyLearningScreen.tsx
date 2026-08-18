@@ -9,13 +9,14 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  ScrollView,
 } from 'react-native';
 import { fetchMyLearning } from '../../api/learner.service';
 
 export default function MyLearningScreen({ navigation }: any) {
   const [inProgressCourses, setInProgressCourses] = useState<any[]>([]);
   const [completedCourses, setCompletedCourses] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'IN_PROGRESS' | 'COMPLETED'>('IN_PROGRESS');
+  const [activeTab, setActiveTab] = useState<'IN_PROGRESS' | 'COMPLETED' | 'ASSESSMENTS' | 'CERTIFICATES'>('IN_PROGRESS');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -68,31 +69,56 @@ export default function MyLearningScreen({ navigation }: any) {
       </View>
 
       {/* Filter Tabs */}
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tabButton, activeTab === 'IN_PROGRESS' && styles.tabButtonActive]}
-          onPress={() => setActiveTab('IN_PROGRESS')}
-        >
-          <Text style={[styles.tabText, activeTab === 'IN_PROGRESS' && styles.tabTextActive]}>
-            In Progress ({inProgressCourses.length})
-          </Text>
-        </TouchableOpacity>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabScrollContainer}>
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'IN_PROGRESS' && styles.tabButtonActive]}
+            onPress={() => setActiveTab('IN_PROGRESS')}
+          >
+            <Text style={[styles.tabText, activeTab === 'IN_PROGRESS' && styles.tabTextActive]}>
+              In Progress ({inProgressCourses.length})
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.tabButton, activeTab === 'COMPLETED' && styles.tabButtonActive]}
-          onPress={() => setActiveTab('COMPLETED')}
-        >
-          <Text style={[styles.tabText, activeTab === 'COMPLETED' && styles.tabTextActive]}>
-            Completed ({completedCourses.length})
-          </Text>
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'COMPLETED' && styles.tabButtonActive]}
+            onPress={() => setActiveTab('COMPLETED')}
+          >
+            <Text style={[styles.tabText, activeTab === 'COMPLETED' && styles.tabTextActive]}>
+              Completed ({completedCourses.length})
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'ASSESSMENTS' && styles.tabButtonActive]}
+            onPress={() => setActiveTab('ASSESSMENTS')}
+          >
+            <Text style={[styles.tabText, activeTab === 'ASSESSMENTS' && styles.tabTextActive]}>
+              Assessments
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'CERTIFICATES' && styles.tabButtonActive]}
+            onPress={() => setActiveTab('CERTIFICATES')}
+          >
+            <Text style={[styles.tabText, activeTab === 'CERTIFICATES' && styles.tabTextActive]}>
+              Certificates
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
 
       {/* Course List */}
       {loading && !refreshing ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#4F46E5" />
           <Text style={styles.loadingText}>Loading your learning dashboard...</Text>
+        </View>
+      ) : activeTab === 'ASSESSMENTS' || activeTab === 'CERTIFICATES' ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyTitle}>{activeTab === 'ASSESSMENTS' ? 'My Assessments & Assignments' : 'My Certificates'}</Text>
+          <Text style={styles.emptySubtitle}>Under construction by Member 3.</Text>
         </View>
       ) : displayList.length === 0 ? (
         <View style={styles.emptyContainer}>
@@ -204,4 +230,5 @@ const styles = StyleSheet.create({
   progressBarFill: { height: '100%', backgroundColor: '#4F46E5', borderRadius: 4 },
   continueBtn: { backgroundColor: '#F3F4F6', paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
   continueBtnText: { color: '#4F46E5', fontSize: 13, fontWeight: '700' },
+  tabScrollContainer: { flexGrow: 0, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
 });
