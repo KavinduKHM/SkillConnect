@@ -187,3 +187,30 @@ export const recordQuizCompletion = async (learnerId: string, quizId: string, da
 
   return completion;
 };
+
+export const getMyQuizzes = async (learnerId: string) => {
+  // Find all courses the learner is enrolled in
+  const enrollments = await prisma.enrollment.findMany({
+    where: { learnerId },
+    select: { courseId: true, course: { select: { title: true } } },
+  });
+
+  const courseIds = enrollments.map(e => e.courseId);
+
+  // Find all quizzes for those courses, including the learner's completion status
+  const quizzes = await prisma.quizLink.findMany({
+    where: { courseId: { in: courseIds } },
+    include: {
+      completions: {
+        where: { learnerId },
+        take: 1, // Only need the learner's specific completion record
+      },
+      course: {
+        select: { title: true },
+      },
+    },
+    orderBy: { dueDate: 'asc' },
+  });
+
+  return quizzes;
+};

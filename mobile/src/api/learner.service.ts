@@ -75,3 +75,17 @@ export const completeLesson = async (courseId: string, lessonId: string) => {
   const response = await client.post('/learner/progress/complete', { courseId, lessonId });
   return response.data;
 };
+
+// ============================================================
+// Quiz / Assessment APIs
+// ============================================================
+
+export const fetchMyQuizzes = async () => {
+  const response = await client.get('/api/assessments/quizzes/me');
+  return response.data;
+};
+
+export const completeQuiz = async (quizId: string) => {
+  const response = await client.post(`/api/assessments/quizzes/${quizId}/complete`, { passed: true });
+  return response.data;
+};

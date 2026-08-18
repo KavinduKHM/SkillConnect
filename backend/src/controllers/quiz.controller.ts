@@ -93,3 +93,14 @@ export const completeQuiz = async (req: any, res: Response): Promise<void> => {
     res.status(400).json({ error: error.message });
   }
 };
+
+export const getMyQuizzes = async (req: any, res: Response): Promise<void> => {
+  try {
+    const learnerId = req.user.id;
+    const quizzes = await quizService.getMyQuizzes(learnerId);
+    res.status(200).json({ success: true, quizzes });
+  } catch (error: any) {
+    logger.error('Error in getMyQuizzes controller:', error);
+    res.status(500).json({ error: error.message });
+  }
+};

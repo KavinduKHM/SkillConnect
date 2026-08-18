@@ -19,6 +19,7 @@ import {
   getCourseQuizzes,
   getSingleQuiz,
   completeQuiz,
+  getMyQuizzes,
 } from '../controllers/quiz.controller.js';
 
 const router = express.Router();
@@ -46,6 +47,7 @@ router.post('/upload-test', uploadAssignmentFiles, async (req, res) => {
 
 // Public / Learner routes (requires authentication)
 router.use('/quizzes', isAuthenticated);
+router.get('/quizzes/me', getMyQuizzes);
 router.get('/quizzes/course/:courseId', getCourseQuizzes);
 router.get('/quizzes/:id', getSingleQuiz);
 router.post('/quizzes/:id/complete', completeQuizValidator, validate, completeQuiz);

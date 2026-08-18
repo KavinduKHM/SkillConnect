@@ -11,11 +11,12 @@ import {
   RefreshControl,
   ScrollView,
 } from 'react-native';
-import { fetchMyLearning } from '../../api/learner.service';
+import { fetchMyLearning, fetchMyQuizzes } from '../../api/learner.service';
 
 export default function MyLearningScreen({ navigation }: any) {
   const [inProgressCourses, setInProgressCourses] = useState<any[]>([]);
   const [completedCourses, setCompletedCourses] = useState<any[]>([]);
+  const [assessments, setAssessments] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'IN_PROGRESS' | 'COMPLETED' | 'ASSESSMENTS' | 'CERTIFICATES'>('IN_PROGRESS');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -27,6 +28,11 @@ export default function MyLearningScreen({ navigation }: any) {
       if (res) {
         setInProgressCourses(res.inProgress || []);
         setCompletedCourses(res.completed || []);
+      }
+      
+      const quizRes = await fetchMyQuizzes();
+      if (quizRes.success) {
+        setAssessments(quizRes.quizzes || []);
       }
     } catch (err) {
       console.log('Error fetching my-learning from API, using demo data:', err);
@@ -115,9 +121,42 @@ export default function MyLearningScreen({ navigation }: any) {
           <ActivityIndicator size="large" color="#4F46E5" />
           <Text style={styles.loadingText}>Loading your learning dashboard...</Text>
         </View>
-      ) : activeTab === 'ASSESSMENTS' || activeTab === 'CERTIFICATES' ? (
+      ) : activeTab === 'ASSESSMENTS' ? (
+        <FlatList
+          data={assessments}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContainer}
+          renderItem={({ item }) => {
+            const status = item.completions && item.completions.length > 0 ? item.completions[0].status : 'PENDING';
+            const courseName = item.course?.title || 'Unknown Course';
+            const dueDate = item.dueDate ? new Date(item.dueDate).toLocaleDateString() : 'No due date';
+
+            return (
+              <View style={styles.card}>
+                <View style={styles.cardHeader}>
+                  <Text style={styles.courseTitle}>{courseName}</Text>
+                  <View style={{ backgroundColor: status === 'PENDING' ? '#FEF3C7' : '#D1FAE5', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                    <Text style={{ color: status === 'PENDING' ? '#D97706' : '#059669', fontSize: 11, fontWeight: '700' }}>
+                      {status}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={{ fontSize: 13, color: '#6B7280', marginBottom: 12 }}>Due Date: {dueDate}</Text>
+                
+                <TouchableOpacity
+                  style={[styles.continueBtn, { backgroundColor: status === 'COMPLETED' ? '#F3F4F6' : '#EEF2FF' }]}
+                  onPress={() => navigation?.navigate('AssessmentDetail', { assessment: item, status, courseName, dueDate, loadMyLearning })}
+                >
+                <Text style={[styles.continueBtnText, { color: item.status === 'COMPLETED' ? '#6B7280' : '#4F46E5' }]}>
+                  {item.status === 'COMPLETED' ? 'View Details' : 'Take Assessment →'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        />
+      ) : activeTab === 'CERTIFICATES' ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyTitle}>{activeTab === 'ASSESSMENTS' ? 'My Assessments & Assignments' : 'My Certificates'}</Text>
+          <Text style={styles.emptyTitle}>My Certificates</Text>
           <Text style={styles.emptySubtitle}>Under construction by Member 3.</Text>
         </View>
       ) : displayList.length === 0 ? (

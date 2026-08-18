@@ -113,3 +113,25 @@ export const courseApi = {
     return apiClient.delete(`/api/courses/${id}`);
   },
 };
+
+// ============================================================
+// Quiz / Assessment APIs
+// ============================================================
+
+export const quizApi = {
+  createQuizLink: (data: any): Promise<ApiResponse<any>> => {
+    return apiClient.post('/api/assessments/quizzes', data);
+  },
+  
+  updateQuizLink: (id: string, data: any): Promise<ApiResponse<any>> => {
+    return apiClient.put(`/api/assessments/quizzes/${id}`, data);
+  },
+
+  deleteQuizLink: (id: string): Promise<ApiResponse<null>> => {
+    return apiClient.delete(`/api/assessments/quizzes/${id}`);
+  },
+
+  getCourseQuizzes: (courseId: string): Promise<ApiResponse<any[]>> => {
+    return apiClient.get(`/api/assessments/quizzes/course/${courseId}`);
+  }
+};
