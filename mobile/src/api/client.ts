@@ -31,7 +31,16 @@ api.interceptors.request.use(
 
 // ✅ Response interceptor - Handle errors
 api.interceptors.response.use(
-  (response) => response.data,  // ✅ Automatically extract data
+  (response) => {
+    const data = response.data;
+    if (data && typeof data === 'object') {
+      // Backward compatibility hack: 
+      // The interceptor now unwraps response.data, but old code still expects a `.data` property on the response.
+      // By making data point to itself, both old and new code will work.
+      data.data = data;
+    }
+    return data;
+  },
   async (error) => {
     // ✅ Handle network errors
     if (!error.response) {

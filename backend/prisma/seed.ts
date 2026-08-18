@@ -11,7 +11,7 @@ async function main() {
   // 1. Create or upsert Admin
   const admin = await prisma.user.upsert({
     where: { email: 'admin@skillconnect.com' },
-    update: {},
+    update: { passwordHash },
     create: {
       email: 'admin@skillconnect.com',
       passwordHash,
@@ -31,7 +31,7 @@ async function main() {
   // 2. Create or upsert Skill Sharer (Instructor)
   const sharer = await prisma.user.upsert({
     where: { email: 'sharer@skillconnect.com' },
-    update: {},
+    update: { passwordHash },
     create: {
       email: 'sharer@skillconnect.com',
       passwordHash,
@@ -54,7 +54,7 @@ async function main() {
   // 3. Create or upsert Learner
   const learner = await prisma.user.upsert({
     where: { email: 'learner@skillconnect.com' },
-    update: {},
+    update: { passwordHash },
     create: {
       email: 'learner@skillconnect.com',
       passwordHash,
