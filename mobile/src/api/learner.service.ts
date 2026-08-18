@@ -5,6 +5,7 @@ export interface Course {
   title: string;
   description: string;
   difficulty: string;
+  deliveryMethod?: string;
   duration?: string;
   thumbnail?: string;
   enrolledCount: number;
@@ -19,15 +20,22 @@ export interface Course {
       title: string;
       description?: string;
       estimatedMinutes?: number;
+      materials?: Array<{
+        id: string;
+        title: string;
+        type: string;
+        duration?: number;
+      }>;
     }>;
   }>;
+  courseReviews?: Array<any>;
 }
 
 export const fetchCourses = async (search?: string, categoryId?: string, difficulty?: string) => {
   const params: any = {};
   if (search) params.search = search;
-  if (categoryId) params.categoryId = categoryId;
-  if (difficulty) params.difficulty = difficulty;
+  if (categoryId && categoryId !== 'All') params.categoryId = categoryId;
+  if (difficulty && difficulty !== 'All') params.difficulty = difficulty;
 
   const response = await client.get('/learner/courses', { params });
   return response.data;
@@ -48,8 +56,18 @@ export const enrollCourse = async (courseId: string) => {
   return response.data;
 };
 
+export const cancelEnrollment = async (courseId: string) => {
+  const response = await client.delete(`/learner/enrollments/${courseId}`);
+  return response.data;
+};
+
 export const fetchMyLearning = async () => {
   const response = await client.get('/learner/my-learning');
+  return response.data;
+};
+
+export const fetchLessonContent = async (lessonId: string) => {
+  const response = await client.get(`/learner/lessons/${lessonId}`);
   return response.data;
 };
 
