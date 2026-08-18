@@ -9,6 +9,7 @@ import adminRoutes from './routes/admin.routes.js';
 import profileRoutes from './routes/profile.routes.js';
 import qualificationRoutes from './routes/qualification.routes.js';
 import courseRoutes from './routes/course.routes.js';
+import learnerRoutes from './routes/learner.routes.js';
 
 dotenv.config();
 
@@ -40,6 +41,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/qualification', qualificationRoutes);
 app.use('/api/course', courseRoutes);
+app.use('/api/learner', learnerRoutes);
 
 // Error handling
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -58,6 +60,7 @@ app.listen(PORT, () => {
   console.log(`🔐 Auth: http://localhost:${PORT}/api/auth`);
   console.log(`👑 Admin: http://localhost:${PORT}/api/admin`);
   console.log(`📚 SKIL-1 Routes: /api/profiles, /api/qualifications, /api/courses`);
+  console.log(`📚 Learner: http://localhost:${PORT}/api/learner`);
 });
 
 export default app;

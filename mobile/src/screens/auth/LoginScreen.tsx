@@ -95,6 +95,15 @@ export const LoginScreen = ({ navigation }: any) => {
               <Text style={styles.loginButtonText}>Sign In</Text>
             )}
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={{ alignItems: 'center', marginTop: 12 }}
+            onPress={() => navigation.navigate('Register')}
+          >
+            <Text style={{ color: '#3b82f6', fontSize: 14, fontWeight: '500' }}>
+              Don't have an account? Sign Up
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
     </KeyboardAvoidingView>
