@@ -16,8 +16,10 @@ export const CourseCreatorScreen: React.FC = ({ navigation }: any) => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
 
+  // Load categories (this would come from SKIL-4 eventually)
   useEffect(() => {
-    // For now, use dummy categories
+    // For now, use dummy categories or fetch from admin endpoint
+    // This is a placeholder - you'd fetch real categories from the admin API
     const dummyCategories: Category[] = [
       { id: '1', name: 'Technology', description: 'Tech courses', courseCount: 0 },
       { id: '2', name: 'Arts', description: 'Creative courses', courseCount: 0 },
@@ -32,6 +34,7 @@ export const CourseCreatorScreen: React.FC = ({ navigation }: any) => {
     try {
       setLoading(true);
       
+      // Ensure categoryId is valid
       if (!data.categoryId) {
         Alert.alert('Error', 'Please select a category');
         return;
@@ -42,7 +45,7 @@ export const CourseCreatorScreen: React.FC = ({ navigation }: any) => {
       if (response.success) {
         Alert.alert(
           'Success',
-          'Course draft created successfully!',
+          'Course draft created successfully! You can now add content to your course.',
           [
             {
               text: 'OK',
@@ -77,9 +80,6 @@ export const CourseCreatorScreen: React.FC = ({ navigation }: any) => {
     </View>
   );
 };
-
-// ✅ Make sure this export exists
-export default CourseCreatorScreen;
 
 const styles = StyleSheet.create({
   container: {
