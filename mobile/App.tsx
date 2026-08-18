@@ -9,6 +9,10 @@ import { SkillSharerNavigator } from './src/navigation/SkillSharerNavigator';
 
 const queryClient = new QueryClient();
 const Stack = createStackNavigator();
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { NavigationContainer } from '@react-navigation/native';
+import { StatusBar } from 'expo-status-bar';
+import LearnerNavigator from './src/navigation/LearnerNavigator';
 
 export default function App() {
   return (
@@ -20,6 +24,8 @@ export default function App() {
           <Stack.Screen name="Learner" component={LearnerNavigator} />
           <Stack.Screen name="SkillSharer" component={SkillSharerNavigator} />
         </Stack.Navigator>
+        <StatusBar style="light" backgroundColor="#4F46E5" />
+        <LearnerNavigator />
       </NavigationContainer>
     </QueryClientProvider>
   );
