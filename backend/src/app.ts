@@ -49,12 +49,18 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/profiles', profileRoutes);
 app.use('/api/qualification', qualificationRoutes);
+app.use('/api/qualifications', qualificationRoutes);
 app.use('/api/course', courseRoutes);
+app.use('/api/courses', courseRoutes);
 app.use('/api/learner', learnerRoutes);
 app.use('/api/assessments', assessmentRoutes);
+app.use('/api/assessment', assessmentRoutes);
 app.use('/api/assignments', assignmentRoutes);
+app.use('/api/assignment', assignmentRoutes);
 app.use('/api/certificates', certificateRoutes);
+app.use('/api/certificate', certificateRoutes);
 app.use('/api/recognition', recognitionRoutes);
 
 // Error handling

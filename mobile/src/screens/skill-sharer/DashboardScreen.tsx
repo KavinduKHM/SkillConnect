@@ -50,11 +50,18 @@ export const DashboardScreen = ({ navigation }: any) => {
   const loadCourses = async () => {
     try {
       const response = await courseApi.getMyCourses();
-      if (response.success && response.data) {
+      if (response && response.success && Array.isArray(response.data)) {
         setCourses(response.data);
+      } else if (Array.isArray(response)) {
+        setCourses(response);
+      } else if (response && Array.isArray(response.data?.data)) {
+        setCourses(response.data.data);
+      } else {
+        setCourses([]);
       }
     } catch (error) {
       console.error('Error loading courses:', error);
+      setCourses([]);
     } finally {
       setLoading(false);
       setRefreshing(false);

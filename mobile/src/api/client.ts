@@ -33,10 +33,9 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => {
     const data = response.data;
-    if (data && typeof data === 'object') {
+    if (data && typeof data === 'object' && !('data' in data)) {
       // Backward compatibility hack: 
-      // The interceptor now unwraps response.data, but old code still expects a `.data` property on the response.
-      // By making data point to itself, both old and new code will work.
+      // Only set data.data if the response object doesn't already have its own .data property
       data.data = data;
     }
     return data;

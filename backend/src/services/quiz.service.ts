@@ -129,13 +129,17 @@ export const recordQuizCompletion = async (learnerId: string, quizId: string, da
   const quiz = await prisma.quizLink.findUnique({ where: { id: quizId } });
   if (!quiz) throw new Error('Quiz link not found');
 
-  // Verify learner is enrolled
-  const enrollment = await prisma.enrollment.findUnique({
-    where: { courseId_learnerId: { courseId: quiz.courseId, learnerId } },
+  // Verify learner is enrolled and not cancelled
+  const enrollment = await prisma.enrollment.findFirst({
+    where: { 
+      courseId: quiz.courseId, 
+      learnerId,
+      status: { in: ['ACTIVE', 'COMPLETED'] },
+    },
   });
 
   if (!enrollment) {
-    throw new Error('You must be enrolled in this course to complete its quizzes');
+    throw new Error('You must be actively enrolled in this course to complete its quizzes');
   }
 
   // Determine pass status if passing score is set
@@ -189,13 +193,21 @@ export const recordQuizCompletion = async (learnerId: string, quizId: string, da
 };
 
 export const getMyQuizzes = async (learnerId: string) => {
-  // Find all courses the learner is enrolled in
+  // Find all active/completed courses the learner is enrolled in
   const enrollments = await prisma.enrollment.findMany({
-    where: { learnerId },
+    where: { 
+      learnerId,
+      status: { in: ['ACTIVE', 'COMPLETED'] },
+    },
     select: { courseId: true, course: { select: { title: true } } },
   });
 
   const courseIds = enrollments.map(e => e.courseId);
+
+  // If learner is not enrolled in any course, return empty array immediately
+  if (courseIds.length === 0) {
+    return [];
+  }
 
   // Find all quizzes for those courses, including the learner's completion status
   const quizzes = await prisma.quizLink.findMany({

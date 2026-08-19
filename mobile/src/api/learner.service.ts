@@ -81,11 +81,11 @@ export const completeLesson = async (courseId: string, lessonId: string) => {
 // ============================================================
 
 export const fetchMyQuizzes = async () => {
-  const response = await client.get('/api/assessments/quizzes/me');
-  return response.data;
+  const response: any = await client.get('/assessments/quizzes/me');
+  return response;
 };
 
 export const completeQuiz = async (quizId: string) => {
-  const response = await client.post(`/api/assessments/quizzes/${quizId}/complete`, { passed: true });
-  return response.data;
+  const response: any = await client.post(`/assessments/quizzes/${quizId}/complete`, { passed: true });
+  return response;
 };

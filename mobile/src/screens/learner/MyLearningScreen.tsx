@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -11,6 +11,7 @@ import {
   RefreshControl,
   ScrollView,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { fetchMyLearning, fetchMyQuizzes } from '../../api/learner.service';
 
 export default function MyLearningScreen({ navigation }: any) {
@@ -30,10 +31,9 @@ export default function MyLearningScreen({ navigation }: any) {
         setCompletedCourses(res.completed || []);
       }
       
-      const quizRes = await fetchMyQuizzes();
-      if (quizRes.success) {
-        setAssessments(quizRes.quizzes || []);
-      }
+      const quizRes: any = await fetchMyQuizzes();
+      const quizzes = quizRes?.quizzes || quizRes?.data || (Array.isArray(quizRes) ? quizRes : []);
+      setAssessments(quizzes);
     } catch (err) {
       console.log('Error fetching my-learning from API, using demo data:', err);
       // Fallback demo data if backend is offline
@@ -56,9 +56,11 @@ export default function MyLearningScreen({ navigation }: any) {
     }
   };
 
-  useEffect(() => {
-    loadMyLearning();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadMyLearning();
+    }, [])
+  );
 
   const displayList = activeTab === 'IN_PROGRESS' ? inProgressCourses : completedCourses;
 
@@ -126,6 +128,15 @@ export default function MyLearningScreen({ navigation }: any) {
           data={assessments}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContainer}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyTitle}>No Assessments Available</Text>
+              <Text style={styles.emptySubtitle}>You will see quizzes here once you enroll in courses with assessments.</Text>
+              <TouchableOpacity style={styles.browseBtn} onPress={() => navigation?.navigate('CourseList')}>
+                <Text style={styles.browseBtnText}>Explore Courses</Text>
+              </TouchableOpacity>
+            </View>
+          }
           renderItem={({ item }) => {
             const status = item.completions && item.completions.length > 0 ? item.completions[0].status : 'PENDING';
             const courseName = item.course?.title || 'Unknown Course';
@@ -147,12 +158,13 @@ export default function MyLearningScreen({ navigation }: any) {
                   style={[styles.continueBtn, { backgroundColor: status === 'COMPLETED' ? '#F3F4F6' : '#EEF2FF' }]}
                   onPress={() => navigation?.navigate('AssessmentDetail', { assessment: item, status, courseName, dueDate, loadMyLearning })}
                 >
-                <Text style={[styles.continueBtnText, { color: item.status === 'COMPLETED' ? '#6B7280' : '#4F46E5' }]}>
-                  {item.status === 'COMPLETED' ? 'View Details' : 'Take Assessment →'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
+                  <Text style={[styles.continueBtnText, { color: item.status === 'COMPLETED' ? '#6B7280' : '#4F46E5' }]}>
+                    {item.status === 'COMPLETED' ? 'View Details' : 'Take Assessment →'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            );
+          }}
         />
       ) : activeTab === 'CERTIFICATES' ? (
         <View style={styles.emptyContainer}>
