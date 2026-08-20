@@ -126,10 +126,43 @@ export default function MyLearningScreen({ navigation }: any) {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContainer}
           renderItem={({ item }) => (
-            <View style={styles.card}>
-              <Text style={styles.courseTitle}>{item.course?.title || 'Course Quiz'}</Text>
-              <Text style={styles.creatorName}>{item.title || 'Google Forms Assessment'}</Text>
-            </View>
+            <TouchableOpacity
+              style={styles.card}
+              onPress={() =>
+                navigation?.navigate('AssessmentDetail', {
+                  assessment: item,
+                  courseName: item.course?.title,
+                  status: item.completions?.[0]?.status || 'PENDING',
+                  loadMyLearning,
+                })
+              }
+            >
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Text style={styles.courseTitle}>{item.course?.title || 'React Native Mobile App Development'}</Text>
+                <View
+                  style={{
+                    backgroundColor: item.completions?.[0]?.status === 'COMPLETED' ? '#DCFCE7' : '#FEF3C7',
+                    paddingHorizontal: 8,
+                    paddingVertical: 3,
+                    borderRadius: 8,
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: item.completions?.[0]?.status === 'COMPLETED' ? '#15803D' : '#D97706',
+                      fontSize: 11,
+                      fontWeight: '700',
+                    }}
+                  >
+                    {item.completions?.[0]?.status === 'COMPLETED' ? '✓ Completed' : 'Pending'}
+                  </Text>
+                </View>
+              </View>
+              <Text style={styles.creatorName}>{item.title || 'React Native Development Final Assessment'}</Text>
+              <Text style={{ fontSize: 12, color: '#064E3B', fontWeight: '600', marginTop: 8 }}>
+                Take Assessment / View Details →
+              </Text>
+            </TouchableOpacity>
           )}
         />
       ) : (

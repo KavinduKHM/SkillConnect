@@ -11,9 +11,11 @@ import {
   Image,
   FlatList,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fetchCourses, fetchMyLearning } from '../../api/learner.service';
 
 export default function HomeScreen({ navigation }: any) {
+  const [userInfo, setUserInfo] = useState<any>(null);
   const [inProgress, setInProgress] = useState<any[]>([]);
   const [courses, setCourses] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -21,6 +23,10 @@ export default function HomeScreen({ navigation }: any) {
 
   const loadHomeData = async () => {
     try {
+      const userJson = await AsyncStorage.getItem('@user');
+      if (userJson) {
+        setUserInfo(JSON.parse(userJson));
+      }
       const [myLearningRes, coursesRes] = await Promise.all([
         fetchMyLearning().catch(() => null),
         fetchCourses().catch(() => null),
@@ -86,7 +92,7 @@ export default function HomeScreen({ navigation }: any) {
           <View style={styles.headerRow}>
             <View>
               <Text style={styles.greetingSub}>Good morning,</Text>
-              <Text style={styles.greetingName}>Alex Morgan</Text>
+              <Text style={styles.greetingName}>{userInfo?.name || 'Asheni Learner'}</Text>
             </View>
             <View style={styles.headerRightActions}>
               <TouchableOpacity style={styles.iconCircle}>

@@ -10,6 +10,7 @@ import MyLearningScreen from '../screens/learner/MyLearningScreen';
 import LessonPlayerScreen from '../screens/learner/LessonPlayerScreen';
 import AssessmentDetailScreen from '../screens/learner/AssessmentDetailScreen';
 import SkillSharerProfileScreen from '../screens/learner/SkillSharerProfileScreen';
+import LearnerProfileScreen from '../screens/learner/LearnerProfileScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -69,7 +70,7 @@ function LearnerBottomTabs() {
       />
       <Tab.Screen
         name="ProfileTab"
-        component={SkillSharerProfileScreen}
+        component={LearnerProfileScreen}
         options={{
           tabBarLabel: 'Profile',
           tabBarIcon: ({ color }) => <Text style={{ fontSize: 18, color }}>👤</Text>,
@@ -90,6 +91,7 @@ export default function LearnerNavigator() {
       <Stack.Screen name="LessonPlayer" component={LessonPlayerScreen} />
       <Stack.Screen name="AssessmentDetail" component={AssessmentDetailScreen} />
       <Stack.Screen name="SkillSharerProfile" component={SkillSharerProfileScreen} />
+      <Stack.Screen name="LearnerProfile" component={LearnerProfileScreen} />
     </Stack.Navigator>
   );
 }
