@@ -88,7 +88,7 @@ export default function LessonPlayerScreen({ route, navigation }: any) {
           <Text style={styles.loadingText}>Loading lesson content...</Text>
         </View>
       ) : (
-        <ScrollView style={styles.content}>
+        <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 40 }}>
           {/* Main Video / Content Player Placeholder */}
           <View style={styles.playerContainer}>
             <Text style={styles.playerIcon}>▶️</Text>
