@@ -122,7 +122,7 @@ export default function CourseDetailScreen({ route, navigation }: any) {
           <Text style={styles.loadingText}>Loading course details...</Text>
         </View>
       ) : (
-        <ScrollView style={styles.scrollContent}>
+        <ScrollView style={styles.scrollContent} contentContainerStyle={{ paddingBottom: 40 }}>
           {/* Hero Banner */}
           <View style={styles.heroBanner}>
             <TouchableOpacity style={styles.backBtn} onPress={() => navigation?.goBack()}>
