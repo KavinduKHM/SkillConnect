@@ -89,3 +89,27 @@ export const completeQuiz = async (quizId: string) => {
   const response: any = await client.post(`/assessments/quizzes/${quizId}/complete`, { passed: true });
   return response;
 };
+
+// ============================================================
+// Assignment APIs
+// ============================================================
+
+export const fetchCourseAssignments = async (courseId: string) => {
+  const response: any = await client.get(`/assignments/course/${courseId}`);
+  return response;
+};
+
+export const fetchSingleAssignment = async (id: string) => {
+  const response: any = await client.get(`/assignments/${id}`);
+  return response;
+};
+
+export const fetchLearnerSubmissions = async (id: string) => {
+  const response: any = await client.get(`/assignments/${id}/my-submissions`);
+  return response;
+};
+
+export const submitAssignmentWork = async (id: string, data: { fileUrls?: string[]; githubLink?: string; textSubmission?: string }) => {
+  const response: any = await client.post(`/assignments/${id}/submit`, data);
+  return response;
+};

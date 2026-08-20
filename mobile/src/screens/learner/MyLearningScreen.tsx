@@ -18,7 +18,8 @@ export default function MyLearningScreen({ navigation }: any) {
   const [inProgressCourses, setInProgressCourses] = useState<any[]>([]);
   const [completedCourses, setCompletedCourses] = useState<any[]>([]);
   const [assessments, setAssessments] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'IN_PROGRESS' | 'COMPLETED' | 'ASSESSMENTS' | 'CERTIFICATES'>('IN_PROGRESS');
+  const [assignments, setAssignments] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'IN_PROGRESS' | 'COMPLETED' | 'ASSESSMENTS' | 'ASSIGNMENTS' | 'CERTIFICATES'>('IN_PROGRESS');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -34,6 +35,38 @@ export default function MyLearningScreen({ navigation }: any) {
       const quizRes: any = await fetchMyQuizzes();
       const quizzes = quizRes?.quizzes || quizRes?.data || (Array.isArray(quizRes) ? quizRes : []);
       setAssessments(quizzes);
+
+      // Fetch assignments for all enrolled courses
+      const allAssignments: any[] = [];
+      const enrolledCourseIds = [...(res?.inProgress || []), ...(res?.completed || [])].map((c: any) => c.courseId);
+      
+      // I'll import fetchCourseAssignments dynamically or at top
+      const { fetchCourseAssignments, fetchLearnerSubmissions } = require('../../api/learner.service');
+      
+      for (const cId of Array.from(new Set(enrolledCourseIds))) {
+        try {
+          const assignRes: any = await fetchCourseAssignments(cId as string);
+          const courseAssignments = assignRes?.assignments || assignRes?.data?.assignments || [];
+          
+          for (const assignment of courseAssignments) {
+            try {
+              const subRes: any = await fetchLearnerSubmissions(assignment.id);
+              const subs = subRes?.submissions || subRes?.data || [];
+              assignment.mySubmission = subs.length > 0 ? subs[0] : null;
+            } catch (e) {
+              assignment.mySubmission = null;
+            }
+            // attach course info if missing
+            const matchedCourse = [...(res?.inProgress || []), ...(res?.completed || [])].find((c: any) => c.courseId === cId)?.course;
+            if (matchedCourse && !assignment.course) assignment.course = matchedCourse;
+            
+            allAssignments.push(assignment);
+          }
+        } catch (e) {
+          console.log(`Failed to fetch assignments for course ${cId}`);
+        }
+      }
+      setAssignments(allAssignments);
     } catch (err) {
       console.log('Error fetching my-learning from API, using demo data:', err);
       // Fallback demo data if backend is offline
@@ -102,7 +135,16 @@ export default function MyLearningScreen({ navigation }: any) {
             onPress={() => setActiveTab('ASSESSMENTS')}
           >
             <Text style={[styles.tabText, activeTab === 'ASSESSMENTS' && styles.tabTextActive]}>
-              Assessments
+              Quizzes
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'ASSIGNMENTS' && styles.tabButtonActive]}
+            onPress={() => setActiveTab('ASSIGNMENTS')}
+          >
+            <Text style={[styles.tabText, activeTab === 'ASSIGNMENTS' && styles.tabTextActive]}>
+              Assignments
             </Text>
           </TouchableOpacity>
 
@@ -160,6 +202,47 @@ export default function MyLearningScreen({ navigation }: any) {
                 >
                   <Text style={[styles.continueBtnText, { color: item.status === 'COMPLETED' ? '#6B7280' : '#4F46E5' }]}>
                     {item.status === 'COMPLETED' ? 'View Details' : 'Take Assessment →'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            );
+          }}
+        />
+      ) : activeTab === 'ASSIGNMENTS' ? (
+        <FlatList
+          data={assignments}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContainer}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyTitle}>No Assignments Found</Text>
+              <Text style={styles.emptySubtitle}>You do not have any assignments pending for your courses.</Text>
+            </View>
+          }
+          renderItem={({ item }) => {
+            const status = item.mySubmission ? item.mySubmission.status : 'PENDING';
+            const courseName = item.course?.title || 'Unknown Course';
+            const dueDate = item.deadline ? new Date(item.deadline).toLocaleDateString() : 'No deadline';
+            
+            return (
+              <View style={styles.card}>
+                <View style={styles.cardHeader}>
+                  <Text style={styles.courseTitle}>{courseName}</Text>
+                  <View style={{ backgroundColor: status === 'PENDING' ? '#FEF3C7' : '#D1FAE5', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                    <Text style={{ color: status === 'PENDING' ? '#D97706' : '#059669', fontSize: 11, fontWeight: '700' }}>
+                      {status}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={styles.courseTitle}>{item.title}</Text>
+                <Text style={{ fontSize: 13, color: '#6B7280', marginBottom: 12 }}>Due Date: {dueDate}</Text>
+                
+                <TouchableOpacity
+                  style={[styles.continueBtn, { backgroundColor: '#EEF2FF' }]}
+                  onPress={() => navigation?.navigate('AssignmentDetail', { assignmentId: item.id })}
+                >
+                  <Text style={[styles.continueBtnText, { color: '#4F46E5' }]}>
+                    View / Submit
                   </Text>
                 </TouchableOpacity>
               </View>

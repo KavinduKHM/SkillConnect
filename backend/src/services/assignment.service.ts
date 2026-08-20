@@ -89,7 +89,7 @@ export const getAssignmentSubmissions = async (instructorId: string, assignmentI
 export const gradeSubmission = async (instructorId: string, submissionId: string, data: { grade: number; feedback?: string; feedbackAttachments?: string[] }) => {
   const submission = await prisma.assignmentSubmission.findUnique({
     where: { id: submissionId },
-    include: { assignment: true },
+    include: { assignment: true, learner: true },
   });
   
   if (!submission) throw new Error('Submission not found');
@@ -136,6 +136,18 @@ export const gradeSubmission = async (instructorId: string, submissionId: string
       data: { averageScore },
     });
   }
+
+  // --- Notification Simulation ---
+  // If the user provided an email or has a device registered for push notifications, we'd trigger it here.
+  if (submission.learner && submission.learner.email) {
+    console.log(`[NOTIFICATION SERVICE] Sending EMAIL to ${submission.learner.email}:`);
+    console.log(`Subject: Your assignment "${submission.assignment.title}" has been graded!`);
+    console.log(`Body: You received a score of ${finalGrade}/${submission.assignment.maxMarks}. Log in to view your feedback.`);
+  }
+  
+  console.log(`[NOTIFICATION SERVICE] Sending PUSH NOTIFICATION to User ID ${submission.learnerId}:`);
+  console.log(`"Your assignment ${submission.assignment.title} was just graded."`);
+  // -------------------------------
 
   return updatedSubmission;
 };
