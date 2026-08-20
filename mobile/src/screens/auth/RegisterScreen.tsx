@@ -19,10 +19,12 @@ export const RegisterScreen = ({ navigation }: any) => {
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<'LEARNER' | 'SKILL_SHARER'>('LEARNER');
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   const handleRegister = async () => {
+    setErrorMsg('');
     if (!name || !email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      setErrorMsg('Please fill in all fields');
       return;
     }
 
@@ -33,7 +35,7 @@ export const RegisterScreen = ({ navigation }: any) => {
         { text: 'OK', onPress: () => navigation.navigate('Login') },
       ]);
     } catch (error: any) {
-      Alert.alert('Registration Failed', error.response?.data?.error || 'Could not register');
+      setErrorMsg(error.error || 'Could not register');
     } finally {
       setLoading(false);
     }
@@ -54,6 +56,7 @@ export const RegisterScreen = ({ navigation }: any) => {
           <Text style={styles.subtitle}>Join SkillConnect today</Text>
 
           <View style={styles.form}>
+            {errorMsg ? <Text style={{ color: '#ef4444', textAlign: 'center', marginBottom: 10, fontWeight: '500' }}>{errorMsg}</Text> : null}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Full Name</Text>
               <TextInput
@@ -137,7 +140,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    justify: 'center',
+    justifyContent: 'center',
     padding: 20,
   },
   card: {

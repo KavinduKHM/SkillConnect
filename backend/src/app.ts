@@ -11,6 +11,11 @@ import profileRoutes from './routes/profile.routes.js';
 import qualificationRoutes from './routes/qualification.routes.js';
 import courseRoutes from './routes/course.routes.js';
 import learnerRoutes from './routes/learner.routes.js';
+import moduleRoutes from './routes/module.routes.js';
+import lessonRoutes from './routes/lesson.routes.js';
+import materialRoutes from './routes/material.routes.js';
+import progressRoutes from './routes/progress.routes.js';
+import recommendationRoutes from './routes/recommendation.routes.js';
 import assessmentRoutes from './routes/assessment.routes.js';
 import assignmentRoutes from './routes/assignment.routes.js';
 import certificateRoutes from './routes/certificate.routes.js';
@@ -53,6 +58,11 @@ app.use('/api/profiles', profileRoutes);
 app.use('/api/qualification', qualificationRoutes);
 app.use('/api/qualifications', qualificationRoutes);
 app.use('/api/course', courseRoutes);
+app.use('/api/modules', moduleRoutes);
+app.use('/api/lessons', lessonRoutes);
+app.use('/api/materials', materialRoutes);
+app.use('/api/progress', progressRoutes);
+app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/learner', learnerRoutes);
 app.use('/api/assessments', assessmentRoutes);
@@ -62,6 +72,7 @@ app.use('/api/assignment', assignmentRoutes);
 app.use('/api/certificates', certificateRoutes);
 app.use('/api/certificate', certificateRoutes);
 app.use('/api/recognition', recognitionRoutes);
+
 
 // Error handling
 app.use(notFoundHandler);

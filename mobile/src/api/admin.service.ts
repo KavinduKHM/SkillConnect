@@ -48,6 +48,7 @@ export interface Course {
   title: string;
   description: string;
   status: string;
+  difficulty: string;
   creator: { id: string; email: string; name: string; verifiedBadge: boolean };
   category: Category;
 }

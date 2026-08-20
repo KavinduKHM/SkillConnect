@@ -1,6 +1,6 @@
 import multer from 'multer';
-import type { Request, Response, NextFunction } from 'express';
 import path from 'path';
+import type { Request, Response, NextFunction } from 'express';
 
 type FileFilterCallback = (error: Error | null, acceptFile?: boolean) => void;
 
@@ -40,6 +40,12 @@ export const ALLOWED_EXTENSIONS = [
   '.jpg',
   '.jpeg',
   '.webp',
+  // Videos & Audio
+  '.mp4',
+  '.webm',
+  '.mov',
+  '.mp3',
+  '.wav',
 ];
 
 // Maximum allowed file size: 10MB (10,485,760 bytes)
@@ -73,6 +79,13 @@ export const upload = multer({
   },
   fileFilter,
 });
+
+// Single file upload middleware
+export const uploadSingle = (fieldName: string) => upload.single(fieldName);
+
+// Multiple files upload middleware
+export const uploadMultiple = (fieldName: string, maxCount: number) =>
+  upload.array(fieldName, maxCount);
 
 /**
  * Middleware for assignment submission files (up to 5 files under 'files' field)

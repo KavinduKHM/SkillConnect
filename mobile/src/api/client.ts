@@ -66,7 +66,7 @@ api.interceptors.response.use(
     return Promise.reject({
       success: false,
       status: error.response?.status,
-      error: error.response?.data?.error || error.message || 'An error occurred',
+      error: error.response?.data?.error || error.response?.data?.errors?.[0]?.msg || error.message || 'An error occurred',
       data: error.response?.data,
     });
   }

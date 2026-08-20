@@ -10,8 +10,9 @@ export const registerUser = async (data: {
   role?: string;
 }) => {
   try {
+    const emailLower = data.email.toLowerCase();
     const existingUser = await prisma.user.findUnique({
-      where: { email: data.email },
+      where: { email: emailLower },
     });
 
     if (existingUser) {
@@ -22,7 +23,7 @@ export const registerUser = async (data: {
 
     const user = await prisma.user.create({
       data: {
-        email: data.email,
+        email: emailLower,
         passwordHash: hashedPassword,
         name: data.name,
         role: data.role as any || 'LEARNER',
@@ -59,7 +60,7 @@ export const registerUser = async (data: {
 export const loginUser = async (email: string, password: string) => {
   try {
     const user = await prisma.user.findUnique({
-      where: { email },
+      where: { email: email.toLowerCase().trim() },
     });
 
     if (!user) {
