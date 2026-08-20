@@ -11,6 +11,7 @@ import { MyCoursesScreen } from '../screens/skill-sharer/MyCoursesScreen';
 import { AssessmentsScreen } from '../screens/skill-sharer/AssessmentsScreen';
 import { AssignmentsScreen } from '../screens/skill-sharer/AssignmentsScreen';
 import { AssignmentSubmissionsScreen } from '../screens/skill-sharer/AssignmentSubmissionsScreen';
+import { CompletionRequestsScreen } from '../screens/skill-sharer/CompletionRequestsScreen';
 
 const Stack = createStackNavigator();
 
@@ -29,6 +30,7 @@ export const SkillSharerNavigator: React.FC = () => {
       <Stack.Screen name="Assessments" component={AssessmentsScreen} />
       <Stack.Screen name="Assignments" component={AssignmentsScreen} />
       <Stack.Screen name="AssignmentSubmissions" component={AssignmentSubmissionsScreen} />
+      <Stack.Screen name="CompletionRequests" component={CompletionRequestsScreen} />
     </Stack.Navigator>
   );
 };

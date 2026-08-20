@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { Platform, Linking } from 'react-native';
 import { fetchMyLearning, fetchMyQuizzes } from '../../api/learner.service';
 
 export default function MyLearningScreen({ navigation }: any) {
@@ -20,6 +21,8 @@ export default function MyLearningScreen({ navigation }: any) {
   const [completedCourses, setCompletedCourses] = useState<any[]>([]);
   const [assessments, setAssessments] = useState<any[]>([]);
   const [assignments, setAssignments] = useState<any[]>([]);
+  const [certificates, setCertificates] = useState<any[]>([]);
+  const [completionRequests, setCompletionRequests] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'IN_PROGRESS' | 'COMPLETED' | 'ASSESSMENTS' | 'ASSIGNMENTS' | 'CERTIFICATES'>('IN_PROGRESS');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -42,7 +45,17 @@ export default function MyLearningScreen({ navigation }: any) {
       const enrolledCourseIds = [...(res?.inProgress || []), ...(res?.completed || [])].map((c: any) => c.courseId);
       
       // I'll import fetchCourseAssignments dynamically or at top
-      const { fetchCourseAssignments, fetchLearnerSubmissions } = require('../../api/learner.service');
+      const { fetchCourseAssignments, fetchLearnerSubmissions, fetchMyCertificates, fetchMyCompletionRequests } = require('../../api/learner.service');
+
+      const certsRes = await fetchMyCertificates();
+      if (certsRes) setCertificates(certsRes.certificates || []);
+
+      const reqsRes = await fetchMyCompletionRequests();
+      if (reqsRes) {
+        // Filter out APPROVED requests since they are shown as Certificates
+        const pendingOrRejected = (reqsRes.requests || []).filter((req: any) => req.status !== 'APPROVED');
+        setCompletionRequests(pendingOrRejected);
+      }
       
       for (const cId of Array.from(new Set(enrolledCourseIds))) {
         try {
@@ -95,6 +108,33 @@ export default function MyLearningScreen({ navigation }: any) {
       loadMyLearning();
     }, [])
   );
+
+  const handleRequestCompletion = async (courseId: string) => {
+    try {
+      setLoading(true);
+      const { requestCourseCompletion } = require('../../api/learner.service');
+      await requestCourseCompletion(courseId);
+      alert('Completion request submitted successfully!');
+      loadMyLearning();
+    } catch (err: any) {
+      alert(err.response?.data?.error || err.message || 'Failed to request completion');
+      setLoading(false);
+    }
+  };
+
+  const downloadCertificate = async (certificate: any) => {
+    try {
+      const url = `http://localhost:5000/api/certificates/${certificate.id}/download`;
+      if (Platform.OS === 'web') {
+        window.open(url, '_blank');
+      } else {
+        await Linking.openURL(url);
+      }
+    } catch (error) {
+      console.log('Error opening PDF download:', error);
+      alert('Could not download the certificate.');
+    }
+  };
 
   const displayList = activeTab === 'IN_PROGRESS' ? inProgressCourses : completedCourses;
 
@@ -263,10 +303,63 @@ export default function MyLearningScreen({ navigation }: any) {
           }}
         />
       ) : activeTab === 'CERTIFICATES' ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyTitle}>My Certificates</Text>
-          <Text style={styles.emptySubtitle}>Under construction by Member 3.</Text>
-        </View>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.listContainer}>
+          {certificates.length === 0 && completionRequests.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyTitle}>No Certificates Yet</Text>
+              <Text style={styles.emptySubtitle}>Complete a course 100% and request a certificate to see it here.</Text>
+            </View>
+          ) : (
+            <>
+              {/* Issued Certificates */}
+              {certificates.map((cert) => (
+                <View key={cert.id} style={styles.card}>
+                  <View style={styles.cardHeader}>
+                    <Text style={styles.courseTitle}>{cert.course?.title}</Text>
+                    <View style={{ backgroundColor: '#D1FAE5', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                      <Text style={{ color: '#059669', fontSize: 11, fontWeight: '700' }}>ISSUED</Text>
+                    </View>
+                  </View>
+                  <Text style={{ fontSize: 13, color: '#6B7280', marginBottom: 12 }}>
+                    Issued on {new Date(cert.issueDate).toLocaleDateString()}
+                  </Text>
+                  <TouchableOpacity
+                    style={[styles.continueBtn, { backgroundColor: '#EEF2FF' }]}
+                    onPress={() => downloadCertificate(cert)}
+                  >
+                    <Text style={[styles.continueBtnText, { color: '#4F46E5' }]}>Download PDF 📄</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+
+              {/* Pending Requests */}
+              {completionRequests.map((req) => (
+                <View key={req.id} style={styles.card}>
+                  <View style={styles.cardHeader}>
+                    <Text style={styles.courseTitle}>{req.course?.title}</Text>
+                    <View style={{ backgroundColor: req.status === 'REJECTED' ? '#FEE2E2' : '#FEF3C7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                      <Text style={{ color: req.status === 'REJECTED' ? '#DC2626' : '#D97706', fontSize: 11, fontWeight: '700' }}>{req.status}</Text>
+                    </View>
+                  </View>
+                  <Text style={{ fontSize: 13, color: '#6B7280', marginBottom: 12 }}>
+                    Requested on {new Date(req.requestedAt).toLocaleDateString()}
+                  </Text>
+                  {req.status === 'REJECTED' && req.rejectionReason && (
+                    <View style={{ backgroundColor: '#FEF2F2', padding: 8, borderRadius: 6, marginBottom: 12 }}>
+                      <Text style={{ fontSize: 13, color: '#991B1B' }}>
+                        <Text style={{ fontWeight: 'bold' }}>Reason: </Text>
+                        {req.rejectionReason}
+                      </Text>
+                    </View>
+                  )}
+                  {req.status === 'PENDING' && (
+                    <Text style={{ fontSize: 13, color: '#9CA3AF', fontStyle: 'italic' }}>Waiting for skill sharer to approve.</Text>
+                  )}
+                </View>
+              ))}
+            </>
+          )}
+        </ScrollView>
       ) : displayList.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyTitle}>No courses found in this view</Text>
@@ -287,6 +380,11 @@ export default function MyLearningScreen({ navigation }: any) {
             const course = item.course || {};
             const progress = item.courseProgress || { completedLessons: 0, totalLessons: 10 };
             const percent = Math.round(item.progressPercentage || 0);
+
+            const courseId = item.courseId || item.course?.id;
+            const issuedCert = certificates.find((c) => c.courseId === courseId || c.course?.id === courseId);
+            const pendingReq = completionRequests.find((r) => (r.courseId === courseId || r.course?.id === courseId) && r.status === 'PENDING');
+            const rejectedReq = completionRequests.find((r) => (r.courseId === courseId || r.course?.id === courseId) && r.status === 'REJECTED');
 
             return (
               <View style={styles.card}>
@@ -310,16 +408,74 @@ export default function MyLearningScreen({ navigation }: any) {
                   <View style={[styles.progressBarFill, { width: `${percent}%` }]} />
                 </View>
 
-                <TouchableOpacity
-                  style={styles.continueBtn}
-                  onPress={() =>
-                    navigation?.navigate('CourseDetail', { courseId: item.courseId || item.course?.id })
-                  }
-                >
-                  <Text style={styles.continueBtnText}>
-                    {percent >= 100 ? 'Review Course ✓' : 'Continue Learning →'}
-                  </Text>
-                </TouchableOpacity>
+                {/* Action Buttons */}
+                {issuedCert ? (
+                  <View>
+                    <TouchableOpacity
+                      style={[styles.continueBtn, { backgroundColor: '#F0FDF4', marginBottom: 8 }]}
+                      onPress={() => downloadCertificate(issuedCert)}
+                    >
+                      <Text style={[styles.continueBtnText, { color: '#059669', fontWeight: 'bold' }]}>
+                        Download PDF 📄
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.continueBtn, { backgroundColor: '#F3F4F6' }]}
+                      onPress={() => navigation?.navigate('CourseDetail', { courseId })}
+                    >
+                      <Text style={[styles.continueBtnText, { color: '#4B5563' }]}>
+                        Review Course ✓
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : pendingReq ? (
+                  <View>
+                    <TouchableOpacity
+                      style={[styles.continueBtn, { backgroundColor: '#FEF3C7', marginBottom: 8 }]}
+                      onPress={() => setActiveTab('CERTIFICATES')}
+                    >
+                      <Text style={[styles.continueBtnText, { color: '#D97706', fontWeight: 'bold' }]}>
+                        Certificate Request Pending ⏳
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.continueBtn, { backgroundColor: '#F3F4F6' }]}
+                      onPress={() => navigation?.navigate('CourseDetail', { courseId })}
+                    >
+                      <Text style={[styles.continueBtnText, { color: '#4B5563' }]}>
+                        Review Course ✓
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : percent >= 100 ? (
+                  <View>
+                    <TouchableOpacity
+                      style={[styles.continueBtn, { backgroundColor: '#EEF2FF', marginBottom: 8 }]}
+                      onPress={() => handleRequestCompletion(courseId)}
+                    >
+                      <Text style={[styles.continueBtnText, { color: '#4F46E5', fontWeight: 'bold' }]}>
+                        {rejectedReq ? 'Resubmit Certificate Request 🏆' : 'Request Certificate 🏆'}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.continueBtn, { backgroundColor: '#F3F4F6' }]}
+                      onPress={() => navigation?.navigate('CourseDetail', { courseId })}
+                    >
+                      <Text style={[styles.continueBtnText, { color: '#4B5563' }]}>
+                        Review Course ✓
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.continueBtn}
+                    onPress={() => navigation?.navigate('CourseDetail', { courseId })}
+                  >
+                    <Text style={styles.continueBtnText}>
+                      Continue Learning →
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
             );
           }}

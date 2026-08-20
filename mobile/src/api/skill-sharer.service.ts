@@ -165,3 +165,19 @@ export const assignmentApi = {
     return apiClient.post(`/assignments/submissions/${submissionId}/grade`, data);
   }
 };
+
+// ============================================================
+// Certificate / Completion APIs
+// ============================================================
+
+export const certificateApi = {
+  getCourseCompletionRequests: (courseId: string): Promise<ApiResponse<any[]>> => {
+    return apiClient.get(`/certificates/course/${courseId}/requests`);
+  },
+  approveCompletionRequest: (requestId: string): Promise<ApiResponse<any>> => {
+    return apiClient.post(`/certificates/requests/${requestId}/approve`);
+  },
+  rejectCompletionRequest: (requestId: string, reason: string): Promise<ApiResponse<any>> => {
+    return apiClient.post(`/certificates/requests/${requestId}/reject`, { reason });
+  }
+};

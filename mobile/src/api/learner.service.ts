@@ -127,3 +127,27 @@ export const deleteAssignmentSubmission = async (submissionId: string) => {
   const response: any = await client.delete(`/assignments/submissions/${submissionId}`);
   return response;
 };
+
+export const deleteLearnerSubmission = async (assignmentId: string, versionNumber: number) => {
+  const response = await client.delete(`/learner/assignments/${assignmentId}/submissions/${versionNumber}`);
+  return response.data;
+};
+
+// ============================================================
+// CERTIFICATES & COMPLETIONS
+// ============================================================
+
+export const requestCourseCompletion = async (courseId: string) => {
+  const response = await client.post(`/certificates/request/${courseId}`);
+  return response.data;
+};
+
+export const fetchMyCompletionRequests = async () => {
+  const response = await client.get('/certificates/my-requests');
+  return response.data;
+};
+
+export const fetchMyCertificates = async () => {
+  const response = await client.get('/certificates/my-certificates');
+  return response.data;
+};
