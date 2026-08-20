@@ -47,9 +47,10 @@ export default function LessonPlayerScreen({ route, navigation }: any) {
       setCompleting(true);
       const res = await completeLesson(courseId, lessonId);
       setCompleted(true);
+      const pct = res.progress?.progressPercentage ?? res.progressPercentage ?? 100;
       Alert.alert(
         'Lesson Completed! 🎉',
-        `Course completion progress is now ${res.progressPercentage || 100}%.`,
+        `Course completion progress is now ${pct}%.`,
         [{ text: 'Back to Course Details', onPress: () => navigation?.goBack() }, { text: 'OK' }]
       );
     } catch (err: any) {
@@ -87,7 +88,7 @@ export default function LessonPlayerScreen({ route, navigation }: any) {
           <Text style={styles.loadingText}>Loading lesson content...</Text>
         </View>
       ) : (
-        <ScrollView style={styles.content}>
+        <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 40 }}>
           {/* Main Video / Content Player Placeholder */}
           <View style={styles.playerContainer}>
             <Text style={styles.playerIcon}>▶️</Text>

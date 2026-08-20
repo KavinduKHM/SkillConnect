@@ -18,8 +18,9 @@ const router = express.Router();
 // PUBLIC DISCOVERY ROUTES
 // -------------------------------------------------------------
 router.get('/courses', listCourses);
-router.get('/courses/:id', getCourseById);
+router.get('/courses/categories', listCategories);
 router.get('/categories', listCategories);
+router.get('/courses/:id', getCourseById);
 
 // -------------------------------------------------------------
 // PROTECTED LEARNER ROUTES (Requires Authentication)

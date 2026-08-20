@@ -1,32 +1,77 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import { TouchableOpacity } from 'react-native';
 
-// Import screens
-import { DashboardScreen } from '../screens/skill-sharer/DashboardScreen';
-import { ProfileScreen } from '../screens/skill-sharer/ProfileScreen';
-import { CourseCreatorScreen } from '../screens/skill-sharer/CourseCreatorScreen';
-import { MyCoursesScreen } from '../screens/skill-sharer/MyCoursesScreen';
-import { AssessmentsScreen } from '../screens/skill-sharer/AssessmentsScreen';
-import { AssignmentsScreen } from '../screens/skill-sharer/AssignmentsScreen';
+import SkillSharerDashboardScreen from '../screens/skill-sharer/SkillSharerDashboardScreen';
+import CourseFormScreen from '../screens/skill-sharer/CourseFormScreen';
+import CourseContentScreen from '../screens/skill-sharer/CourseContentScreen';
+import ModuleEditorScreen from '../screens/skill-sharer/ModuleEditorScreen';
+import LessonEditorScreen from '../screens/skill-sharer/LessonEditorScreen';
+import ProfileScreen from '../screens/skill-sharer/ProfileScreen';
+import QualificationsScreen from '../screens/skill-sharer/QualificationsScreen';
+import LearnerProgressScreen from '../screens/skill-sharer/LearnerProgressScreen';
+import CourseAnalyticsScreen from '../screens/skill-sharer/CourseAnalyticsScreen';
 
 const Stack = createStackNavigator();
 
-export const SkillSharerNavigator: React.FC = () => {
+export const SkillSharerNavigator = () => {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerShown: false,
-        cardStyle: { backgroundColor: '#F9FAFB' },
+        headerStyle: { backgroundColor: '#4F46E5' },
+        headerTintColor: '#FFFFFF',
+        headerTitleStyle: { fontWeight: '600' },
+        headerBackTitle: '', // ✅ Hides back button text
+        // For React Navigation v7+, use:
+        // headerBackButtonDisplayMode: 'minimal',
       }}
     >
-      <Stack.Screen name="Dashboard" component={DashboardScreen} />
-      <Stack.Screen name="Profile" component={ProfileScreen} />
-      <Stack.Screen name="CourseCreator" component={CourseCreatorScreen} />
-      <Stack.Screen name="MyCourses" component={MyCoursesScreen} />
-      <Stack.Screen name="Assessments" component={AssessmentsScreen} />
-      <Stack.Screen name="Assignments" component={AssignmentsScreen} />
+      <Stack.Screen
+        name="Dashboard"
+        component={SkillSharerDashboardScreen}
+        options={{ title: 'My Courses' }}
+      />
+      <Stack.Screen
+        name="CourseForm"
+        component={CourseFormScreen}
+        options={{ title: 'Create Course' }}
+      />
+      <Stack.Screen
+        name="CourseContent"
+        component={CourseContentScreen}
+        options={{ title: 'Course Content' }}
+      />
+      <Stack.Screen
+        name="ModuleEditor"
+        component={ModuleEditorScreen}
+        options={{ title: 'Edit Module' }}
+      />
+      <Stack.Screen
+        name="LessonEditor"
+        component={LessonEditorScreen}
+        options={{ title: 'Edit Lesson' }}
+      />
+      <Stack.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{ title: 'My Profile' }}
+      />
+      <Stack.Screen
+        name="Qualifications"
+        component={QualificationsScreen}
+        options={{ title: 'Qualifications' }}
+      />
+      <Stack.Screen
+        name="LearnerProgress"
+        component={LearnerProgressScreen}
+        options={{ title: 'Learner Progress' }}
+      />
+      <Stack.Screen
+        name="CourseAnalytics"
+        component={CourseAnalyticsScreen}
+        options={{ title: 'Course Analytics' }}
+      />
     </Stack.Navigator>
   );
 };
+
+export default SkillSharerNavigator;

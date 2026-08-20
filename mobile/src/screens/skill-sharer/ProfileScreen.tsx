@@ -3,40 +3,65 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
-  RefreshControl,
+  TextInput,
+  TouchableOpacity,
   Alert,
+  ActivityIndicator,
+  ScrollView,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { Header } from '../../components/common/Header';
-import { LoadingSpinner } from '../../components/common/LoadingSpinner';
-import { ProfileForm } from '../../components/skill-sharer/ProfileForm';
-import { profileApi } from '../../api/skill-sharer.service';
-import { Profile } from '../../types';
+import { profileService } from '../../api/skill-sharer.service';
+import { authService } from '../../api/auth.service';
 
-export const ProfileScreen: React.FC = ({ navigation }: any) => {
+interface ProfileData {
+  bio: string;
+  skills: string[];
+  experience: string;
+  portfolio: string[];
+  location: string;
+  website: string;
+  socialLinks: {
+    linkedin?: string;
+    github?: string;
+    twitter?: string;
+  };
+}
+
+export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [hasProfile, setHasProfile] = useState(false);
+  const [userName, setUserName] = useState('');
+  const [profile, setProfile] = useState<ProfileData>({
+    bio: '',
+    skills: [],
+    experience: '',
+    portfolio: [],
+    location: '',
+    website: '',
+    socialLinks: {},
+  });
+  const [newSkill, setNewSkill] = useState('');
 
   const loadProfile = async () => {
     try {
-      setLoading(true);
-      const response = await profileApi.getMyProfile();
-      
-      if (response.success && response.data) {
-        setProfile(response.data);
-        setHasProfile(true);
-      } else {
-        setHasProfile(false);
-        setProfile(null);
-      }
+      const response = await profileService.getMyProfile();
+      const data = response.data;
+      setProfile({
+        bio: data.bio || '',
+        skills: data.skills || [],
+        experience: data.experience || '',
+        portfolio: data.portfolio || [],
+        location: data.location || '',
+        website: data.website || '',
+        socialLinks: data.socialLinks || {},
+      });
+
+      // Get user name
+      const userResponse = await authService.getMe();
+      setUserName(userResponse.data.name || '');
     } catch (error) {
-      console.error('Error loading profile:', error);
-      setHasProfile(false);
-      setProfile(null);
+      Alert.alert('Error', 'Failed to load profile');
     } finally {
       setLoading(false);
     }
@@ -48,107 +73,311 @@ export const ProfileScreen: React.FC = ({ navigation }: any) => {
     }, [])
   );
 
-  const handleSubmit = async (data: any) => {
+  const handleSave = async () => {
+    setSaving(true);
     try {
-      setSaving(true);
-      
-      let response;
-      if (hasProfile && profile) {
-        response = await profileApi.updateProfile(data);
-      } else {
-        response = await profileApi.createProfile(data);
-      }
-
-      if (response.success) {
-        setProfile(response.data!);
-        setHasProfile(true);
-        Alert.alert(
-          'Success',
-          hasProfile ? 'Profile updated successfully!' : 'Profile created successfully!'
-        );
-      } else {
-        Alert.alert('Error', response.error || 'Failed to save profile');
-      }
-    } catch (error) {
-      console.error('Error saving profile:', error);
-      Alert.alert('Error', 'Failed to save profile');
+      await profileService.updateProfile(profile);
+      Alert.alert('Success', 'Profile updated successfully');
+    } catch (error: any) {
+      Alert.alert('Error', error.error || 'Failed to update profile');
     } finally {
       setSaving(false);
     }
   };
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadProfile();
-    setRefreshing(false);
+  const addSkill = () => {
+    if (newSkill.trim()) {
+      setProfile({
+        ...profile,
+        skills: [...profile.skills, newSkill.trim()],
+      });
+      setNewSkill('');
+    }
+  };
+
+  const removeSkill = (index: number) => {
+    setProfile({
+      ...profile,
+      skills: profile.skills.filter((_, i) => i !== index),
+    });
   };
 
   if (loading) {
-    return <LoadingSpinner message="Loading profile..." />;
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#4F46E5" />
+      </View>
+    );
   }
 
   return (
-    <View style={styles.container}>
-      <Header title="My Profile" />
-      
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-        {hasProfile && profile && (
-          <View style={styles.statusContainer}>
-            <Text style={styles.statusLabel}>Profile Status:</Text>
-            <View style={[styles.statusBadge, { backgroundColor: '#10B981' }]}>
-              <Text style={styles.statusBadgeText}>Active</Text>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Personal Information</Text>
+
+        <View style={styles.field}>
+          <Text style={styles.label}>Name</Text>
+          <TextInput
+            style={[styles.input, styles.disabledInput]}
+            value={userName}
+            editable={false}
+          />
+          <Text style={styles.helperText}>Name cannot be changed here</Text>
+        </View>
+
+        <View style={styles.field}>
+          <Text style={styles.label}>Bio</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            value={profile.bio}
+            onChangeText={(text) => setProfile({ ...profile, bio: text })}
+            placeholder="Tell us about yourself"
+            placeholderTextColor="#9CA3AF"
+            multiline
+            numberOfLines={4}
+            textAlignVertical="top"
+          />
+        </View>
+
+        <View style={styles.field}>
+          <Text style={styles.label}>Location</Text>
+          <TextInput
+            style={styles.input}
+            value={profile.location}
+            onChangeText={(text) => setProfile({ ...profile, location: text })}
+            placeholder="Your location"
+            placeholderTextColor="#9CA3AF"
+          />
+        </View>
+
+        <View style={styles.field}>
+          <Text style={styles.label}>Website</Text>
+          <TextInput
+            style={styles.input}
+            value={profile.website}
+            onChangeText={(text) => setProfile({ ...profile, website: text })}
+            placeholder="Your website URL"
+            placeholderTextColor="#9CA3AF"
+            keyboardType="url"
+          />
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Skills</Text>
+        <View style={styles.skillsContainer}>
+          {profile.skills.map((skill, index) => (
+            <View key={index} style={styles.skillItem}>
+              <Text style={styles.skillText}>{skill}</Text>
+              <TouchableOpacity onPress={() => removeSkill(index)}>
+                <Ionicons name="close-circle" size={18} color="#EF4444" />
+              </TouchableOpacity>
             </View>
-          </View>
+          ))}
+        </View>
+        <View style={styles.addSkillContainer}>
+          <TextInput
+            style={[styles.input, styles.skillInput]}
+            value={newSkill}
+            onChangeText={setNewSkill}
+            placeholder="Add a skill"
+            placeholderTextColor="#9CA3AF"
+          />
+          <TouchableOpacity style={styles.addSkillButton} onPress={addSkill}>
+            <Ionicons name="add" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Experience</Text>
+        <View style={styles.field}>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            value={profile.experience}
+            onChangeText={(text) => setProfile({ ...profile, experience: text })}
+            placeholder="Your professional experience"
+            placeholderTextColor="#9CA3AF"
+            multiline
+            numberOfLines={4}
+            textAlignVertical="top"
+          />
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Social Links</Text>
+
+        <View style={styles.field}>
+          <Text style={styles.label}>LinkedIn</Text>
+          <TextInput
+            style={styles.input}
+            value={profile.socialLinks?.linkedin || ''}
+            onChangeText={(text) =>
+              setProfile({
+                ...profile,
+                socialLinks: { ...profile.socialLinks, linkedin: text },
+              })
+            }
+            placeholder="LinkedIn URL"
+            placeholderTextColor="#9CA3AF"
+            keyboardType="url"
+          />
+        </View>
+
+        <View style={styles.field}>
+          <Text style={styles.label}>GitHub</Text>
+          <TextInput
+            style={styles.input}
+            value={profile.socialLinks?.github || ''}
+            onChangeText={(text) =>
+              setProfile({
+                ...profile,
+                socialLinks: { ...profile.socialLinks, github: text },
+              })
+            }
+            placeholder="GitHub URL"
+            placeholderTextColor="#9CA3AF"
+            keyboardType="url"
+          />
+        </View>
+
+        <View style={styles.field}>
+          <Text style={styles.label}>Twitter</Text>
+          <TextInput
+            style={styles.input}
+            value={profile.socialLinks?.twitter || ''}
+            onChangeText={(text) =>
+              setProfile({
+                ...profile,
+                socialLinks: { ...profile.socialLinks, twitter: text },
+              })
+            }
+            placeholder="Twitter URL"
+            placeholderTextColor="#9CA3AF"
+            keyboardType="url"
+          />
+        </View>
+      </View>
+
+      <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving}>
+        {saving ? (
+          <ActivityIndicator color="#FFFFFF" />
+        ) : (
+          <Text style={styles.saveButtonText}>Save Profile</Text>
         )}
-
-        <ProfileForm
-          initialData={profile || undefined}  // ✅ Pass undefined when null
-          onSubmit={handleSubmit}
-          loading={saving}
-        />
-
-        <View style={styles.footer} />
-      </ScrollView>
-    </View>
+      </TouchableOpacity>
+    </ScrollView>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
   },
-  scrollContent: {
+  content: {
+    padding: 16,
     paddingBottom: 40,
   },
-  statusContainer: {
-    flexDirection: 'row',
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    gap: 12,
   },
-  statusLabel: {
+  section: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 16,
+  },
+  field: {
+    marginBottom: 16,
+  },
+  label: {
     fontSize: 14,
     fontWeight: '500',
     color: '#374151',
+    marginBottom: 6,
   },
-  statusBadge: {
+  input: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
     paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#111827',
+    backgroundColor: '#FFFFFF',
   },
-  statusBadgeText: {
+  disabledInput: {
+    backgroundColor: '#F3F4F6',
+    color: '#6B7280',
+  },
+  textArea: {
+    minHeight: 80,
+  },
+  helperText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#6B7280',
+    marginTop: 4,
   },
-  footer: {
-    height: 20,
+  skillsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 8,
+  },
+  skillItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EEF2FF',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  skillText: {
+    fontSize: 14,
+    color: '#4F46E5',
+    marginRight: 4,
+  },
+  addSkillContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  skillInput: {
+    flex: 1,
+    marginRight: 8,
+  },
+  addSkillButton: {
+    backgroundColor: '#4F46E5',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  saveButton: {
+    backgroundColor: '#4F46E5',
+    paddingVertical: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  saveButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 16,
   },
 });

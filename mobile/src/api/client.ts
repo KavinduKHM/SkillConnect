@@ -8,10 +8,10 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 30000, // ✅ Add timeout
+  timeout: 30000,
 });
 
-// ✅ Request interceptor - Add token to requests
+// Request interceptor - Add token
 api.interceptors.request.use(
   async (config) => {
     try {
@@ -24,52 +24,38 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// ✅ Response interceptor - Handle errors
+// Response interceptor - Handle errors
 api.interceptors.response.use(
-  (response) => {
-    const data = response.data;
-    if (data && typeof data === 'object' && !('data' in data)) {
-      // Backward compatibility hack: 
-      // Only set data.data if the response object doesn't already have its own .data property
-      data.data = data;
-    }
-    return data;
-  },
+  (response) => response.data,
   async (error) => {
-    // ✅ Handle network errors
     if (!error.response) {
-      console.error('Network Error - No response from server');
       return Promise.reject({
         success: false,
         error: 'Network error - please check your connection',
       });
     }
 
-    // ✅ Handle 401 Unauthorized
     if (error.response?.status === 401) {
       try {
         await AsyncStorage.removeItem('token');
-        // ✅ Emit event for auth context to handle
-        // You can use EventEmitter or a global state
-        console.log('Token expired - redirecting to login');
       } catch (err) {
         console.error('Error clearing token:', err);
       }
     }
 
-    // ✅ Return consistent error format
     return Promise.reject({
       success: false,
       status: error.response?.status,
-      error: error.response?.data?.error || error.response?.data?.errors?.[0]?.msg || error.message || 'An error occurred',
-      data: error.response?.data,
+      error: error.response?.data?.error || error.message || 'An error occurred',
     });
   }
 );
 
+// ✅ DEFAULT EXPORT - This is the key fix
 export default api;
+
+// Also export as named export for consistency
+export { api };
