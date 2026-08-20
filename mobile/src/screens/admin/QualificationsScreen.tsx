@@ -78,7 +78,7 @@ export const QualificationsScreen = () => {
     );
   };
 
-  const qualifications = data || [];
+  const qualifications = Array.isArray(data) ? data : [];
 
   return (
     <ScrollView
