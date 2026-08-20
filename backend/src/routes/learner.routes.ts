@@ -1,5 +1,5 @@
 import express from 'express';
-import { isAuthenticated } from '../middleware/auth.middleware.js';
+import { isAuthenticated, optionalAuth } from '../middleware/auth.middleware.js';
 import {
   listCourses,
   getCourseById,
@@ -22,7 +22,7 @@ router.get('/courses', listCourses);
 router.get('/courses/categories', listCategories);
 router.get('/categories', listCategories);
 router.get('/sharers/:id', getSharerProfile);
-router.get('/courses/:id', getCourseById);
+router.get('/courses/:id', optionalAuth, getCourseById);
 
 // -------------------------------------------------------------
 // PROTECTED LEARNER ROUTES (Requires Authentication)

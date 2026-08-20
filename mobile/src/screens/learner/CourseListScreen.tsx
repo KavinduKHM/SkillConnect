@@ -11,42 +11,70 @@ import {
   StatusBar,
   ScrollView,
   RefreshControl,
+  Image,
 } from 'react-native';
 import { fetchCourses, fetchCategories } from '../../api/learner.service';
 
 const DEMO_COURSES = [
   {
     id: 'c1',
-    title: 'React Native & Mobile App Development',
-    description: 'Build cross-platform iOS & Android mobile apps with modern React Native and TypeScript.',
-    category: { name: 'Software Engineering' },
-    difficulty: 'BEGINNER',
-    duration: '12 Hours',
+    title: 'React Native Development',
+    description: 'Master cross-platform mobile development using React Native, Expo, and TypeScript.',
+    category: { name: 'Technology' },
+    difficulty: 'Beginner',
+    duration: '20h',
     rating: 4.8,
-    enrolledCount: 142,
-    creator: { name: 'Senior Dev John', verifiedBadge: true },
+    enrolledCount: '3.4k',
+    creator: { id: 's1', name: 'John Perera', verifiedBadge: true },
+    thumbnail: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=600&q=80',
   },
   {
     id: 'c2',
-    title: 'Fullstack Web Development with Node.js & PostgreSQL',
-    description: 'Master RESTful API design, database schemas, authentication, and backend architecture.',
-    category: { name: 'Web Development' },
-    difficulty: 'INTERMEDIATE',
-    duration: '18 Hours',
-    rating: 4.9,
-    enrolledCount: 215,
-    creator: { name: 'Tech Lead Sarah', verifiedBadge: true },
+    title: 'Web Development Bootcamp',
+    description: 'Fullstack web development with React, Node.js, Express, and modern databases.',
+    category: { name: 'Technology' },
+    difficulty: 'Beginner',
+    duration: '20h',
+    rating: 4.7,
+    enrolledCount: '1.4k',
+    creator: { id: 's2', name: 'Maria Santos', verifiedBadge: true },
+    thumbnail: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=600&q=80',
   },
   {
     id: 'c3',
-    title: 'UI/UX Design Systems & Mobile Prototyping',
-    description: 'Learn modern design principles, color theory, accessibility, and component styling.',
-    category: { name: 'Design & Arts' },
-    difficulty: 'BEGINNER',
-    duration: '8 Hours',
-    rating: 4.7,
-    enrolledCount: 98,
-    creator: { name: 'Alex Rivera', verifiedBadge: false },
+    title: 'Digital Photography Masterclass',
+    description: 'Learn composition, lighting, camera controls, and digital photo editing.',
+    category: { name: 'Arts' },
+    difficulty: 'All Levels',
+    duration: '10h',
+    rating: 4.6,
+    enrolledCount: '1.4k',
+    creator: { id: 's3', name: 'James Wilson', verifiedBadge: false },
+    thumbnail: 'https://images.unsplash.com/photo-1542038784456-1ea8e935640e?auto=format&fit=crop&w=600&q=80',
+  },
+  {
+    id: 'c4',
+    title: 'Business Analytics',
+    description: 'Data analytics, visualization, dashboard building, and business insights.',
+    category: { name: 'Business' },
+    difficulty: 'Intermediate',
+    duration: '15h',
+    rating: 4.8,
+    enrolledCount: '1.4k',
+    creator: { id: 's4', name: 'Priya Sharma', verifiedBadge: true },
+    thumbnail: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=600&q=80',
+  },
+  {
+    id: 'c5',
+    title: 'Graphic Design Essentials',
+    description: 'Color theory, typography, branding, and digital illustration workflow.',
+    category: { name: 'Arts' },
+    difficulty: 'Beginner',
+    duration: '8h',
+    rating: 4.5,
+    enrolledCount: '1.4k',
+    creator: { id: 's5', name: 'Aisha Mohammed', verifiedBadge: false },
+    thumbnail: 'https://images.unsplash.com/photo-1626785774573-4b799315345d?auto=format&fit=crop&w=600&q=80',
   },
 ];
 
@@ -55,6 +83,7 @@ export default function CourseListScreen({ navigation }: any) {
   const [categories, setCategories] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedDifficulty, setSelectedDifficulty] = useState('All');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -91,113 +120,161 @@ export default function CourseListScreen({ navigation }: any) {
       !searchQuery ||
       course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (course.description && course.description.toLowerCase().includes(searchQuery.toLowerCase()));
-    return matchesSearch;
+    const matchesCat = selectedCategory === 'All' || course.category?.name === selectedCategory || course.categoryId === selectedCategory;
+    const matchesDiff = selectedDifficulty === 'All' || course.difficulty === selectedDifficulty;
+    return matchesSearch && matchesCat && matchesDiff;
   });
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#4F46E5" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FAF9F6" />
 
-      {/* Header */}
+      {/* Main Header */}
       <View style={styles.header}>
-        <View>
-          <Text style={styles.headerSubtitle}>Component 2 • Learner Portal</Text>
-          <Text style={styles.headerTitle}>Explore Courses 🎓</Text>
+        <Text style={styles.headerTitle}>Explore</Text>
+      </View>
+
+      {/* Search Input Bar */}
+      <View style={styles.searchSection}>
+        <View style={styles.searchBox}>
+          <Text style={styles.searchIcon}>🔍</Text>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search for courses, skills..."
+            placeholderTextColor="#94A3B8"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            onSubmitEditing={handleSearchSubmit}
+          />
         </View>
-        <TouchableOpacity
-          style={styles.myLearningBtn}
-          onPress={() => navigation?.navigate('MyLearning')}
-        >
-          <Text style={styles.myLearningBtnText}>My Learning</Text>
-        </TouchableOpacity>
       </View>
 
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search by title, topic or skill..."
-          placeholderTextColor="#9CA3AF"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          onSubmitEditing={handleSearchSubmit}
-        />
-      </View>
-
-      {/* Categories */}
-      <View style={styles.categoryWrapper}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
+      {/* Dropdown Filters & Active Tags */}
+      <View style={styles.filterSection}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dropdownScroll}>
           <TouchableOpacity
-            style={[styles.categoryPill, selectedCategory === 'All' && styles.categoryPillActive]}
-            onPress={() => setSelectedCategory('All')}
+            style={[styles.dropdownPill, selectedCategory !== 'All' && styles.dropdownPillActive]}
+            onPress={() => setSelectedCategory(selectedCategory === 'All' ? 'Technology' : 'All')}
           >
-            <Text style={[styles.categoryText, selectedCategory === 'All' && styles.categoryTextActive]}>
-              All
+            <Text style={[styles.dropdownText, selectedCategory !== 'All' && styles.dropdownTextActive]}>
+              Category ▾
             </Text>
           </TouchableOpacity>
-          {categories.map((cat: any) => (
-            <TouchableOpacity
-              key={cat.id || cat.name}
-              style={[styles.categoryPill, selectedCategory === cat.id && styles.categoryPillActive]}
-              onPress={() => setSelectedCategory(cat.id)}
-            >
-              <Text style={[styles.categoryText, selectedCategory === cat.id && styles.categoryTextActive]}>
-                {cat.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
+
+          <TouchableOpacity
+            style={[styles.dropdownPill, selectedDifficulty !== 'All' && styles.dropdownPillActive]}
+            onPress={() => setSelectedDifficulty(selectedDifficulty === 'All' ? 'Beginner' : 'All')}
+          >
+            <Text style={[styles.dropdownText, selectedDifficulty !== 'All' && styles.dropdownTextActive]}>
+              Difficulty ▾
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.dropdownPill}>
+            <Text style={styles.dropdownText}>Duration ▾</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.dropdownPill}>
+            <Text style={styles.dropdownText}>Rating ▾</Text>
+          </TouchableOpacity>
         </ScrollView>
+
+        {/* Active Filter Tags */}
+        {(selectedCategory !== 'All' || selectedDifficulty !== 'All') && (
+          <View style={styles.activeTagsRow}>
+            {selectedCategory !== 'All' && (
+              <TouchableOpacity
+                style={styles.activeTag}
+                onPress={() => setSelectedCategory('All')}
+              >
+                <Text style={styles.activeTagText}>{selectedCategory} ⊗</Text>
+              </TouchableOpacity>
+            )}
+            {selectedDifficulty !== 'All' && (
+              <TouchableOpacity
+                style={styles.activeTag}
+                onPress={() => setSelectedDifficulty('All')}
+              >
+                <Text style={styles.activeTagText}>{selectedDifficulty} ⊗</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              onPress={() => {
+                setSelectedCategory('All');
+                setSelectedDifficulty('All');
+              }}
+            >
+              <Text style={styles.clearAllText}>Clear All</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
-      {/* Course List */}
+      {/* Course Cards Grid */}
       {loading && !refreshing ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#4F46E5" />
+          <ActivityIndicator size="large" color="#064E3B" />
           <Text style={styles.loadingText}>Loading courses...</Text>
         </View>
       ) : (
         <FlatList
           data={filteredCourses}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContainer}
+          numColumns={2}
+          columnWrapperStyle={styles.columnWrapper}
+          contentContainerStyle={styles.gridContainer}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData(); }} />
           }
           renderItem={({ item }) => (
             <TouchableOpacity
               style={styles.courseCard}
-              activeOpacity={0.85}
+              activeOpacity={0.9}
               onPress={() => navigation?.navigate('CourseDetail', { courseId: item.id, course: item })}
             >
-              <View style={styles.cardHeader}>
-                <Text style={styles.badgeDifficulty}>{item.difficulty || 'BEGINNER'}</Text>
-                <Text style={styles.ratingText}>⭐ {item.rating || 4.8}</Text>
-              </View>
+              {/* Image Banner */}
+              <Image
+                source={{ uri: item.thumbnail || 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=600&q=80' }}
+                style={styles.cardImage}
+              />
 
-              <Text style={styles.courseTitle}>{item.title}</Text>
-              <Text style={styles.courseDescription} numberOfLines={2}>
-                {item.description}
-              </Text>
+              <View style={styles.cardBody}>
+                <Text style={styles.courseTitle} numberOfLines={2}>
+                  {item.title}
+                </Text>
 
-              <TouchableOpacity
-                style={styles.creatorRow}
-                onPress={() =>
-                  navigation?.navigate('SkillSharerProfile', {
-                    sharerId: item.creator?.id,
-                    sharerName: item.creator?.name || item.creatorName,
-                  })
-                }
-              >
-                <Text style={styles.creatorName}>By {item.creator?.name || item.creatorName || 'Instructor'}</Text>
-                {(item.creator?.verifiedBadge || item.verified) && (
-                  <Text style={styles.verifiedBadge}>✓ Verified Sharer</Text>
-                )}
-              </TouchableOpacity>
+                {/* Instructor Row */}
+                <TouchableOpacity
+                  style={styles.instructorRow}
+                  onPress={() =>
+                    navigation?.navigate('SkillSharerProfile', {
+                      sharerId: item.creator?.id,
+                      sharerName: item.creator?.name || item.creatorName,
+                    })
+                  }
+                >
+                  <Text style={styles.instructorName} numberOfLines={1}>
+                    {item.creator?.name || item.creatorName || 'Instructor'}
+                  </Text>
+                  {(item.creator?.verifiedBadge || item.verified) && (
+                    <View style={styles.verifiedBadge}>
+                      <Text style={styles.verifiedText}>✓ Verified</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
 
-              <View style={styles.cardFooter}>
-                <Text style={styles.metaText}>⏱️ {item.duration || '10 Hours'}</Text>
-                <Text style={styles.metaText}>👥 {item.enrolledCount || 0} learners</Text>
-                <Text style={styles.viewDetailText}>View Details →</Text>
+                {/* Rating & Level Row */}
+                <View style={styles.metaRow}>
+                  <Text style={styles.ratingText}>⭐ {item.rating || 4.8}</Text>
+                  <View style={styles.difficultyBadge}>
+                    <Text style={styles.difficultyText}>{item.difficulty || 'Beginner'}</Text>
+                  </View>
+                </View>
+
+                {/* Duration & Learners */}
+                <Text style={styles.statsText}>
+                  {item.duration || '20h'} • {item.enrolledCount || '1.4k'} learners
+                </Text>
               </View>
             </TouchableOpacity>
           )}
@@ -208,78 +285,77 @@ export default function CourseListScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
-  header: {
-    padding: 20,
-    backgroundColor: '#4F46E5',
+  container: { flex: 1, backgroundColor: '#FAF9F6' },
+  header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
+  headerTitle: { fontSize: 28, fontWeight: '800', color: '#0F172A', letterSpacing: -0.5 },
+  searchSection: { paddingHorizontal: 20, marginBottom: 12 },
+  searchBox: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  headerSubtitle: { color: '#EEF2FF', fontSize: 12, fontWeight: '600', textTransform: 'uppercase' },
-  headerTitle: { color: '#FFFFFF', fontSize: 22, fontWeight: 'bold', marginTop: 2 },
-  myLearningBtn: { backgroundColor: '#6366F1', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 20 },
-  myLearningBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
-  searchContainer: { paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#FFFFFF' },
-  searchInput: {
-    backgroundColor: '#F3F4F6',
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    paddingHorizontal: 14,
     paddingVertical: 12,
-    fontSize: 14,
-    color: '#1F2937',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
-  categoryWrapper: { backgroundColor: '#FFFFFF', paddingBottom: 12 },
-  categoryScroll: { paddingHorizontal: 16, gap: 8 },
-  categoryPill: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: '#F3F4F6' },
-  categoryPillActive: { backgroundColor: '#4F46E5' },
-  categoryText: { fontSize: 13, fontWeight: '600', color: '#4B5563' },
-  categoryTextActive: { color: '#FFFFFF' },
+  searchIcon: { fontSize: 16, marginRight: 10 },
+  searchInput: { flex: 1, fontSize: 14, color: '#0F172A' },
+  filterSection: { paddingBottom: 12 },
+  dropdownScroll: { paddingHorizontal: 20, gap: 8 },
+  dropdownPill: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  dropdownPillActive: { backgroundColor: '#DCFCE7', borderColor: '#86EFAC' },
+  dropdownText: { fontSize: 13, fontWeight: '600', color: '#475569' },
+  dropdownTextActive: { color: '#166534' },
+  activeTagsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginTop: 10,
+    gap: 8,
+  },
+  activeTag: {
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  activeTagText: { fontSize: 12, fontWeight: '700', color: '#15803D' },
+  clearAllText: { fontSize: 12, color: '#64748B', fontWeight: '600', marginLeft: 4 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { marginTop: 10, color: '#6B7280', fontSize: 14 },
-  listContainer: { padding: 16, gap: 16 },
+  loadingText: { marginTop: 10, color: '#64748B' },
+  gridContainer: { paddingHorizontal: 16, paddingBottom: 40 },
+  columnWrapper: { justifyContent: 'space-between', marginBottom: 16 },
   courseCard: {
+    width: '48%',
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 16,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
     elevation: 2,
   },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  badgeDifficulty: {
-    backgroundColor: '#E0E7FF',
-    color: '#3730A3',
-    fontSize: 11,
-    fontWeight: '700',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  ratingText: { fontSize: 13, fontWeight: '700', color: '#D97706' },
-  courseTitle: { fontSize: 16, fontWeight: 'bold', color: '#111827', marginBottom: 6 },
-  courseDescription: { fontSize: 13, color: '#6B7280', lineHeight: 18, marginBottom: 12 },
-  creatorRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
-  creatorName: { fontSize: 12, fontWeight: '600', color: '#374151' },
-  verifiedBadge: {
-    fontSize: 11,
-    color: '#059669',
-    fontWeight: '700',
-    backgroundColor: '#D1FAE5',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-    paddingTop: 10,
-  },
-  metaText: { fontSize: 12, color: '#6B7280' },
-  viewDetailText: { fontSize: 12, fontWeight: '700', color: '#4F46E5' },
+  cardImage: { width: '100%', height: 120, borderTopLeftRadius: 16, borderTopRightRadius: 16 },
+  cardBody: { padding: 12 },
+  courseTitle: { fontSize: 14, fontWeight: '700', color: '#0F172A', lineHeight: 18, marginBottom: 6 },
+  instructorRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
+  instructorName: { fontSize: 12, color: '#64748B', flexShrink: 1 },
+  verifiedBadge: { backgroundColor: '#DCFCE7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+  verifiedText: { fontSize: 10, fontWeight: '700', color: '#15803D' },
+  metaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  ratingText: { fontSize: 12, fontWeight: '700', color: '#0F172A' },
+  difficultyBadge: { backgroundColor: '#F1F5F9', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+  difficultyText: { fontSize: 10, color: '#475569', fontWeight: '600' },
+  statsText: { fontSize: 11, color: '#94A3B8' },
 });

@@ -1,8 +1,9 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text, View } from 'react-native';
+import { Text } from 'react-native';
 
+import HomeScreen from '../screens/learner/HomeScreen';
 import CourseListScreen from '../screens/learner/CourseListScreen';
 import CourseDetailScreen from '../screens/learner/CourseDetailScreen';
 import MyLearningScreen from '../screens/learner/MyLearningScreen';
@@ -16,38 +17,62 @@ const Tab = createBottomTabNavigator();
 function LearnerBottomTabs() {
   return (
     <Tab.Navigator
-      initialRouteName="MyLearningTab"
+      initialRouteName="HomeTab"
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#4F46E5',
-        tabBarInactiveTintColor: '#6B7280',
+        tabBarActiveTintColor: '#064E3B',
+        tabBarInactiveTintColor: '#94A3B8',
         tabBarStyle: {
           backgroundColor: '#FFFFFF',
-          borderTopColor: '#E5E7EB',
-          height: 60,
-          paddingBottom: 8,
-          paddingTop: 6,
+          borderTopColor: '#F1F5F9',
+          height: 64,
+          paddingBottom: 10,
+          paddingTop: 8,
         },
         tabBarLabelStyle: {
-          fontSize: 12,
+          fontSize: 11,
           fontWeight: '600',
         },
       }}
     >
       <Tab.Screen
-        name="MyLearningTab"
-        component={MyLearningScreen}
+        name="HomeTab"
+        component={HomeScreen}
         options={{
-          tabBarLabel: 'My Learning',
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 18, color }}>📊</Text>,
+          tabBarLabel: 'Home',
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: 18, color }}>🏠</Text>,
         }}
       />
       <Tab.Screen
         name="CourseListTab"
         component={CourseListScreen}
         options={{
-          tabBarLabel: 'Browse Courses',
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 18, color }}>🎓</Text>,
+          tabBarLabel: 'Explore',
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: 18, color }}>🧭</Text>,
+        }}
+      />
+      <Tab.Screen
+        name="MyLearningTab"
+        component={MyLearningScreen}
+        options={{
+          tabBarLabel: 'My Learning',
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: 18, color }}>📑</Text>,
+        }}
+      />
+      <Tab.Screen
+        name="CertificatesTab"
+        component={MyLearningScreen}
+        options={{
+          tabBarLabel: 'Certificates',
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: 18, color }}>🎖️</Text>,
+        }}
+      />
+      <Tab.Screen
+        name="ProfileTab"
+        component={SkillSharerProfileScreen}
+        options={{
+          tabBarLabel: 'Profile',
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: 18, color }}>👤</Text>,
         }}
       />
     </Tab.Navigator>
@@ -58,6 +83,7 @@ export default function LearnerNavigator() {
   return (
     <Stack.Navigator initialRouteName="MainTabs" screenOptions={{ headerShown: false }}>
       <Stack.Screen name="MainTabs" component={LearnerBottomTabs} />
+      <Stack.Screen name="HomeScreen" component={HomeScreen} />
       <Stack.Screen name="CourseList" component={CourseListScreen} />
       <Stack.Screen name="CourseDetail" component={CourseDetailScreen} />
       <Stack.Screen name="MyLearning" component={MyLearningScreen} />
