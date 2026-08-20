@@ -3,6 +3,7 @@ import {
   getPublishedCourses,
   getCourseDetails,
   getCategories,
+  getSkillSharerProfile,
   enrollInCourse,
   cancelEnrollment,
   getMyLearning,
@@ -53,6 +54,17 @@ export const listCategories = async (req: Request, res: Response): Promise<void>
   } catch (error: any) {
     logger.error('Error in listCategories controller:', error);
     res.status(500).json({ error: error.message });
+  }
+};
+
+export const getSharerProfile = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const profile = await getSkillSharerProfile(id);
+    res.status(200).json(profile);
+  } catch (error: any) {
+    logger.error('Error in getSharerProfile controller:', error);
+    res.status(404).json({ error: error.message });
   }
 };
 

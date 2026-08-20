@@ -179,12 +179,20 @@ export default function CourseListScreen({ navigation }: any) {
                 {item.description}
               </Text>
 
-              <View style={styles.creatorRow}>
+              <TouchableOpacity
+                style={styles.creatorRow}
+                onPress={() =>
+                  navigation?.navigate('SkillSharerProfile', {
+                    sharerId: item.creator?.id,
+                    sharerName: item.creator?.name || item.creatorName,
+                  })
+                }
+              >
                 <Text style={styles.creatorName}>By {item.creator?.name || item.creatorName || 'Instructor'}</Text>
                 {(item.creator?.verifiedBadge || item.verified) && (
                   <Text style={styles.verifiedBadge}>✓ Verified Sharer</Text>
                 )}
-              </View>
+              </TouchableOpacity>
 
               <View style={styles.cardFooter}>
                 <Text style={styles.metaText}>⏱️ {item.duration || '10 Hours'}</Text>

@@ -22,6 +22,7 @@ export default function LessonPlayerScreen({ route, navigation }: any) {
   const [loading, setLoading] = useState(true);
   const [completing, setCompleting] = useState(false);
   const [completed, setCompleted] = useState(false);
+  const [completedMaterials, setCompletedMaterials] = useState<string[]>([]);
 
   const loadLesson = async () => {
     if (!lessonId) return;
@@ -41,6 +42,14 @@ export default function LessonPlayerScreen({ route, navigation }: any) {
   useEffect(() => {
     loadLesson();
   }, [lessonId]);
+
+  const toggleMaterialCheck = (matId: string) => {
+    if (completedMaterials.includes(matId)) {
+      setCompletedMaterials(completedMaterials.filter((id) => id !== matId));
+    } else {
+      setCompletedMaterials([...completedMaterials, matId]);
+    }
+  };
 
   const handleMarkComplete = async () => {
     try {
@@ -104,31 +113,30 @@ export default function LessonPlayerScreen({ route, navigation }: any) {
             </Text>
           </View>
 
-          {/* Materials List */}
+          {/* Materials List with Interactive Checkbox Checklist */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Learning Materials & Downloads</Text>
+            <Text style={styles.sectionTitle}>Learning Materials & Interactive Checklist</Text>
             {currentLesson.materials && currentLesson.materials.length > 0 ? (
-              currentLesson.materials.map((mat: any, idx: number) => (
-                <TouchableOpacity
-                  key={mat.id || idx}
-                  style={styles.materialItem}
-                  onPress={() => {
-                    if (mat.url) {
-                      Linking.openURL(mat.url);
-                    } else {
-                      Alert.alert('Material Opened', `Viewing ${mat.title}`);
-                    }
-                  }}
-                >
-                  <Text style={styles.materialTypeIcon}>
-                    {mat.type === 'VIDEO' ? '🎥' : mat.type === 'SLIDES' ? '📊' : '📄'}
-                  </Text>
-                  <View style={styles.materialInfo}>
-                    <Text style={styles.materialTitle}>{mat.title}</Text>
-                    <Text style={styles.materialType}>{mat.type} • Tap to view</Text>
-                  </View>
-                </TouchableOpacity>
-              ))
+              currentLesson.materials.map((mat: any, idx: number) => {
+                const matId = mat.id || `mat_${idx}`;
+                const isChecked = completedMaterials.includes(matId);
+                return (
+                  <TouchableOpacity
+                    key={matId}
+                    style={[styles.materialItem, isChecked && styles.materialItemChecked]}
+                    onPress={() => toggleMaterialCheck(matId)}
+                  >
+                    <Text style={styles.checkboxIcon}>{isChecked ? '☑️' : '⬜'}</Text>
+                    <Text style={styles.materialTypeIcon}>
+                      {mat.type === 'VIDEO' ? '🎥' : mat.type === 'SLIDES' || mat.type === 'SLIDE' ? '📊' : '📄'}
+                    </Text>
+                    <View style={styles.materialInfo}>
+                      <Text style={[styles.materialTitle, isChecked && styles.materialTitleChecked]}>{mat.title}</Text>
+                      <Text style={styles.materialType}>{mat.type} • Tap to mark as consumed</Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })
             ) : (
               <Text style={styles.noMaterials}>No extra material attachments for this lesson.</Text>
             )}
@@ -180,15 +188,28 @@ const styles = StyleSheet.create({
   materialItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
+    borderRadius: 8,
+  },
+  materialItemChecked: {
+    backgroundColor: '#F0FDF4',
+  },
+  checkboxIcon: {
+    fontSize: 20,
+    marginRight: 10,
   },
   materialTypeIcon: { fontSize: 24, marginRight: 12 },
   materialInfo: { flex: 1 },
   materialTitle: { fontSize: 14, fontWeight: '600', color: '#1F2937' },
+  materialTitleChecked: {
+    textDecorationLine: 'line-through',
+    color: '#059669',
+  },
   materialType: { fontSize: 12, color: '#6B7280', marginTop: 2 },
-  noMaterials: { fontSize: 13, color: '#9CA3AF', italic: true },
+  noMaterials: { fontSize: 13, color: '#9CA3AF' },
   footer: { padding: 16, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#E5E7EB' },
   completeBtn: { backgroundColor: '#059669', paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
   completeBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },

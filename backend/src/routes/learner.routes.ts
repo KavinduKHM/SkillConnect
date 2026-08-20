@@ -4,6 +4,7 @@ import {
   listCourses,
   getCourseById,
   listCategories,
+  getSharerProfile,
   enroll,
   cancel,
   getMyLearningDashboard,
@@ -20,6 +21,7 @@ const router = express.Router();
 router.get('/courses', listCourses);
 router.get('/courses/categories', listCategories);
 router.get('/categories', listCategories);
+router.get('/sharers/:id', getSharerProfile);
 router.get('/courses/:id', getCourseById);
 
 // -------------------------------------------------------------

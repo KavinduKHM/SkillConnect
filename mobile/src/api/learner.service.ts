@@ -51,6 +51,11 @@ export const fetchCategories = async () => {
   return response.data;
 };
 
+export const fetchSharerProfile = async (sharerId: string) => {
+  const response = await client.get(`/learner/sharers/${sharerId}`);
+  return response.data;
+};
+
 export const enrollCourse = async (courseId: string) => {
   const response = await client.post('/learner/enrollments', { courseId });
   return response.data;

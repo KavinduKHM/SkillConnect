@@ -138,13 +138,21 @@ export default function CourseDetailScreen({ route, navigation }: any) {
           {/* Content Body */}
           <View style={styles.bodyContent}>
             {/* Instructor Card */}
-            <View style={styles.instructorCard}>
+            <TouchableOpacity
+              style={styles.instructorCard}
+              onPress={() =>
+                navigation?.navigate('SkillSharerProfile', {
+                  sharerId: course.creator?.id,
+                  sharerName: course.creator?.name,
+                })
+              }
+            >
               <View>
                 <Text style={styles.instructorRole}>Skill Sharer</Text>
                 <Text style={styles.instructorName}>{course.creator?.name || 'Instructor'}</Text>
               </View>
               {course.creator?.verifiedBadge && <Text style={styles.verifiedBadge}>✓ Verified Sharer</Text>}
-            </View>
+            </TouchableOpacity>
 
             {/* Overview */}
             <Text style={styles.sectionHeading}>Course Overview</Text>
