@@ -5,7 +5,9 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery } from '@tanstack/react-query';
 import { adminService } from '../../api/admin.service';
 
@@ -35,6 +37,25 @@ export const AdminDashboardScreen = ({ navigation }: any) => {
   const totalUsers = usersData?.data?.pagination?.total || 0;
   const pendingCourses = pendingCoursesData?.data?.length || 0;
   const pendingQualifications = pendingQualificationsData?.data?.length || 0;
+
+  const handleLogout = async () => {
+  Alert.alert(
+    'Logout',
+    'Are you sure you want to logout?',
+    [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Logout',
+        style: 'destructive',
+        onPress: async () => {
+          await AsyncStorage.removeItem('token');
+          await AsyncStorage.removeItem('user');
+          navigation.replace('Login');
+        },
+      },
+    ]
+  );
+};
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -127,7 +148,36 @@ export const AdminDashboardScreen = ({ navigation }: any) => {
           <Text style={styles.actionArrow}>→</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Profile & Logout Section */}
+      <View style={styles.profileSection}>
+        <Text style={styles.sectionTitle}>Account</Text>
+        
+        <TouchableOpacity
+          style={styles.actionCard}
+          onPress={() => navigation.navigate('Profile')}
+        >
+          <View style={styles.actionContent}>
+            <Text style={styles.actionTitle}>👤 My Profile</Text>
+            <Text style={styles.actionDescription}>View and edit your profile</Text>
+          </View>
+          <Text style={styles.actionArrow}>→</Text>
+        </TouchableOpacity>
+
+        
+        <TouchableOpacity
+        style={styles.logoutCard}
+        onPress={handleLogout}
+        >
+        <View style={styles.actionContent}>
+            <Text style={[styles.actionTitle, { color: '#dc2626' }]}>🚪 Logout</Text>
+            <Text style={styles.actionDescription}>Sign out of your account</Text>
+        </View>
+        <Text style={styles.actionArrow}>→</Text>
+        </TouchableOpacity>
+      </View>
     </ScrollView>
+    
   );
 };
 
@@ -183,6 +233,9 @@ const styles = StyleSheet.create({
   actionsContainer: {
     marginBottom: 24,
   },
+  profileSection: {
+    marginBottom: 24,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
@@ -202,6 +255,22 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 2,
+  },
+  logoutCard: {
+    backgroundColor: '#fef2f2',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#fecaca',
   },
   actionContent: {
     flex: 1,
