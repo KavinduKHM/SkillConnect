@@ -1,47 +1,6 @@
 import multer from 'multer';
 import path from 'path';
-import type { Request } from 'express';
-
-// Configure storage (memory storage for Cloudinary upload)
-const storage = multer.memoryStorage();
-
-// File filter
-const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  const allowedTypes = [
-    // Videos
-    'video/mp4',
-    'video/webm',
-    'video/quicktime',
-    // Images
-    'image/jpeg',
-    'image/png',
-    'image/gif',
-    'image/webp',
-    // Documents
-    'application/pdf',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/vnd.ms-powerpoint',
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-    // Audio
-    'audio/mpeg',
-    'audio/wav',
-  ];
-
-  if (allowedTypes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new Error(`File type ${file.mimetype} is not allowed`) as any, false);
-  }
-};
-
-// Create multer instance
-export const upload = multer({
-  storage,
-  limits: {
-    fileSize: 50 * 1024 * 1024, // 50MB max
 import type { Request, Response, NextFunction } from 'express';
-import path from 'path';
 
 type FileFilterCallback = (error: Error | null, acceptFile?: boolean) => void;
 
@@ -81,6 +40,12 @@ export const ALLOWED_EXTENSIONS = [
   '.jpg',
   '.jpeg',
   '.webp',
+  // Videos & Audio
+  '.mp4',
+  '.webm',
+  '.mov',
+  '.mp3',
+  '.wav',
 ];
 
 // Maximum allowed file size: 10MB (10,485,760 bytes)
@@ -121,6 +86,7 @@ export const uploadSingle = (fieldName: string) => upload.single(fieldName);
 // Multiple files upload middleware
 export const uploadMultiple = (fieldName: string, maxCount: number) =>
   upload.array(fieldName, maxCount);
+
 /**
  * Middleware for assignment submission files (up to 5 files under 'files' field)
  */

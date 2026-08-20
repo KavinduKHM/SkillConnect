@@ -1,15 +1,6 @@
 import React from 'react';
-import { View, Text } from 'react-native';
-
-export const SkillSharerNavigator = () => {
-  return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text>Skill Sharer Dashboard (Work in Progress)</Text>
-    </View>
-  );
-};
 import { createStackNavigator } from '@react-navigation/stack';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { TouchableOpacity } from 'react-native';
 
 // Import screens
