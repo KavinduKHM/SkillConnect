@@ -140,6 +140,7 @@ export default function CourseDetailScreen({ route, navigation }: any) {
             {/* Instructor Card */}
             <TouchableOpacity
               style={styles.instructorCard}
+              activeOpacity={0.8}
               onPress={() =>
                 navigation?.navigate('SkillSharerProfile', {
                   sharerId: course.creator?.id,
@@ -147,11 +148,16 @@ export default function CourseDetailScreen({ route, navigation }: any) {
                 })
               }
             >
-              <View>
-                <Text style={styles.instructorRole}>Skill Sharer</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.instructorRole}>Course Instructor</Text>
                 <Text style={styles.instructorName}>{course.creator?.name || 'Instructor'}</Text>
+                <Text style={styles.viewProfileHint}>Tap to view bio, skills & qualifications →</Text>
               </View>
-              {course.creator?.verifiedBadge && <Text style={styles.verifiedBadge}>✓ Verified Sharer</Text>}
+              {course.creator?.verifiedBadge && (
+                <View style={styles.verifiedBadgeContainer}>
+                  <Text style={styles.verifiedBadge}>✓ Verified Skill Sharer</Text>
+                </View>
+              )}
             </TouchableOpacity>
 
             {/* Overview */}
@@ -269,16 +275,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
-  instructorRole: { fontSize: 11, color: '#6B7280', textTransform: 'uppercase' },
-  instructorName: { fontSize: 15, fontWeight: 'bold', color: '#111827' },
+  instructorRole: { fontSize: 11, color: '#6B7280', textTransform: 'uppercase', fontWeight: '600' },
+  instructorName: { fontSize: 16, fontWeight: 'bold', color: '#111827', marginTop: 2 },
+  viewProfileHint: { fontSize: 12, color: '#4F46E5', fontWeight: '600', marginTop: 4 },
+  verifiedBadgeContainer: { justifyContent: 'center' },
   verifiedBadge: {
     backgroundColor: '#D1FAE5',
     color: '#059669',
     fontSize: 11,
     fontWeight: '700',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
   },
   sectionHeading: { fontSize: 17, fontWeight: 'bold', color: '#111827', marginTop: 8 },
   descriptionText: { fontSize: 14, color: '#4B5563', lineHeight: 22 },
