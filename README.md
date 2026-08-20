@@ -1,4 +1,4 @@
-﻿# SkillConnect - Community Skill-Exchange & Micro-Learning Platform
+# SkillConnect - Community Skill-Exchange & Micro-Learning Platform
 
 ## Project Structure
 

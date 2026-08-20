@@ -10,3 +10,21 @@ cloudinary.config({
 });
 
 export default cloudinary;
+const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+const apiKey = process.env.CLOUDINARY_API_KEY;
+const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+export const isCloudinaryConfigured = (): boolean => {
+  return Boolean(cloudName && apiKey && apiSecret && cloudName !== 'your_cloud_name');
+};
+
+if (isCloudinaryConfigured() && cloudName && apiKey && apiSecret) {
+  cloudinary.config({
+    cloud_name: cloudName,
+    api_key: apiKey,
+    api_secret: apiSecret,
+    secure: true,
+  });
+}
+
+export default cloudinary;
