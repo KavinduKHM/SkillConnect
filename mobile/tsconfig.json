@@ -2,6 +2,14 @@
   "compilerOptions": {
     "module": "esnext",
     "moduleResolution": "bundler",
+    // File Layout
+    // "rootDir": "./src",
+    // "outDir": "./dist",
+
+    // Environment Settings
+    // See also https://aka.ms/tsconfig/module
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "target": "esnext",
     "types": [],
     "sourceMap": true,

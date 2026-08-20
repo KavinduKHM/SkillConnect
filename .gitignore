@@ -1,9 +1,10 @@
-﻿# Node modules
+# Node modules
 node_modules/
 **/node_modules/
 
 # Environment files
 .env
+*.env
 .env.local
 .env.production
 
@@ -11,6 +12,10 @@ node_modules/
 dist/
 build/
 *.log
+backend/src/**/*.js
+backend/src/**/*.js.map
+backend/src/**/*.d.ts
+backend/src/**/*.d.ts.map
 
 # OS files
 .DS_Store
