@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -9,13 +9,16 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  ScrollView,
 } from 'react-native';
-import { fetchMyLearning } from '../../api/learner.service';
+import { useFocusEffect } from '@react-navigation/native';
+import { fetchMyLearning, fetchMyQuizzes } from '../../api/learner.service';
 
 export default function MyLearningScreen({ navigation }: any) {
   const [inProgressCourses, setInProgressCourses] = useState<any[]>([]);
   const [completedCourses, setCompletedCourses] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'IN_PROGRESS' | 'COMPLETED'>('IN_PROGRESS');
+  const [assessments, setAssessments] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'IN_PROGRESS' | 'COMPLETED' | 'ASSESSMENTS' | 'CERTIFICATES'>('IN_PROGRESS');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -27,6 +30,10 @@ export default function MyLearningScreen({ navigation }: any) {
         setInProgressCourses(res.inProgress || []);
         setCompletedCourses(res.completed || []);
       }
+      
+      const quizRes: any = await fetchMyQuizzes();
+      const quizzes = quizRes?.quizzes || quizRes?.data || (Array.isArray(quizRes) ? quizRes : []);
+      setAssessments(quizzes);
     } catch (err) {
       console.log('Error fetching my-learning from API, using demo data:', err);
       // Fallback demo data if backend is offline
@@ -49,9 +56,11 @@ export default function MyLearningScreen({ navigation }: any) {
     }
   };
 
-  useEffect(() => {
-    loadMyLearning();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadMyLearning();
+    }, [])
+  );
 
   const displayList = activeTab === 'IN_PROGRESS' ? inProgressCourses : completedCourses;
 
@@ -68,31 +77,99 @@ export default function MyLearningScreen({ navigation }: any) {
       </View>
 
       {/* Filter Tabs */}
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tabButton, activeTab === 'IN_PROGRESS' && styles.tabButtonActive]}
-          onPress={() => setActiveTab('IN_PROGRESS')}
-        >
-          <Text style={[styles.tabText, activeTab === 'IN_PROGRESS' && styles.tabTextActive]}>
-            In Progress ({inProgressCourses.length})
-          </Text>
-        </TouchableOpacity>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabScrollContainer}>
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'IN_PROGRESS' && styles.tabButtonActive]}
+            onPress={() => setActiveTab('IN_PROGRESS')}
+          >
+            <Text style={[styles.tabText, activeTab === 'IN_PROGRESS' && styles.tabTextActive]}>
+              In Progress ({inProgressCourses.length})
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.tabButton, activeTab === 'COMPLETED' && styles.tabButtonActive]}
-          onPress={() => setActiveTab('COMPLETED')}
-        >
-          <Text style={[styles.tabText, activeTab === 'COMPLETED' && styles.tabTextActive]}>
-            Completed ({completedCourses.length})
-          </Text>
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'COMPLETED' && styles.tabButtonActive]}
+            onPress={() => setActiveTab('COMPLETED')}
+          >
+            <Text style={[styles.tabText, activeTab === 'COMPLETED' && styles.tabTextActive]}>
+              Completed ({completedCourses.length})
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'ASSESSMENTS' && styles.tabButtonActive]}
+            onPress={() => setActiveTab('ASSESSMENTS')}
+          >
+            <Text style={[styles.tabText, activeTab === 'ASSESSMENTS' && styles.tabTextActive]}>
+              Assessments
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'CERTIFICATES' && styles.tabButtonActive]}
+            onPress={() => setActiveTab('CERTIFICATES')}
+          >
+            <Text style={[styles.tabText, activeTab === 'CERTIFICATES' && styles.tabTextActive]}>
+              Certificates
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
 
       {/* Course List */}
       {loading && !refreshing ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#4F46E5" />
           <Text style={styles.loadingText}>Loading your learning dashboard...</Text>
+        </View>
+      ) : activeTab === 'ASSESSMENTS' ? (
+        <FlatList
+          data={assessments}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContainer}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyTitle}>No Assessments Available</Text>
+              <Text style={styles.emptySubtitle}>You will see quizzes here once you enroll in courses with assessments.</Text>
+              <TouchableOpacity style={styles.browseBtn} onPress={() => navigation?.navigate('CourseList')}>
+                <Text style={styles.browseBtnText}>Explore Courses</Text>
+              </TouchableOpacity>
+            </View>
+          }
+          renderItem={({ item }) => {
+            const status = item.completions && item.completions.length > 0 ? item.completions[0].status : 'PENDING';
+            const courseName = item.course?.title || 'Unknown Course';
+            const dueDate = item.dueDate ? new Date(item.dueDate).toLocaleDateString() : 'No due date';
+
+            return (
+              <View style={styles.card}>
+                <View style={styles.cardHeader}>
+                  <Text style={styles.courseTitle}>{courseName}</Text>
+                  <View style={{ backgroundColor: status === 'PENDING' ? '#FEF3C7' : '#D1FAE5', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                    <Text style={{ color: status === 'PENDING' ? '#D97706' : '#059669', fontSize: 11, fontWeight: '700' }}>
+                      {status}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={{ fontSize: 13, color: '#6B7280', marginBottom: 12 }}>Due Date: {dueDate}</Text>
+                
+                <TouchableOpacity
+                  style={[styles.continueBtn, { backgroundColor: status === 'COMPLETED' ? '#F3F4F6' : '#EEF2FF' }]}
+                  onPress={() => navigation?.navigate('AssessmentDetail', { assessment: item, status, courseName, dueDate, loadMyLearning })}
+                >
+                  <Text style={[styles.continueBtnText, { color: item.status === 'COMPLETED' ? '#6B7280' : '#4F46E5' }]}>
+                    {item.status === 'COMPLETED' ? 'View Details' : 'Take Assessment →'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            );
+          }}
+        />
+      ) : activeTab === 'CERTIFICATES' ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyTitle}>My Certificates</Text>
+          <Text style={styles.emptySubtitle}>Under construction by Member 3.</Text>
         </View>
       ) : displayList.length === 0 ? (
         <View style={styles.emptyContainer}>
@@ -204,4 +281,5 @@ const styles = StyleSheet.create({
   progressBarFill: { height: '100%', backgroundColor: '#4F46E5', borderRadius: 4 },
   continueBtn: { backgroundColor: '#F3F4F6', paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
   continueBtnText: { color: '#4F46E5', fontSize: 13, fontWeight: '700' },
+  tabScrollContainer: { flexGrow: 0, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
 });
