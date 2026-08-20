@@ -47,9 +47,10 @@ export default function LessonPlayerScreen({ route, navigation }: any) {
       setCompleting(true);
       const res = await completeLesson(courseId, lessonId);
       setCompleted(true);
+      const pct = res.progress?.progressPercentage ?? res.progressPercentage ?? 100;
       Alert.alert(
         'Lesson Completed! 🎉',
-        `Course completion progress is now ${res.progressPercentage || 100}%.`,
+        `Course completion progress is now ${pct}%.`,
         [{ text: 'Back to Course Details', onPress: () => navigation?.goBack() }, { text: 'OK' }]
       );
     } catch (err: any) {
