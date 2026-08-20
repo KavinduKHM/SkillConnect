@@ -10,7 +10,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { fetchCourseDetails, enrollCourse, cancelEnrollment } from '../../api/learner.service';
+import { fetchCourseDetails, enrollCourse, cancelEnrollment, completeLesson } from '../../api/learner.service';
 
 export default function CourseDetailScreen({ route, navigation }: any) {
   const courseId = route.params?.courseId || 'c1';
@@ -18,6 +18,7 @@ export default function CourseDetailScreen({ route, navigation }: any) {
 
   const [courseData, setCourseData] = useState<any>(initialCourseData || null);
   const [userEnrollment, setUserEnrollment] = useState<any>(null);
+  const [completedLessonIds, setCompletedLessonIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -39,6 +40,23 @@ export default function CourseDetailScreen({ route, navigation }: any) {
   useEffect(() => {
     loadDetails();
   }, [courseId]);
+
+  const handleToggleLesson = async (lessonId: string) => {
+    try {
+      setActionLoading(true);
+      const res = await completeLesson(courseId, lessonId);
+      if (completedLessonIds.includes(lessonId)) {
+        setCompletedLessonIds(completedLessonIds.filter((id) => id !== lessonId));
+      } else {
+        setCompletedLessonIds([...completedLessonIds, lessonId]);
+      }
+      loadDetails();
+    } catch (err: any) {
+      Alert.alert('Notice', err.response?.data?.error || err.message || 'Updated lesson progress');
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const handleEnroll = async () => {
     try {
@@ -137,6 +155,22 @@ export default function CourseDetailScreen({ route, navigation }: any) {
 
           {/* Content Body */}
           <View style={styles.bodyContent}>
+            {/* Live Progress Bar for Enrolled Learner */}
+            {isEnrolled && (
+              <View style={styles.progressCardContainer}>
+                <View style={styles.progressHeaderRow}>
+                  <Text style={styles.progressCardTitle}>Your Learning Progress</Text>
+                  <Text style={styles.progressCardPct}>{progressPct}%</Text>
+                </View>
+                <View style={styles.progressBarTrack}>
+                  <View style={[styles.progressBarFill, { width: `${Math.min(100, Math.max(0, progressPct))}%` }]} />
+                </View>
+                <Text style={styles.progressCardSubtext}>
+                  {completedCount} / {totalCount} lessons completed
+                </Text>
+              </View>
+            )}
+
             {/* Instructor Card */}
             <TouchableOpacity
               style={styles.instructorCard}
@@ -174,27 +208,41 @@ export default function CourseDetailScreen({ route, navigation }: any) {
             </View>
 
             {/* Course Modules (Syllabus) */}
-            <Text style={styles.sectionHeading}>Course Modules (Syllabus)</Text>
+            <Text style={styles.sectionHeading}>Course Modules & Lessons</Text>
             {course.modules && course.modules.length > 0 ? (
               course.modules.map((mod: any, idx: number) => (
                 <View key={mod.id || idx} style={styles.moduleCard}>
                   <Text style={styles.moduleTitle}>{mod.title}</Text>
-                  {mod.lessons?.map((les: any, lIdx: number) => (
-                    <TouchableOpacity
-                      key={les.id || lIdx}
-                      style={styles.lessonRow}
-                      onPress={() => {
-                        if (isEnrolled) {
-                          navigation?.navigate('LessonPlayer', { courseId, lessonId: les.id, lessonTitle: les.title });
-                        } else {
-                          Alert.alert('Enrollment Required', 'Please enroll in the course to view lesson contents.');
-                        }
-                      }}
-                    >
-                      <Text style={styles.lessonItem}>• {les.title} ({les.estimatedMinutes || 15} mins)</Text>
-                      {isEnrolled && <Text style={styles.playTag}>Play ▶</Text>}
-                    </TouchableOpacity>
-                  ))}
+                  {mod.lessons?.map((les: any, lIdx: number) => {
+                    const isDone = completedLessonIds.includes(les.id);
+                    return (
+                      <View key={les.id || lIdx} style={styles.lessonRowWrapper}>
+                        {isEnrolled && (
+                          <TouchableOpacity
+                            style={styles.checkboxBtn}
+                            onPress={() => handleToggleLesson(les.id)}
+                          >
+                            <Text style={styles.checkboxIcon}>{isDone ? '☑️' : '⬜'}</Text>
+                          </TouchableOpacity>
+                        )}
+                        <TouchableOpacity
+                          style={styles.lessonRow}
+                          onPress={() => {
+                            if (isEnrolled) {
+                              navigation?.navigate('LessonPlayer', { courseId, lessonId: les.id, lessonTitle: les.title });
+                            } else {
+                              Alert.alert('Enrollment Required', 'Please enroll in the course to view lesson contents.');
+                            }
+                          }}
+                        >
+                          <Text style={[styles.lessonItem, isDone && styles.lessonItemDone]}>
+                            {les.title} ({les.estimatedMinutes || 15} mins)
+                          </Text>
+                          {isEnrolled && <Text style={styles.playTag}>Play ▶</Text>}
+                        </TouchableOpacity>
+                      </View>
+                    );
+                  })}
                 </View>
               ))
             ) : (
@@ -294,8 +342,44 @@ const styles = StyleSheet.create({
   outcomeItem: { fontSize: 13, color: '#166534', fontWeight: '500' },
   moduleCard: { backgroundColor: '#F9FAFB', padding: 14, borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB' },
   moduleTitle: { fontSize: 14, fontWeight: 'bold', color: '#111827', marginBottom: 8 },
-  lessonRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 6 },
+  progressCardContainer: {
+    backgroundColor: '#EEF2FF',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+  },
+  progressHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  progressCardTitle: { fontSize: 15, fontWeight: 'bold', color: '#312E81' },
+  progressCardPct: { fontSize: 16, fontWeight: 'bold', color: '#4F46E5' },
+  progressBarTrack: {
+    height: 10,
+    backgroundColor: '#E0E7FF',
+    borderRadius: 5,
+    overflow: 'hidden',
+    marginBottom: 6,
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: '#4F46E5',
+    borderRadius: 5,
+  },
+  progressCardSubtext: { fontSize: 12, color: '#4338CA', fontWeight: '600' },
+  lessonRowWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+  },
+  checkboxBtn: { paddingRight: 8 },
+  checkboxIcon: { fontSize: 18 },
+  lessonRow: { flex: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   lessonItem: { fontSize: 13, color: '#4B5563', flex: 1 },
+  lessonItemDone: { textDecorationLine: 'line-through', color: '#059669', fontWeight: '600' },
   playTag: { fontSize: 12, color: '#4F46E5', fontWeight: '700' },
   reviewCard: { backgroundColor: '#F9FAFB', padding: 12, borderRadius: 8, marginTop: 8 },
   reviewAuthor: { fontSize: 13, fontWeight: '700', color: '#111827' },
