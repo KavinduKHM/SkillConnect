@@ -181,3 +181,29 @@ export const certificateApi = {
     return apiClient.post(`/certificates/requests/${requestId}/reject`, { reason });
   }
 };
+
+// ============================================================
+// Recommendation APIs (Skill Sharer -> Learner)
+// ============================================================
+
+export const recommendationApi = {
+  // Create a recommendation for a learner
+  create: (data: { learnerId: string; courseId: string; title: string; content: string; isPublic?: boolean }): Promise<ApiResponse<any>> => {
+    return apiClient.post('/recommendations', data);
+  },
+
+  // Get all learners who completed my courses (to recommend)
+  getMyCourseLearners: (courseId: string): Promise<ApiResponse<any>> => {
+    return apiClient.get(`/certificates/course/${courseId}/requests`);
+  },
+
+  // Update a recommendation
+  update: (id: string, data: { title?: string; content?: string; isPublic?: boolean }): Promise<ApiResponse<any>> => {
+    return apiClient.put(`/recommendations/${id}`, data);
+  },
+
+  // Delete a recommendation
+  delete: (id: string): Promise<ApiResponse<null>> => {
+    return apiClient.delete(`/recommendations/${id}`);
+  },
+};

@@ -147,7 +147,16 @@ export default function MyLearningScreen({ navigation }: any) {
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation?.goBack()}>
           <Text style={styles.backBtnText}>← Back to Browse</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Learning Dashboard 📊</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text style={styles.headerTitle}>My Learning Dashboard 📊</Text>
+          <TouchableOpacity
+            style={styles.recBtn}
+            onPress={() => navigation?.navigate('MyRecommendations')}
+          >
+            <Ionicons name="ribbon-outline" size={14} color="#F59E0B" />
+            <Text style={styles.recBtnText}>Recommendations</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Filter Tabs */}
@@ -534,4 +543,11 @@ const styles = StyleSheet.create({
   continueBtn: { backgroundColor: '#F3F4F6', paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
   continueBtnText: { color: '#4F46E5', fontSize: 13, fontWeight: '700' },
   tabScrollContainer: { flexGrow: 0, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
+  recBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20,
+    borderWidth: 1, borderColor: '#F59E0B',
+  },
+  recBtnText: { fontSize: 11, fontWeight: '700', color: '#F59E0B' },
 });

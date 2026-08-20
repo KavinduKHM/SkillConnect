@@ -6,6 +6,8 @@ import MyLearningScreen from '../screens/learner/MyLearningScreen';
 import LessonPlayerScreen from '../screens/learner/LessonPlayerScreen';
 import AssessmentDetailScreen from '../screens/learner/AssessmentDetailScreen';
 import AssignmentDetailScreen from '../screens/learner/AssignmentDetailScreen';
+import CourseReviewScreen from '../screens/learner/CourseReviewScreen';
+import MyRecommendationsScreen from '../screens/learner/MyRecommendationsScreen';
 
 const Stack = createStackNavigator();
 
@@ -18,6 +20,8 @@ export default function LearnerNavigator() {
       <Stack.Screen name="LessonPlayer" component={LessonPlayerScreen} />
       <Stack.Screen name="AssessmentDetail" component={AssessmentDetailScreen} />
       <Stack.Screen name="AssignmentDetail" component={AssignmentDetailScreen} />
+      <Stack.Screen name="CourseReview" component={CourseReviewScreen} />
+      <Stack.Screen name="MyRecommendations" component={MyRecommendationsScreen} />
     </Stack.Navigator>
   );
 }

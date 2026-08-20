@@ -151,3 +151,36 @@ export const fetchMyCertificates = async () => {
   const response = await client.get('/certificates/my-certificates');
   return response.data;
 };
+
+// ============================================================
+// RATINGS & REVIEWS
+// ============================================================
+
+export const fetchCourseReviews = async (courseId: string) => {
+  const response = await client.get(`/recognition/reviews/course/${courseId}`);
+  return response.data;
+};
+
+export const createCourseReview = async (data: { courseId: string; rating: number; comment?: string }) => {
+  const response = await client.post('/recognition/reviews', data);
+  return response.data;
+};
+
+export const updateCourseReview = async (reviewId: string, data: { rating: number; comment?: string }) => {
+  const response = await client.put(`/recognition/reviews/${reviewId}`, data);
+  return response.data;
+};
+
+export const deleteCourseReview = async (reviewId: string) => {
+  const response = await client.delete(`/recognition/reviews/${reviewId}`);
+  return response.data;
+};
+
+// ============================================================
+// RECOMMENDATIONS (Learner: view my recommendations)
+// ============================================================
+
+export const fetchMyRecommendations = async () => {
+  const response = await client.get('/recommendations/me');
+  return response.data;
+};
