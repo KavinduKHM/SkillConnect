@@ -17,6 +17,8 @@ import { DashboardScreen } from '../screens/skill-sharer/DashboardScreen';
 import { ProfileScreen } from '../screens/skill-sharer/ProfileScreen';
 import { CourseCreatorScreen } from '../screens/skill-sharer/CourseCreatorScreen';
 import { MyCoursesScreen } from '../screens/skill-sharer/MyCoursesScreen';
+import { AssessmentsScreen } from '../screens/skill-sharer/AssessmentsScreen';
+import { AssignmentsScreen } from '../screens/skill-sharer/AssignmentsScreen';
 
 const Stack = createStackNavigator();
 
@@ -32,6 +34,8 @@ export const SkillSharerNavigator: React.FC = () => {
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="CourseCreator" component={CourseCreatorScreen} />
       <Stack.Screen name="MyCourses" component={MyCoursesScreen} />
+      <Stack.Screen name="Assessments" component={AssessmentsScreen} />
+      <Stack.Screen name="Assignments" component={AssignmentsScreen} />
     </Stack.Navigator>
   );
 };

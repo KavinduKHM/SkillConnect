@@ -19,22 +19,22 @@ import {
 export const profileApi = {
   // Create a profile
   createProfile: (data: CreateProfileInput): Promise<ApiResponse<Profile>> => {
-    return apiClient.post('/api/profiles', data);
+    return apiClient.post('/profiles', data);
   },
 
   // Get my profile
   getMyProfile: (): Promise<ApiResponse<Profile>> => {
-    return apiClient.get('/api/profiles/me');
+    return apiClient.get('/profiles/me');
   },
 
   // Update profile
   updateProfile: (data: UpdateProfileInput): Promise<ApiResponse<Profile>> => {
-    return apiClient.put('/api/profiles/me', data);
+    return apiClient.put('/profiles/me', data);
   },
 
   // Get public profile
   getPublicProfile: (userId: string): Promise<ApiResponse<Profile>> => {
-    return apiClient.get(`/api/profiles/public/${userId}`);
+    return apiClient.get(`/profiles/public/${userId}`);
   },
 };
 
@@ -48,17 +48,17 @@ export const qualificationApi = {
     profileId: string,
     data: CreateQualificationInput
   ): Promise<ApiResponse<Qualification>> => {
-    return apiClient.post('/api/qualifications', { ...data, profileId });
+    return apiClient.post('/qualifications', { ...data, profileId });
   },
 
   // Get all qualifications
   getQualifications: (): Promise<ApiResponse<Qualification[]>> => {
-    return apiClient.get('/api/qualifications');
+    return apiClient.get('/qualifications');
   },
 
   // Get single qualification
   getQualification: (id: string): Promise<ApiResponse<Qualification>> => {
-    return apiClient.get(`/api/qualifications/${id}`);
+    return apiClient.get(`/qualifications/${id}`);
   },
 
   // Update qualification
@@ -66,12 +66,12 @@ export const qualificationApi = {
     id: string,
     data: UpdateQualificationInput
   ): Promise<ApiResponse<Qualification>> => {
-    return apiClient.put(`/api/qualifications/${id}`, data);
+    return apiClient.put(`/qualifications/${id}`, data);
   },
 
   // Delete qualification
   deleteQualification: (id: string): Promise<ApiResponse<null>> => {
-    return apiClient.delete(`/api/qualifications/${id}`);
+    return apiClient.delete(`/qualifications/${id}`);
   },
 };
 
@@ -82,17 +82,17 @@ export const qualificationApi = {
 export const courseApi = {
   // Create course draft
   createCourse: (data: CreateCourseInput): Promise<ApiResponse<Course>> => {
-    return apiClient.post('/api/courses', data);
+    return apiClient.post('/courses', data);
   },
 
   // Get all my courses
   getMyCourses: (): Promise<ApiResponse<Course[]>> => {
-    return apiClient.get('/api/courses');
+    return apiClient.get('/courses');
   },
 
   // Get single course
   getCourse: (id: string): Promise<ApiResponse<Course>> => {
-    return apiClient.get(`/api/courses/${id}`);
+    return apiClient.get(`/courses/${id}`);
   },
 
   // Update course
@@ -100,16 +100,38 @@ export const courseApi = {
     id: string,
     data: UpdateCourseInput
   ): Promise<ApiResponse<Course>> => {
-    return apiClient.put(`/api/courses/${id}`, data);
+    return apiClient.put(`/courses/${id}`, data);
   },
 
   // Submit course for approval
   submitCourse: (id: string): Promise<ApiResponse<Course>> => {
-    return apiClient.post(`/api/courses/${id}/submit`);
+    return apiClient.post(`/courses/${id}/submit`);
   },
 
   // Delete course (draft only)
   deleteCourse: (id: string): Promise<ApiResponse<null>> => {
-    return apiClient.delete(`/api/courses/${id}`);
+    return apiClient.delete(`/courses/${id}`);
   },
+};
+
+// ============================================================
+// Quiz / Assessment APIs
+// ============================================================
+
+export const quizApi = {
+  createQuizLink: (data: any): Promise<ApiResponse<any>> => {
+    return apiClient.post('/assessments/quizzes', data);
+  },
+  
+  updateQuizLink: (id: string, data: any): Promise<ApiResponse<any>> => {
+    return apiClient.put(`/assessments/quizzes/${id}`, data);
+  },
+
+  deleteQuizLink: (id: string): Promise<ApiResponse<null>> => {
+    return apiClient.delete(`/assessments/quizzes/${id}`);
+  },
+
+  getCourseQuizzes: (courseId: string): Promise<ApiResponse<any[]>> => {
+    return apiClient.get(`/assessments/quizzes/course/${courseId}`);
+  }
 };

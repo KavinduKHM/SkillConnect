@@ -2,7 +2,6 @@ import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import { AdminDashboardScreen } from '../screens/admin/AdminDashboardScreen';
 import { UsersScreen } from '../screens/admin/UsersScreen';
-import { UserDetailScreen } from '../screens/admin/UserDetailScreen';
 import { QualificationsScreen } from '../screens/admin/QualificationsScreen';
 import { CourseApprovalScreen } from '../screens/admin/CourseApprovalScreen';
 import { CategoriesScreen } from '../screens/admin/CategoriesScreen';
@@ -10,6 +9,7 @@ import { SkillsScreen } from '../screens/admin/SkillsScreen';
 import { ProfileScreen } from '../screens/admin/ProfileScreen'; // NEW
 
 const Stack = createStackNavigator();
+const queryClient = new QueryClient();
 
 export const AdminNavigator = () => {
   return (
