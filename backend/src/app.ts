@@ -10,6 +10,11 @@ import profileRoutes from './routes/profile.routes.js';
 import qualificationRoutes from './routes/qualification.routes.js';
 import courseRoutes from './routes/course.routes.js';
 import learnerRoutes from './routes/learner.routes.js';
+import moduleRoutes from './routes/module.routes.js';
+import lessonRoutes from './routes/lesson.routes.js';
+import materialRoutes from './routes/material.routes.js';
+import progressRoutes from './routes/progress.routes.js';
+import recommendationRoutes from './routes/recommendation.routes.js';
 
 dotenv.config();
 
@@ -41,7 +46,13 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/qualification', qualificationRoutes);
 app.use('/api/course', courseRoutes);
+app.use('/api/modules', moduleRoutes);
+app.use('/api/lessons', lessonRoutes);
+app.use('/api/materials', materialRoutes);
+app.use('/api/progress', progressRoutes);
+app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/learner', learnerRoutes);
+
 
 // Error handling
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
