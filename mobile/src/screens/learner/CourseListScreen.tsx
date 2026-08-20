@@ -12,6 +12,7 @@ import {
   ScrollView,
   RefreshControl,
   Image,
+  Modal,
 } from 'react-native';
 import { fetchCourses, fetchCategories } from '../../api/learner.service';
 
@@ -20,61 +21,37 @@ const DEMO_COURSES = [
     id: 'c1',
     title: 'React Native Development',
     description: 'Master cross-platform mobile development using React Native, Expo, and TypeScript.',
-    category: { name: 'Technology' },
-    difficulty: 'Beginner',
-    duration: '20h',
+    category: { name: 'Mobile Development' },
+    difficulty: 'BEGINNER',
+    duration: '5 weeks',
     rating: 4.8,
-    enrolledCount: '3.4k',
+    enrolledCount: '154',
     creator: { id: 's1', name: 'John Perera', verifiedBadge: true },
     thumbnail: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=600&q=80',
   },
   {
     id: 'c2',
-    title: 'Web Development Bootcamp',
-    description: 'Fullstack web development with React, Node.js, Express, and modern databases.',
-    category: { name: 'Technology' },
-    difficulty: 'Beginner',
-    duration: '20h',
-    rating: 4.7,
-    enrolledCount: '1.4k',
-    creator: { id: 's2', name: 'Maria Santos', verifiedBadge: true },
+    title: 'Full-Stack Web Development with React & Node.js',
+    description: 'Fullstack web development with React, Node.js, Express, PostgreSQL, and Prisma.',
+    category: { name: 'Web Development' },
+    difficulty: 'BEGINNER',
+    duration: '8 weeks',
+    rating: 4.9,
+    enrolledCount: '99',
+    creator: { id: 's2', name: 'John Perera', verifiedBadge: true },
     thumbnail: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=600&q=80',
   },
   {
     id: 'c3',
-    title: 'Digital Photography Masterclass',
-    description: 'Learn composition, lighting, camera controls, and digital photo editing.',
-    category: { name: 'Arts' },
-    difficulty: 'All Levels',
-    duration: '10h',
-    rating: 4.6,
-    enrolledCount: '1.4k',
-    creator: { id: 's3', name: 'James Wilson', verifiedBadge: false },
+    title: 'UI/UX Design Masterclass: Figma to Mobile UI',
+    description: 'Learn design systems, wireframing, mobile UI components, and Figma prototypes.',
+    category: { name: 'Software Engineering' },
+    difficulty: 'BEGINNER',
+    duration: '4 weeks',
+    rating: 4.7,
+    enrolledCount: '210',
+    creator: { id: 's3', name: 'Dr. Sarah Jenkins', verifiedBadge: true },
     thumbnail: 'https://images.unsplash.com/photo-1542038784456-1ea8e935640e?auto=format&fit=crop&w=600&q=80',
-  },
-  {
-    id: 'c4',
-    title: 'Business Analytics',
-    description: 'Data analytics, visualization, dashboard building, and business insights.',
-    category: { name: 'Business' },
-    difficulty: 'Intermediate',
-    duration: '15h',
-    rating: 4.8,
-    enrolledCount: '1.4k',
-    creator: { id: 's4', name: 'Priya Sharma', verifiedBadge: true },
-    thumbnail: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=600&q=80',
-  },
-  {
-    id: 'c5',
-    title: 'Graphic Design Essentials',
-    description: 'Color theory, typography, branding, and digital illustration workflow.',
-    category: { name: 'Arts' },
-    difficulty: 'Beginner',
-    duration: '8h',
-    rating: 4.5,
-    enrolledCount: '1.4k',
-    creator: { id: 's5', name: 'Aisha Mohammed', verifiedBadge: false },
-    thumbnail: 'https://images.unsplash.com/photo-1626785774573-4b799315345d?auto=format&fit=crop&w=600&q=80',
   },
 ];
 
@@ -84,6 +61,11 @@ export default function CourseListScreen({ navigation }: any) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedDifficulty, setSelectedDifficulty] = useState('All');
+  const [selectedDuration, setSelectedDuration] = useState('All');
+  const [selectedRating, setSelectedRating] = useState('All');
+
+  const [activeModal, setActiveModal] = useState<'CATEGORY' | 'DIFFICULTY' | 'DURATION' | 'RATING' | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -91,7 +73,11 @@ export default function CourseListScreen({ navigation }: any) {
     try {
       setLoading(true);
       const [coursesData, categoriesData] = await Promise.all([
-        fetchCourses(searchQuery, selectedCategory === 'All' ? undefined : selectedCategory),
+        fetchCourses(
+          searchQuery,
+          selectedCategory === 'All' ? undefined : selectedCategory,
+          selectedDifficulty === 'All' ? undefined : selectedDifficulty
+        ),
         fetchCategories().catch(() => []),
       ]);
 
@@ -109,7 +95,7 @@ export default function CourseListScreen({ navigation }: any) {
 
   useEffect(() => {
     loadData();
-  }, [selectedCategory]);
+  }, [selectedCategory, selectedDifficulty]);
 
   const handleSearchSubmit = () => {
     loadData();
@@ -120,10 +106,31 @@ export default function CourseListScreen({ navigation }: any) {
       !searchQuery ||
       course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (course.description && course.description.toLowerCase().includes(searchQuery.toLowerCase()));
-    const matchesCat = selectedCategory === 'All' || course.category?.name === selectedCategory || course.categoryId === selectedCategory;
-    const matchesDiff = selectedDifficulty === 'All' || course.difficulty === selectedDifficulty;
-    return matchesSearch && matchesCat && matchesDiff;
+
+    const matchesCat =
+      selectedCategory === 'All' ||
+      course.category?.name === selectedCategory ||
+      course.categoryId === selectedCategory;
+
+    const matchesDiff =
+      selectedDifficulty === 'All' ||
+      course.difficulty?.toUpperCase() === selectedDifficulty.toUpperCase();
+
+    const matchesRating =
+      selectedRating === 'All' ||
+      (selectedRating === '4.8+' && (course.rating || 4.8) >= 4.8) ||
+      (selectedRating === '4.5+' && (course.rating || 4.8) >= 4.5);
+
+    return matchesSearch && matchesCat && matchesDiff && matchesRating;
   });
+
+  const clearAllFilters = () => {
+    setSelectedCategory('All');
+    setSelectedDifficulty('All');
+    setSelectedDuration('All');
+    setSelectedRating('All');
+    setSearchQuery('');
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -154,56 +161,60 @@ export default function CourseListScreen({ navigation }: any) {
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dropdownScroll}>
           <TouchableOpacity
             style={[styles.dropdownPill, selectedCategory !== 'All' && styles.dropdownPillActive]}
-            onPress={() => setSelectedCategory(selectedCategory === 'All' ? 'Technology' : 'All')}
+            onPress={() => setActiveModal('CATEGORY')}
           >
             <Text style={[styles.dropdownText, selectedCategory !== 'All' && styles.dropdownTextActive]}>
-              Category ▾
+              Category: {selectedCategory === 'All' ? 'All' : selectedCategory} ▾
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.dropdownPill, selectedDifficulty !== 'All' && styles.dropdownPillActive]}
-            onPress={() => setSelectedDifficulty(selectedDifficulty === 'All' ? 'Beginner' : 'All')}
+            onPress={() => setActiveModal('DIFFICULTY')}
           >
             <Text style={[styles.dropdownText, selectedDifficulty !== 'All' && styles.dropdownTextActive]}>
-              Difficulty ▾
+              Difficulty: {selectedDifficulty === 'All' ? 'All' : selectedDifficulty} ▾
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.dropdownPill}>
-            <Text style={styles.dropdownText}>Duration ▾</Text>
+          <TouchableOpacity
+            style={[styles.dropdownPill, selectedDuration !== 'All' && styles.dropdownPillActive]}
+            onPress={() => setActiveModal('DURATION')}
+          >
+            <Text style={[styles.dropdownText, selectedDuration !== 'All' && styles.dropdownTextActive]}>
+              Duration: {selectedDuration === 'All' ? 'All' : selectedDuration} ▾
+            </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.dropdownPill}>
-            <Text style={styles.dropdownText}>Rating ▾</Text>
+          <TouchableOpacity
+            style={[styles.dropdownPill, selectedRating !== 'All' && styles.dropdownPillActive]}
+            onPress={() => setActiveModal('RATING')}
+          >
+            <Text style={[styles.dropdownText, selectedRating !== 'All' && styles.dropdownTextActive]}>
+              Rating: {selectedRating === 'All' ? 'All' : selectedRating} ▾
+            </Text>
           </TouchableOpacity>
         </ScrollView>
 
         {/* Active Filter Tags */}
-        {(selectedCategory !== 'All' || selectedDifficulty !== 'All') && (
+        {(selectedCategory !== 'All' || selectedDifficulty !== 'All' || selectedRating !== 'All') && (
           <View style={styles.activeTagsRow}>
             {selectedCategory !== 'All' && (
-              <TouchableOpacity
-                style={styles.activeTag}
-                onPress={() => setSelectedCategory('All')}
-              >
+              <TouchableOpacity style={styles.activeTag} onPress={() => setSelectedCategory('All')}>
                 <Text style={styles.activeTagText}>{selectedCategory} ⊗</Text>
               </TouchableOpacity>
             )}
             {selectedDifficulty !== 'All' && (
-              <TouchableOpacity
-                style={styles.activeTag}
-                onPress={() => setSelectedDifficulty('All')}
-              >
+              <TouchableOpacity style={styles.activeTag} onPress={() => setSelectedDifficulty('All')}>
                 <Text style={styles.activeTagText}>{selectedDifficulty} ⊗</Text>
               </TouchableOpacity>
             )}
-            <TouchableOpacity
-              onPress={() => {
-                setSelectedCategory('All');
-                setSelectedDifficulty('All');
-              }}
-            >
+            {selectedRating !== 'All' && (
+              <TouchableOpacity style={styles.activeTag} onPress={() => setSelectedRating('All')}>
+                <Text style={styles.activeTagText}>{selectedRating} ⭐ ⊗</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity onPress={clearAllFilters}>
               <Text style={styles.clearAllText}>Clear All</Text>
             </TouchableOpacity>
           </View>
@@ -267,19 +278,114 @@ export default function CourseListScreen({ navigation }: any) {
                 <View style={styles.metaRow}>
                   <Text style={styles.ratingText}>⭐ {item.rating || 4.8}</Text>
                   <View style={styles.difficultyBadge}>
-                    <Text style={styles.difficultyText}>{item.difficulty || 'Beginner'}</Text>
+                    <Text style={styles.difficultyText}>{item.difficulty || 'BEGINNER'}</Text>
                   </View>
                 </View>
 
                 {/* Duration & Learners */}
                 <Text style={styles.statsText}>
-                  {item.duration || '20h'} • {item.enrolledCount || '1.4k'} learners
+                  {item.duration || '5 weeks'} • {item.enrolledCount || '154'} learners
                 </Text>
               </View>
             </TouchableOpacity>
           )}
         />
       )}
+
+      {/* FILTER SELECTION MODALS */}
+      <Modal visible={!!activeModal} transparent animationType="fade">
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setActiveModal(null)}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>
+              Select {activeModal === 'CATEGORY' ? 'Category' : activeModal === 'DIFFICULTY' ? 'Difficulty' : activeModal === 'DURATION' ? 'Duration' : 'Rating'}
+            </Text>
+
+            {activeModal === 'CATEGORY' && (
+              <View style={styles.optionList}>
+                {['All', 'Web Development', 'Mobile Development', 'Software Engineering', 'Arts & Design', 'Business'].map((cat) => (
+                  <TouchableOpacity
+                    key={cat}
+                    style={styles.optionItem}
+                    onPress={() => {
+                      setSelectedCategory(cat);
+                      setActiveModal(null);
+                    }}
+                  >
+                    <Text style={[styles.optionText, selectedCategory === cat && styles.optionTextActive]}>
+                      {cat}
+                    </Text>
+                    {selectedCategory === cat && <Text style={styles.checkmark}>✓</Text>}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            {activeModal === 'DIFFICULTY' && (
+              <View style={styles.optionList}>
+                {['All', 'BEGINNER', 'INTERMEDIATE', 'ADVANCED'].map((diff) => (
+                  <TouchableOpacity
+                    key={diff}
+                    style={styles.optionItem}
+                    onPress={() => {
+                      setSelectedDifficulty(diff);
+                      setActiveModal(null);
+                    }}
+                  >
+                    <Text style={[styles.optionText, selectedDifficulty === diff && styles.optionTextActive]}>
+                      {diff}
+                    </Text>
+                    {selectedDifficulty === diff && <Text style={styles.checkmark}>✓</Text>}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            {activeModal === 'DURATION' && (
+              <View style={styles.optionList}>
+                {['All', 'Short (< 5 wks)', 'Long (5+ wks)'].map((dur) => (
+                  <TouchableOpacity
+                    key={dur}
+                    style={styles.optionItem}
+                    onPress={() => {
+                      setSelectedDuration(dur);
+                      setActiveModal(null);
+                    }}
+                  >
+                    <Text style={[styles.optionText, selectedDuration === dur && styles.optionTextActive]}>
+                      {dur}
+                    </Text>
+                    {selectedDuration === dur && <Text style={styles.checkmark}>✓</Text>}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            {activeModal === 'RATING' && (
+              <View style={styles.optionList}>
+                {['All', '4.8+', '4.5+'].map((rat) => (
+                  <TouchableOpacity
+                    key={rat}
+                    style={styles.optionItem}
+                    onPress={() => {
+                      setSelectedRating(rat);
+                      setActiveModal(null);
+                    }}
+                  >
+                    <Text style={[styles.optionText, selectedRating === rat && styles.optionTextActive]}>
+                      {rat === 'All' ? 'All Ratings' : `${rat} ⭐ Stars`}
+                    </Text>
+                    {selectedRating === rat && <Text style={styles.checkmark}>✓</Text>}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            <TouchableOpacity style={styles.closeBtn} onPress={() => setActiveModal(null)}>
+              <Text style={styles.closeBtnText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -358,4 +464,34 @@ const styles = StyleSheet.create({
   difficultyBadge: { backgroundColor: '#F1F5F9', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
   difficultyText: { fontSize: 10, color: '#475569', fontWeight: '600' },
   statsText: { fontSize: 11, color: '#94A3B8' },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 340,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 20,
+  },
+  modalTitle: { fontSize: 18, fontWeight: '800', color: '#0F172A', marginBottom: 16 },
+  optionList: { gap: 4, marginBottom: 16 },
+  optionItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  optionText: { fontSize: 14, color: '#334155', fontWeight: '500' },
+  optionTextActive: { color: '#064E3B', fontWeight: '700' },
+  checkmark: { fontSize: 16, color: '#15803D', fontWeight: '700' },
+  closeBtn: { backgroundColor: '#064E3B', paddingVertical: 12, borderRadius: 12, alignItems: 'center' },
+  closeBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
 });

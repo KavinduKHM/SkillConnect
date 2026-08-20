@@ -176,6 +176,7 @@ export const getCourseDetails = async (courseId: string, learnerId?: string) => 
       },
       include: {
         courseProgress: true,
+        lessonProgress: true,
       },
     });
   }
@@ -384,7 +385,8 @@ export const getLessonContent = async (learnerId: string, lessonId: string) => {
 export const markLessonComplete = async (
   learnerId: string,
   courseId: string,
-  lessonId: string
+  lessonId: string,
+  targetCompleted?: boolean
 ) => {
   const enrollment = await prisma.enrollment.findUnique({
     where: {
@@ -407,6 +409,23 @@ export const markLessonComplete = async (
     throw new Error('Enrollment not found or cancelled');
   }
 
+  // Find existing lesson progress
+  const existingProgress = await prisma.lessonProgress.findUnique({
+    where: {
+      enrollmentId_lessonId: {
+        enrollmentId: enrollment.id,
+        lessonId,
+      },
+    },
+  });
+
+  const nextCompletedState =
+    targetCompleted !== undefined
+      ? targetCompleted
+      : existingProgress
+      ? !existingProgress.completed
+      : true;
+
   // Upsert LessonProgress
   await prisma.lessonProgress.upsert({
     where: {
@@ -416,14 +435,14 @@ export const markLessonComplete = async (
       },
     },
     update: {
-      completed: true,
-      completedAt: new Date(),
+      completed: nextCompletedState,
+      completedAt: nextCompletedState ? new Date() : null,
     },
     create: {
       enrollmentId: enrollment.id,
       lessonId,
-      completed: true,
-      completedAt: new Date(),
+      completed: nextCompletedState,
+      completedAt: nextCompletedState ? new Date() : null,
     },
   });
 

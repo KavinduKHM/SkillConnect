@@ -76,8 +76,8 @@ export const fetchLessonContent = async (lessonId: string) => {
   return response.data;
 };
 
-export const completeLesson = async (courseId: string, lessonId: string) => {
-  const response = await client.post('/learner/progress/complete', { courseId, lessonId });
+export const completeLesson = async (courseId: string, lessonId: string, completed?: boolean) => {
+  const response = await client.post('/learner/progress/complete', { courseId, lessonId, completed });
   return response.data;
 };
 

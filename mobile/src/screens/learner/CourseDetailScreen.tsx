@@ -30,6 +30,12 @@ export default function CourseDetailScreen({ route, navigation }: any) {
       if (res?.course) {
         setCourseData(res.course);
         setUserEnrollment(res.userEnrollment);
+        if (res.userEnrollment?.lessonProgress) {
+          const doneIds = res.userEnrollment.lessonProgress
+            .filter((lp: any) => lp.completed)
+            .map((lp: any) => lp.lessonId);
+          setCompletedLessonIds(doneIds);
+        }
       }
     } catch (err) {
       console.log('Error loading course details from API, using fallback data:', err);
@@ -45,11 +51,15 @@ export default function CourseDetailScreen({ route, navigation }: any) {
   const handleToggleLesson = async (lessonId: string) => {
     try {
       setActionLoading(true);
-      await completeLesson(courseId, lessonId);
-      if (completedLessonIds.includes(lessonId)) {
-        setCompletedLessonIds(completedLessonIds.filter((id) => id !== lessonId));
-      } else {
+      const isCurrentlyDone = completedLessonIds.includes(lessonId);
+      const targetState = !isCurrentlyDone;
+
+      await completeLesson(courseId, lessonId, targetState);
+
+      if (targetState) {
         setCompletedLessonIds([...completedLessonIds, lessonId]);
+      } else {
+        setCompletedLessonIds(completedLessonIds.filter((id) => id !== lessonId));
       }
       loadDetails();
     } catch (err: any) {
@@ -299,18 +309,33 @@ export default function CourseDetailScreen({ route, navigation }: any) {
           <ActivityIndicator color="#064E3B" />
         ) : isEnrolled ? (
           <View style={styles.enrolledActionRow}>
-            <TouchableOpacity
-              style={styles.continueBtn}
-              onPress={() =>
-                navigation?.navigate('LessonPlayer', {
-                  courseId,
-                  lessonId: course.modules?.[0]?.lessons?.[0]?.id || 'l1',
-                  lessonTitle: course.title,
-                })
-              }
-            >
-              <Text style={styles.actionBtnText}>Continue Learning ▶</Text>
-            </TouchableOpacity>
+            {progressPct >= 100 ? (
+              <TouchableOpacity
+                style={styles.continueBtn}
+                onPress={() =>
+                  Alert.alert(
+                    'Completion Request Sent! 🎓',
+                    'Your course completion request has been submitted to your instructor. Once verified, your course certificate will be available under the Certificates tab!',
+                    [{ text: 'View My Dashboard', onPress: () => navigation?.navigate('MyLearningTab') }]
+                  )
+                }
+              >
+                <Text style={styles.actionBtnText}>Send Completion Request 🎓</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={styles.continueBtn}
+                onPress={() =>
+                  navigation?.navigate('LessonPlayer', {
+                    courseId,
+                    lessonId: course.modules?.[0]?.lessons?.[0]?.id || 'l1',
+                    lessonTitle: course.title,
+                  })
+                }
+              >
+                <Text style={styles.actionBtnText}>Continue Learning ▶</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity style={styles.cancelBtn} onPress={handleCancelEnrollment}>
               <Text style={styles.cancelBtnText}>Cancel</Text>
             </TouchableOpacity>

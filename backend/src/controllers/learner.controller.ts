@@ -140,16 +140,16 @@ export const getLesson = async (req: any, res: Response): Promise<void> => {
 export const completeLesson = async (req: any, res: Response): Promise<void> => {
   try {
     const learnerId = req.user.id;
-    const { courseId, lessonId } = req.body;
+    const { courseId, lessonId, completed } = req.body;
 
     if (!courseId || !lessonId) {
       res.status(400).json({ error: 'courseId and lessonId are required' });
       return;
     }
 
-    const result = await markLessonComplete(learnerId, courseId, lessonId);
+    const result = await markLessonComplete(learnerId, courseId, lessonId, completed);
     res.status(200).json({
-      message: 'Lesson marked as completed',
+      message: 'Lesson progress updated',
       progress: result,
     });
   } catch (error: any) {
