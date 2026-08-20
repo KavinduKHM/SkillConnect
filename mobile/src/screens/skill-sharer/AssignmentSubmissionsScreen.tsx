@@ -34,15 +34,23 @@ export const AssignmentSubmissionsScreen = ({ route, navigation }: any) => {
     }
   }, [assignmentId]);
 
+  const showNotification = (title: string, message: string) => {
+    if (Platform.OS === 'web') {
+      window.alert(`${title}: ${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
+
   const fetchSubmissions = async () => {
     try {
       setLoading(true);
       const res: any = await assignmentApi.getAssignmentSubmissions(assignmentId);
       const data = res?.submissions || res?.data?.submissions || res?.data || [];
       setSubmissions(Array.isArray(data) ? data : []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching submissions:', error);
-      Alert.alert('Error', 'Failed to load submissions.');
+      showNotification('Error', error?.error || error?.response?.data?.error || 'Failed to load submissions.');
     } finally {
       setLoading(false);
     }
@@ -58,7 +66,7 @@ export const AssignmentSubmissionsScreen = ({ route, navigation }: any) => {
   const handleSaveGrade = async () => {
     if (!selectedSubmission) return;
     if (!grade.trim()) {
-      Alert.alert('Validation Error', 'Grade is required.');
+      showNotification('Validation Error', 'Grade is required.');
       return;
     }
 
@@ -69,18 +77,26 @@ export const AssignmentSubmissionsScreen = ({ route, navigation }: any) => {
         feedback: feedback.trim(),
       });
       
-      Alert.alert('Success', 'Grade saved successfully!');
+      showNotification('Success', 'Grade saved successfully!');
       setModalVisible(false);
       fetchSubmissions();
     } catch (error: any) {
       console.error('Error saving grade:', error);
-      Alert.alert('Error', error?.response?.data?.error || 'Failed to save grade.');
+      showNotification('Error', error?.error || error?.response?.data?.error || 'Failed to save grade.');
     } finally {
       setIsSaving(false);
     }
   };
 
+  const getFileUrl = (url: string) => {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    return `http://localhost:5000${url.startsWith('/') ? '' : '/'}${url}`;
+  };
+
   const renderSubmission = ({ item }: { item: AssignmentSubmission }) => {
+    const isGraded = item.status === 'GRADED' || item.status === 'COMPLETED' || (item.grade !== null && item.grade !== undefined);
+
     return (
       <View style={styles.card}>
         <View style={styles.cardHeader}>
@@ -95,9 +111,9 @@ export const AssignmentSubmissionsScreen = ({ route, navigation }: any) => {
               </Text>
             </View>
           </View>
-          <View style={[styles.statusBadge, item.status === 'GRADED' ? styles.statusGraded : styles.statusPending]}>
-            <Text style={[styles.statusText, item.status === 'GRADED' ? styles.statusTextGraded : styles.statusTextPending]}>
-              {item.status || 'SUBMITTED'}
+          <View style={[styles.statusBadge, isGraded ? styles.statusGraded : styles.statusPending]}>
+            <Text style={[styles.statusText, isGraded ? styles.statusTextGraded : styles.statusTextPending]}>
+              {isGraded ? 'GRADED' : (item.status || 'SUBMITTED')}
             </Text>
           </View>
         </View>
@@ -105,13 +121,13 @@ export const AssignmentSubmissionsScreen = ({ route, navigation }: any) => {
         <View style={styles.cardBody}>
           {item.textSubmission && (
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Text:</Text>
+              <Text style={styles.detailLabel}>Text Notes:</Text>
               <Text style={styles.detailValue}>{item.textSubmission}</Text>
             </View>
           )}
           {item.githubLink && (
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Link:</Text>
+              <Text style={styles.detailLabel}>Project Link:</Text>
               <TouchableOpacity onPress={() => Linking.openURL(item.githubLink!)}>
                 <Text style={styles.linkValue}>{item.githubLink}</Text>
               </TouchableOpacity>
@@ -119,12 +135,30 @@ export const AssignmentSubmissionsScreen = ({ route, navigation }: any) => {
           )}
           {item.fileUrls && item.fileUrls.length > 0 && (
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Files:</Text>
-              {item.fileUrls.map((url, idx) => (
-                <TouchableOpacity key={idx} onPress={() => Linking.openURL(url)}>
-                  <Text style={styles.linkValue}>View File {idx + 1}</Text>
-                </TouchableOpacity>
-              ))}
+              <Text style={styles.detailLabel}>Attached Files ({item.fileUrls.length}):</Text>
+              {item.fileUrls.map((url, idx) => {
+                const fullUrl = getFileUrl(url);
+                const fileName = url.split('/').pop() || `File ${idx + 1}`;
+                return (
+                  <TouchableOpacity
+                    key={idx}
+                    style={styles.fileLinkBtn}
+                    onPress={() => Linking.openURL(fullUrl)}
+                  >
+                    <Ionicons name="document-attach-outline" size={18} color="#4F46E5" />
+                    <Text style={styles.fileLinkText} numberOfLines={1}>
+                      {fileName}
+                    </Text>
+                    <Ionicons name="download-outline" size={16} color="#4F46E5" />
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+          {item.feedback && (
+            <View style={[styles.detailRow, { marginTop: 6, backgroundColor: '#F9FAFB', padding: 8, borderRadius: 6 }]}>
+              <Text style={styles.detailLabel}>Feedback Given:</Text>
+              <Text style={[styles.detailValue, { fontStyle: 'italic', color: '#4B5563' }]}>{item.feedback}</Text>
             </View>
           )}
         </View>
@@ -140,7 +174,7 @@ export const AssignmentSubmissionsScreen = ({ route, navigation }: any) => {
             style={styles.gradeBtn}
             onPress={() => handleOpenGradeModal(item)}
           >
-            <Text style={styles.gradeBtnText}>{item.grade !== null ? 'Update Grade' : 'Grade Now'}</Text>
+            <Text style={styles.gradeBtnText}>{item.grade !== null && item.grade !== undefined ? 'Update Grade' : 'Grade Now'}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -331,6 +365,24 @@ const styles = StyleSheet.create({
   detailLabel: { fontSize: 14, fontWeight: '600', color: '#4B5563', marginBottom: 4 },
   detailValue: { fontSize: 14, color: '#111827' },
   linkValue: { fontSize: 14, color: '#4F46E5', textDecorationLine: 'underline' },
+  fileLinkBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 6,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  fileLinkText: {
+    flex: 1,
+    marginLeft: 8,
+    marginRight: 8,
+    fontSize: 13,
+    color: '#4F46E5',
+    fontWeight: '500',
+  },
   
   cardFooter: {
     flexDirection: 'row',

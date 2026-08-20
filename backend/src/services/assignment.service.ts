@@ -255,3 +255,42 @@ export const submitAssignment = async (
 
   return submission;
 };
+
+export const deleteLearnerSubmission = async (learnerId: string, submissionId: string) => {
+  const submission = await prisma.assignmentSubmission.findUnique({
+    where: { id: submissionId },
+    include: { assignment: true }
+  });
+
+  if (!submission) {
+    throw new Error('Submission not found');
+  }
+
+  if (submission.learnerId !== learnerId) {
+    throw new Error('You do not have permission to delete this submission');
+  }
+
+  if (submission.status === AssignmentStatus.COMPLETED || submission.grade !== null) {
+    throw new Error('Cannot delete a graded submission');
+  }
+
+  await prisma.assignmentSubmission.delete({
+    where: { id: submissionId },
+  });
+
+  // If this was their only submission (or all submissions), we should decrement count.
+  // Actually, wait, let's just delete the one submission. The learner can still have other versions,
+  // but if we delete the last one, decrement count.
+  const remainingSubmissions = await prisma.assignmentSubmission.count({
+    where: { learnerId, assignmentId: submission.assignmentId }
+  });
+
+  if (remainingSubmissions === 0) {
+    await prisma.assignment.update({
+      where: { id: submission.assignmentId },
+      data: { submissionCount: { decrement: 1 } },
+    });
+  }
+
+  return { success: true };
+};

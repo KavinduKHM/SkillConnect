@@ -153,6 +153,10 @@ export const assignmentApi = {
     return apiClient.delete(`/assignments/${id}`);
   },
 
+  getCourseAssignments: (courseId: string): Promise<ApiResponse<any[]>> => {
+    return apiClient.get(`/assignments/course/${courseId}`);
+  },
+
   getAssignmentSubmissions: (id: string): Promise<ApiResponse<any[]>> => {
     return apiClient.get(`/assignments/${id}/submissions`);
   },

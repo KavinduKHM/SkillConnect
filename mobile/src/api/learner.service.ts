@@ -113,3 +113,17 @@ export const submitAssignmentWork = async (id: string, data: { fileUrls?: string
   const response: any = await client.post(`/assignments/${id}/submit`, data);
   return response;
 };
+
+export const uploadAssessmentFiles = async (formData: FormData) => {
+  const response: any = await client.post('/assessments/upload', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response;
+};
+
+export const deleteAssignmentSubmission = async (submissionId: string) => {
+  const response: any = await client.delete(`/assignments/submissions/${submissionId}`);
+  return response;
+};

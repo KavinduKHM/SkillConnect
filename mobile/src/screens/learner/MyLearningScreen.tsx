@@ -12,6 +12,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { fetchMyLearning, fetchMyQuizzes } from '../../api/learner.service';
 
 export default function MyLearningScreen({ navigation }: any) {
@@ -220,7 +221,9 @@ export default function MyLearningScreen({ navigation }: any) {
             </View>
           }
           renderItem={({ item }) => {
-            const status = item.mySubmission ? item.mySubmission.status : 'PENDING';
+            const hasSubmission = Boolean(item.mySubmission);
+            const isGraded = Boolean(item.mySubmission && (item.mySubmission.status === 'COMPLETED' || item.mySubmission.status === 'GRADED' || (item.mySubmission.grade !== null && item.mySubmission.grade !== undefined)));
+            const status = isGraded ? 'GRADED' : (hasSubmission ? (item.mySubmission.status || 'SUBMITTED') : 'PENDING');
             const courseName = item.course?.title || 'Unknown Course';
             const dueDate = item.deadline ? new Date(item.deadline).toLocaleDateString() : 'No deadline';
             
@@ -228,21 +231,31 @@ export default function MyLearningScreen({ navigation }: any) {
               <View style={styles.card}>
                 <View style={styles.cardHeader}>
                   <Text style={styles.courseTitle}>{courseName}</Text>
-                  <View style={{ backgroundColor: status === 'PENDING' ? '#FEF3C7' : '#D1FAE5', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
-                    <Text style={{ color: status === 'PENDING' ? '#D97706' : '#059669', fontSize: 11, fontWeight: '700' }}>
+                  <View style={{ backgroundColor: isGraded ? '#D1FAE5' : status === 'PENDING' ? '#FEF3C7' : '#EEF2FF', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                    <Text style={{ color: isGraded ? '#059669' : status === 'PENDING' ? '#D97706' : '#4F46E5', fontSize: 11, fontWeight: '700' }}>
                       {status}
                     </Text>
                   </View>
                 </View>
                 <Text style={styles.courseTitle}>{item.title}</Text>
+                
+                {isGraded && item.mySubmission.grade !== null && item.mySubmission.grade !== undefined ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, backgroundColor: '#F0FDF4', padding: 8, borderRadius: 6 }}>
+                    <Ionicons name="ribbon-outline" size={16} color="#059669" style={{ marginRight: 6 }} />
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#065F46' }}>
+                      Grade: {item.mySubmission.grade} / {item.maxMarks}
+                    </Text>
+                  </View>
+                ) : null}
+
                 <Text style={{ fontSize: 13, color: '#6B7280', marginBottom: 12 }}>Due Date: {dueDate}</Text>
                 
                 <TouchableOpacity
-                  style={[styles.continueBtn, { backgroundColor: '#EEF2FF' }]}
+                  style={[styles.continueBtn, { backgroundColor: isGraded ? '#F0FDF4' : '#EEF2FF' }]}
                   onPress={() => navigation?.navigate('AssignmentDetail', { assignmentId: item.id })}
                 >
-                  <Text style={[styles.continueBtnText, { color: '#4F46E5' }]}>
-                    View / Submit
+                  <Text style={[styles.continueBtnText, { color: isGraded ? '#059669' : '#4F46E5' }]}>
+                    {isGraded ? 'View Grade & Feedback →' : hasSubmission ? 'View Submission →' : 'Submit Assignment →'}
                   </Text>
                 </TouchableOpacity>
               </View>

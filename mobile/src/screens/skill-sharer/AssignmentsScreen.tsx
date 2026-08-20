@@ -143,36 +143,48 @@ export const AssignmentsScreen = ({ navigation }: any) => {
     setModalVisible(true);
   };
 
+  const showNotification = (title: string, message: string) => {
+    if (Platform.OS === 'web') {
+      window.alert(`${title}: ${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
+
   const handleDeleteAssignment = (assignment: Assignment) => {
-    Alert.alert(
-      'Delete Assignment',
-      `Are you sure you want to delete "${assignment.title}"? This cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await assignmentApi.deleteAssignment(assignment.id);
-              Alert.alert('Deleted', 'Assignment removed successfully.');
-              fetchCoursesAndAssignments();
-            } catch (error: any) {
-              Alert.alert('Error', error?.response?.data?.error || 'Failed to delete assignment.');
-            }
-          },
-        },
-      ]
-    );
+    const doDelete = async () => {
+      try {
+        await assignmentApi.deleteAssignment(assignment.id);
+        showNotification('Deleted', 'Assignment removed successfully.');
+        fetchCoursesAndAssignments();
+      } catch (error: any) {
+        showNotification('Error', error?.error || error?.response?.data?.error || 'Failed to delete assignment.');
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Are you sure you want to delete "${assignment.title}"? This cannot be undone.`)) {
+        doDelete();
+      }
+    } else {
+      Alert.alert(
+        'Delete Assignment',
+        `Are you sure you want to delete "${assignment.title}"? This cannot be undone.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Delete', style: 'destructive', onPress: doDelete },
+        ]
+      );
+    }
   };
 
   const handleSave = async () => {
     if (!selectedCourseId) {
-      Alert.alert('Validation Error', 'Please select a course for this assignment.');
+      showNotification('Validation Error', 'Please select a course for this assignment.');
       return;
     }
     if (!title.trim()) {
-      Alert.alert('Validation Error', 'Assignment title is required.');
+      showNotification('Validation Error', 'Assignment title is required.');
       return;
     }
 
@@ -194,17 +206,18 @@ export const AssignmentsScreen = ({ navigation }: any) => {
 
       if (isEditing && currentAssignmentId) {
         await assignmentApi.updateAssignment(currentAssignmentId, payload);
-        Alert.alert('Success', 'Assignment updated successfully!');
+        showNotification('Success', 'Assignment updated successfully!');
       } else {
         await assignmentApi.createAssignment(payload);
-        Alert.alert('Success', 'New assignment created successfully!');
+        showNotification('Success', 'New assignment created successfully!');
       }
 
       setModalVisible(false);
       fetchCoursesAndAssignments();
     } catch (error: any) {
       console.error('Error saving assignment:', error);
-      Alert.alert('Error', error?.response?.data?.error || error?.message || 'Failed to save assignment');
+      const errorMsg = error?.error || error?.response?.data?.error || error?.message || 'Failed to save assignment';
+      showNotification('Error', errorMsg);
     } finally {
       setIsSaving(false);
     }

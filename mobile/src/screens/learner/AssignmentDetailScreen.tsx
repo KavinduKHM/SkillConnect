@@ -12,7 +12,22 @@ import {
   Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { fetchSingleAssignment, submitAssignmentWork, fetchLearnerSubmissions } from '../../api/learner.service';
+import * as DocumentPicker from 'expo-document-picker';
+import {
+  fetchSingleAssignment,
+  submitAssignmentWork,
+  fetchLearnerSubmissions,
+  uploadAssessmentFiles,
+  deleteAssignmentSubmission,
+} from '../../api/learner.service';
+
+interface LocalFile {
+  name: string;
+  size?: number;
+  uri: string;
+  mimeType?: string;
+  file?: any;
+}
 
 export default function AssignmentDetailScreen({ route, navigation }: any) {
   const { assignmentId } = route.params || {};
@@ -23,7 +38,10 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
   // Form
   const [textSubmission, setTextSubmission] = useState('');
   const [githubLink, setGithubLink] = useState('');
+  const [selectedFiles, setSelectedFiles] = useState<LocalFile[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<string>('');
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     if (assignmentId) {
@@ -43,36 +61,168 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
       const subs = subRes?.submissions || subRes?.data || [];
       if (subs.length > 0) {
         setSubmission(subs[0]);
+        setIsEditing(false); // reset editing state on load
+      } else {
+        setSubmission(null);
       }
     } catch (error) {
       console.error('Error fetching assignment details:', error);
-      Alert.alert('Error', 'Could not load assignment details.');
+      showNotification('Error', 'Could not load assignment details.');
     } finally {
       setLoading(false);
     }
   };
 
+  const showNotification = (title: string, message: string) => {
+    if (Platform.OS === 'web') {
+      window.alert(`${title}: ${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
+
+  const formatFileSize = (bytes?: number) => {
+    if (!bytes) return '';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const getFileUrl = (url: string) => {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    return `http://localhost:5000${url.startsWith('/') ? '' : '/'}${url}`;
+  };
+
+  const handlePickDocument = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: '*/*',
+        multiple: true,
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const newFiles: LocalFile[] = result.assets.map((asset) => ({
+          name: asset.name,
+          size: asset.size,
+          uri: asset.uri,
+          mimeType: asset.mimeType,
+          file: (asset as any).file,
+        }));
+
+        setSelectedFiles((prev) => {
+          const combined = [...prev, ...newFiles];
+          if (combined.length > 5) {
+            showNotification('Limit Reached', 'You can upload a maximum of 5 files.');
+            return combined.slice(0, 5);
+          }
+          return combined;
+        });
+      }
+    } catch (err: any) {
+      console.error('Error picking document:', err);
+      showNotification('Error', 'Failed to pick file.');
+    }
+  };
+
+  const handleRemoveFile = (index: number) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async () => {
-    if (!textSubmission.trim() && !githubLink.trim()) {
-      Alert.alert('Validation Error', 'Please provide either text submission or a GitHub link.');
+    if (!textSubmission.trim() && !githubLink.trim() && selectedFiles.length === 0) {
+      showNotification('Validation Error', 'Please upload a file, enter text notes, or provide a GitHub link.');
       return;
     }
 
     try {
       setIsSubmitting(true);
+      let uploadedFileUrls: string[] = [];
+
+      if (selectedFiles.length > 0) {
+        setUploadStatus('Uploading files to Cloudinary...');
+        const formData = new FormData();
+
+        for (const file of selectedFiles) {
+          if (Platform.OS === 'web' && file.file) {
+            formData.append('files', file.file, file.name);
+          } else if (Platform.OS === 'web') {
+            const res = await fetch(file.uri);
+            const blob = await res.blob();
+            formData.append('files', blob, file.name);
+          } else {
+            formData.append('files', {
+              uri: file.uri,
+              name: file.name,
+              type: file.mimeType || 'application/octet-stream',
+            } as any);
+          }
+        }
+
+        const uploadRes: any = await uploadAssessmentFiles(formData);
+        const filesData = uploadRes?.files || uploadRes?.data?.files || uploadRes?.data || [];
+        uploadedFileUrls = (Array.isArray(filesData) ? filesData : []).map((f: any) => f.url || f);
+      }
+
+      setUploadStatus('Saving submission...');
       await submitAssignmentWork(assignmentId, {
         textSubmission: textSubmission.trim() || undefined,
         githubLink: githubLink.trim() || undefined,
-        // Assuming file upload is not fully implemented in the UI yet, we can add it later
+        fileUrls: uploadedFileUrls.length > 0 ? uploadedFileUrls : undefined,
       });
-      
-      Alert.alert('Success', 'Assignment submitted successfully!');
+
+      showNotification('Success', 'Assignment submitted successfully!');
+      setSelectedFiles([]);
+      setTextSubmission('');
+      setGithubLink('');
       loadData();
     } catch (error: any) {
       console.error('Error submitting assignment:', error);
-      Alert.alert('Error', error?.response?.data?.error || 'Failed to submit assignment.');
+      showNotification('Error', error?.error || error?.response?.data?.error || 'Failed to submit assignment.');
     } finally {
       setIsSubmitting(false);
+      setUploadStatus('');
+    }
+  };
+
+  const handleEdit = () => {
+    setTextSubmission(submission?.textSubmission || '');
+    setGithubLink(submission?.githubLink || '');
+    // Note: Previously uploaded files are kept on the server unless overwritten.
+    // In this simple flow, if they want to keep previous files, they should not upload new ones.
+    setSelectedFiles([]); 
+    setIsEditing(true);
+  };
+
+  const handleDelete = () => {
+    if (Platform.OS === 'web') {
+      if (window.confirm('Are you sure you want to delete this submission?')) {
+        performDelete();
+      }
+    } else {
+      Alert.alert('Delete Submission', 'Are you sure you want to delete this submission?', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: performDelete },
+      ]);
+    }
+  };
+
+  const performDelete = async () => {
+    try {
+      setLoading(true);
+      await deleteAssignmentSubmission(submission.id);
+      showNotification('Success', 'Submission deleted successfully!');
+      setTextSubmission('');
+      setGithubLink('');
+      setSelectedFiles([]);
+      setSubmission(null);
+      setIsEditing(false);
+      loadData();
+    } catch (error: any) {
+      console.error('Error deleting submission:', error);
+      showNotification('Error', error?.error || error?.response?.data?.error || 'Failed to delete submission.');
+      setLoading(false);
     }
   };
 
@@ -99,7 +249,7 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
     );
   }
 
-  const isGraded = submission && submission.status === 'GRADED';
+  const isGraded = Boolean(submission && (submission.status === 'GRADED' || submission.status === 'COMPLETED' || (submission.grade !== null && submission.grade !== undefined)));
   const isSubmitted = submission && (submission.status === 'SUBMITTED' || isGraded);
 
   return (
@@ -139,7 +289,7 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
               <Text style={styles.statusTitle}>Submission Status</Text>
               <View style={[styles.badge, isGraded ? styles.badgeSuccess : styles.badgeWarning]}>
                 <Text style={[styles.badgeText, isGraded ? styles.badgeTextSuccess : styles.badgeTextWarning]}>
-                  {submission.status}
+                  {isGraded ? 'GRADED' : (submission.status || 'SUBMITTED')}
                 </Text>
               </View>
             </View>
@@ -159,28 +309,101 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
             
             <View style={styles.submittedWork}>
               <Text style={styles.submittedWorkTitle}>Your Work:</Text>
-              {submission.textSubmission && <Text style={styles.submittedText}>{submission.textSubmission}</Text>}
+              {submission.textSubmission && (
+                <View style={{ marginBottom: 8 }}>
+                  <Text style={styles.detailLabel}>Notes / Text:</Text>
+                  <Text style={styles.submittedText}>{submission.textSubmission}</Text>
+                </View>
+              )}
               {submission.githubLink && (
-                <TouchableOpacity onPress={() => Linking.openURL(submission.githubLink)}>
-                  <Text style={styles.submittedLink}>{submission.githubLink}</Text>
-                </TouchableOpacity>
+                <View style={{ marginBottom: 8 }}>
+                  <Text style={styles.detailLabel}>Project Link:</Text>
+                  <TouchableOpacity onPress={() => Linking.openURL(submission.githubLink)}>
+                    <Text style={styles.submittedLink}>{submission.githubLink}</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              {submission.fileUrls && submission.fileUrls.length > 0 && (
+                <View style={{ marginTop: 4 }}>
+                  <Text style={styles.detailLabel}>Attached Files ({submission.fileUrls.length}):</Text>
+                  {submission.fileUrls.map((url: string, idx: number) => {
+                    const fullUrl = getFileUrl(url);
+                    const fileName = url.split('/').pop() || `Attachment ${idx + 1}`;
+                    return (
+                      <TouchableOpacity
+                        key={idx}
+                        style={styles.attachedFileItem}
+                        onPress={() => Linking.openURL(fullUrl)}
+                      >
+                        <Ionicons name="document-attach-outline" size={18} color="#4F46E5" />
+                        <Text style={styles.attachedFileText} numberOfLines={1}>
+                          {fileName}
+                        </Text>
+                        <Ionicons name="download-outline" size={16} color="#4F46E5" />
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
+              
+              {!isGraded && !isEditing && (
+                <View style={styles.actionRow}>
+                  <TouchableOpacity style={styles.editBtn} onPress={handleEdit}>
+                    <Ionicons name="create-outline" size={18} color="#4F46E5" />
+                    <Text style={styles.editBtnText}>Edit Submission</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete}>
+                    <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                    <Text style={styles.deleteBtnText}>Delete</Text>
+                  </TouchableOpacity>
+                </View>
               )}
             </View>
           </View>
         )}
 
         {/* Submission Form */}
-        {!isGraded && (
+        {(!isSubmitted || isEditing) && !isGraded && (
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>{isSubmitted ? 'Resubmit Assignment' : 'Submit Assignment'}</Text>
             
+            {/* File Upload Section */}
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Upload Files (PDF, DOCX, ZIP, Code, Images - Max 10MB)</Text>
+              
+              <TouchableOpacity style={styles.uploadBox} onPress={handlePickDocument}>
+                <Ionicons name="cloud-upload-outline" size={32} color="#4F46E5" />
+                <Text style={styles.uploadBoxTitle}>Select Files to Upload</Text>
+                <Text style={styles.uploadBoxSub}>Browse documents, code files, or archives</Text>
+              </TouchableOpacity>
+
+              {selectedFiles.length > 0 && (
+                <View style={styles.fileList}>
+                  {selectedFiles.map((file, index) => (
+                    <View key={index} style={styles.fileRow}>
+                      <View style={styles.fileRowLeft}>
+                        <Ionicons name="document-text" size={22} color="#4F46E5" />
+                        <View style={styles.fileInfo}>
+                          <Text style={styles.fileName} numberOfLines={1}>{file.name}</Text>
+                          {file.size ? <Text style={styles.fileSize}>{formatFileSize(file.size)}</Text> : null}
+                        </View>
+                      </View>
+                      <TouchableOpacity onPress={() => handleRemoveFile(index)} style={styles.removeBtn}>
+                        <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+
             <View style={styles.formGroup}>
               <Text style={styles.label}>Text / Notes</Text>
               <TextInput
                 style={[styles.input, styles.textArea]}
                 value={textSubmission}
                 onChangeText={setTextSubmission}
-                placeholder="Enter any text submission here..."
+                placeholder="Enter any notes or text description..."
                 multiline
                 numberOfLines={4}
                 textAlignVertical="top"
@@ -198,6 +421,13 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
               />
             </View>
 
+            {uploadStatus ? (
+              <View style={styles.statusIndicator}>
+                <ActivityIndicator size="small" color="#4F46E5" />
+                <Text style={styles.statusIndicatorText}>{uploadStatus}</Text>
+              </View>
+            ) : null}
+
             <TouchableOpacity 
               style={[styles.submitBtn, isSubmitting && styles.submitBtnDisabled]} 
               onPress={handleSubmit}
@@ -206,7 +436,7 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
               {isSubmitting ? (
                 <ActivityIndicator size="small" color="#FFF" />
               ) : (
-                <Text style={styles.submitBtnText}>{isSubmitted ? 'Resubmit' : 'Submit Work'}</Text>
+                <Text style={styles.submitBtnText}>{isSubmitted ? 'Resubmit Assignment' : 'Submit Work'}</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -294,12 +524,62 @@ const styles = StyleSheet.create({
   feedbackText: { fontSize: 14, color: '#111827', marginTop: 4 },
   
   submittedWork: { marginTop: 10 },
-  submittedWorkTitle: { fontSize: 14, fontWeight: '600', color: '#312E81', marginBottom: 8 },
-  submittedText: { fontSize: 14, color: '#4B5563', marginBottom: 8 },
+  submittedWorkTitle: { fontSize: 14, fontWeight: '700', color: '#312E81', marginBottom: 8 },
+  detailLabel: { fontSize: 13, fontWeight: '600', color: '#4B5563', marginBottom: 2 },
+  submittedText: { fontSize: 14, color: '#111827', marginBottom: 4 },
   submittedLink: { fontSize: 14, color: '#4F46E5', textDecorationLine: 'underline' },
   
-  formGroup: { marginBottom: 16 },
-  label: { fontSize: 14, fontWeight: '500', color: '#374151', marginBottom: 8 },
+  attachedFileItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 6,
+    borderWidth: 1,
+    borderColor: '#E0E7FF',
+  },
+  attachedFileText: {
+    flex: 1,
+    marginLeft: 8,
+    marginRight: 8,
+    fontSize: 13,
+    color: '#4F46E5',
+    fontWeight: '500',
+  },
+
+  formGroup: { marginBottom: 18 },
+  label: { fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 },
+  
+  uploadBox: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 2,
+    borderColor: '#CBD5E1',
+    borderStyle: 'dashed',
+    borderRadius: 12,
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  uploadBoxTitle: { fontSize: 15, fontWeight: '600', color: '#4F46E5', marginTop: 6 },
+  uploadBoxSub: { fontSize: 12, color: '#64748B', marginTop: 2 },
+  
+  fileList: { marginTop: 10 },
+  fileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F1F5F9',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 6,
+  },
+  fileRowLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 },
+  fileInfo: { marginLeft: 8, flex: 1 },
+  fileName: { fontSize: 13, fontWeight: '500', color: '#1E293B' },
+  fileSize: { fontSize: 11, color: '#64748B', marginTop: 1 },
+  removeBtn: { padding: 4 },
+
   input: {
     backgroundColor: '#F9FAFB',
     borderWidth: 1,
@@ -307,18 +587,60 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    fontSize: 16,
+    fontSize: 15,
     color: '#111827',
   },
-  textArea: { height: 100 },
+  textArea: { height: 90 },
+
+  statusIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+    gap: 8,
+  },
+  statusIndicatorText: { fontSize: 13, color: '#4F46E5', fontWeight: '500' },
   
   submitBtn: {
     backgroundColor: '#4F46E5',
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 8,
   },
   submitBtnDisabled: { opacity: 0.7 },
   submitBtnText: { color: '#FFF', fontSize: 16, fontWeight: '600' },
+  
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    paddingTop: 16,
+    gap: 12,
+  },
+  editBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EEF2FF',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    flex: 1,
+    justifyContent: 'center',
+  },
+  editBtnText: { color: '#4F46E5', fontWeight: '600', fontSize: 14, marginLeft: 6 },
+  deleteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF2F2',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    flex: 1,
+    justifyContent: 'center',
+  },
+  deleteBtnText: { color: '#EF4444', fontWeight: '600', fontSize: 14, marginLeft: 6 },
 });
+
