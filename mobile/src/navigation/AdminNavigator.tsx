@@ -9,7 +9,6 @@ import { SkillsScreen } from '../screens/admin/SkillsScreen';
 import { ProfileScreen } from '../screens/admin/ProfileScreen'; // NEW
 
 const Stack = createStackNavigator();
-const queryClient = new QueryClient();
 
 export const AdminNavigator = () => {
   return (
@@ -22,7 +21,7 @@ export const AdminNavigator = () => {
     >
       <Stack.Screen name="Dashboard" component={AdminDashboardScreen} options={{ title: 'Admin Panel' }} />
       <Stack.Screen name="Users" component={UsersScreen} options={{ title: 'Users' }} />
-      <Stack.Screen name="UserDetail" component={UserDetailScreen} options={{ title: 'User Details' }} />
+      {/* <Stack.Screen name="UserDetail" component={UserDetailScreen} options={{ title: 'User Details' }} /> */}
       <Stack.Screen name="Qualifications" component={QualificationsScreen} options={{ title: 'Qualifications' }} />
       <Stack.Screen name="CourseApproval" component={CourseApprovalScreen} options={{ title: 'Course Approval' }} />
       <Stack.Screen name="Categories" component={CategoriesScreen} options={{ title: 'Categories' }} />

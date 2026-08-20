@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import type { LearningMaterial } from '@prisma/client';
 import cloudinary from '../config/cloudinary.js';
 import type { CreateMaterialInput, UpdateMaterialInput } from '../types/index.js';
-import streamifier from 'streamifier';
+import { Readable } from 'stream';
 
 const prisma = new PrismaClient();
 
@@ -76,7 +76,7 @@ async createMaterial(
         }
       );
 
-      streamifier.createReadStream(file.buffer).pipe(uploadStream);
+      Readable.from(file.buffer).pipe(uploadStream);
     });
   }
 

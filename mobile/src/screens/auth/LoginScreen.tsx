@@ -17,10 +17,12 @@ export const LoginScreen = ({ navigation }: any) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   const handleLogin = async () => {
+    setErrorMsg('');
     if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      setErrorMsg('Please fill in all fields');
       return;
     }
 
@@ -41,7 +43,7 @@ export const LoginScreen = ({ navigation }: any) => {
         navigation.replace('Learner');
       }
     } catch (error: any) {
-      Alert.alert('Login Failed', error.response?.data?.error || 'Invalid credentials');
+      setErrorMsg(error.error || 'Invalid credentials');
     } finally {
       setLoading(false);
     }
@@ -61,6 +63,7 @@ export const LoginScreen = ({ navigation }: any) => {
         <Text style={styles.subtitle}>Sign in to your account</Text>
 
         <View style={styles.form}>
+          {errorMsg ? <Text style={{ color: '#ef4444', textAlign: 'center', marginBottom: 10, fontWeight: '500' }}>{errorMsg}</Text> : null}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Email</Text>
             <TextInput

@@ -13,7 +13,7 @@ import {
   Switch,
   Platform,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { courseApi, quizApi } from '../../api/skill-sharer.service';
 
 interface Quiz {
