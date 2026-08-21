@@ -11,6 +11,32 @@ const generateVerificationCode = () => {
   return randomBytes(16).toString('hex');
 };
 
+export const rejectCompletionRequest = async (instructorId: string, requestId: string, reason: string) => {
+  const request = await prisma.completionRequest.findUnique({
+    where: { id: requestId },
+    include: { course: true },
+  });
+
+  if (!request) throw new Error('Completion request not found');
+  if (request.course.creatorId !== instructorId) {
+    throw new Error('Unauthorized. You are not the instructor of this course.');
+  }
+
+  if (request.status !== CompletionRequestStatus.PENDING) {
+    throw new Error('Only pending requests can be rejected.');
+  }
+
+  return prisma.completionRequest.update({
+    where: { id: requestId },
+    data: {
+      status: CompletionRequestStatus.REJECTED,
+      instructorId,
+      reviewedAt: new Date(),
+      rejectionReason: reason,
+    },
+  });
+};
+
 export const approveCompletionAndIssueCertificate = async (instructorId: string, requestId: string) => {
   const request = await prisma.completionRequest.findUnique({
     where: { id: requestId },

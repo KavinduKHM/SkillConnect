@@ -191,17 +191,24 @@ export default function CourseDetailScreen({ route, navigation }: any) {
             )}
 
             {/* Reviews Section */}
-            {course.courseReviews && course.courseReviews.length > 0 && (
+            <TouchableOpacity
+              style={styles.reviewsCtaRow}
+              onPress={() => navigation?.navigate('CourseReview', {
+                courseId,
+                courseTitle: course.title,
+                hasCompleted: userEnrollment?.status === 'COMPLETED',
+              })}
+            >
               <View>
-                <Text style={styles.sectionHeading}>Learner Reviews</Text>
-                {course.courseReviews.map((rev: any, rIdx: number) => (
-                  <View key={rev.id || rIdx} style={styles.reviewCard}>
-                    <Text style={styles.reviewAuthor}>{rev.learner?.name || 'Learner'} ⭐ {rev.rating}/5</Text>
-                    <Text style={styles.reviewComment}>{rev.comment}</Text>
-                  </View>
-                ))}
+                <Text style={styles.reviewsCtaTitle}>⭐ Ratings & Reviews</Text>
+                {course.courseReviews && course.courseReviews.length > 0 ? (
+                  <Text style={styles.reviewsCtaSub}>{course.courseReviews.length} review{course.courseReviews.length !== 1 ? 's' : ''} from learners</Text>
+                ) : (
+                  <Text style={styles.reviewsCtaSub}>Be the first to review this course</Text>
+                )}
               </View>
-            )}
+              <Text style={{ fontSize: 18, color: '#4F46E5' }}>›</Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       )}
@@ -214,6 +221,16 @@ export default function CourseDetailScreen({ route, navigation }: any) {
           <View style={styles.enrolledActionRow}>
             <TouchableOpacity style={styles.continueBtn} onPress={() => navigation?.navigate('MyLearning')}>
               <Text style={styles.actionBtnText}>Continue Learning →</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.reviewBtn}
+              onPress={() => navigation?.navigate('CourseReview', {
+                courseId,
+                courseTitle: course.title,
+                hasCompleted: userEnrollment?.status === 'COMPLETED',
+              })}
+            >
+              <Text style={styles.reviewBtnText}>⭐ Review</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.cancelBtn} onPress={handleCancelEnrollment}>
               <Text style={styles.cancelBtnText}>Cancel</Text>
@@ -291,4 +308,16 @@ const styles = StyleSheet.create({
   cancelBtn: { backgroundColor: '#EF4444', paddingVertical: 14, paddingHorizontal: 16, borderRadius: 12, alignItems: 'center' },
   cancelBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
   actionBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
+  reviewBtn: {
+    backgroundColor: '#EEF2FF', paddingVertical: 14, paddingHorizontal: 16,
+    borderRadius: 12, alignItems: 'center', borderWidth: 1.5, borderColor: '#4F46E5',
+  },
+  reviewBtnText: { color: '#4F46E5', fontWeight: '700', fontSize: 13 },
+  reviewsCtaRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    backgroundColor: '#EEF2FF', padding: 14, borderRadius: 12,
+    borderWidth: 1, borderColor: '#C7D2FE',
+  },
+  reviewsCtaTitle: { fontSize: 15, fontWeight: '700', color: '#4F46E5' },
+  reviewsCtaSub: { fontSize: 12, color: '#6B7280', marginTop: 2 },
 });

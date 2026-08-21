@@ -154,6 +154,52 @@ export interface Category {
   courseCount: number;
 }
 
+// Assignment Types
+export interface Assignment {
+  id: string;
+  courseId: string;
+  instructorId: string;
+  title: string;
+  instructions?: string;
+  deadline: string;
+  maxMarks: number;
+  maxSubmissions: number;
+  allowedFileTypes: string[];
+  maxFileSize: number;
+  submissionMethods: string[];
+  requireForCompletion: boolean;
+  acceptLate: boolean;
+  latePenalty?: number;
+  lateWindow?: number;
+  status: string;
+  submissionCount: number;
+  averageScore?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AssignmentSubmission {
+  id: string;
+  assignmentId: string;
+  learnerId: string;
+  learner?: { id: string; name: string; email: string; profilePicture?: string };
+  fileUrls: string[];
+  githubLink?: string;
+  textSubmission?: string;
+  submissionDate: string;
+  grade?: number;
+  feedback?: string;
+  feedbackAttachments: string[];
+  status: string;
+  versionNumber: number;
+  isLate: boolean;
+  latePenaltyApplied?: number;
+  gradedAt?: string;
+  gradedBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // API Response Types
 export interface ApiResponse<T> {
   success: boolean;
