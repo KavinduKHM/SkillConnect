@@ -125,3 +125,16 @@ export const submitAssignment = async (req: any, res: Response): Promise<void> =
     res.status(400).json({ error: error.message });
   }
 };
+
+export const deleteLearnerSubmission = async (req: any, res: Response): Promise<void> => {
+  try {
+    const learnerId = req.user.id;
+    const submissionId = req.params.submissionId as string;
+    
+    await assignmentService.deleteLearnerSubmission(learnerId, submissionId);
+    res.status(200).json({ success: true, message: 'Submission deleted successfully' });
+  } catch (error: any) {
+    logger.error('Error in deleteLearnerSubmission controller:', error);
+    res.status(400).json({ error: error.message });
+  }
+};
