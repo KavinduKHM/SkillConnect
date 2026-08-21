@@ -25,7 +25,7 @@ export default function MyLearningScreen({ navigation }: any) {
   const [assignments, setAssignments] = useState<any[]>([]);
   const [certificates, setCertificates] = useState<any[]>([]);
   const [completionRequests, setCompletionRequests] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'IN_PROGRESS' | 'COMPLETED' | 'ASSESSMENTS' | 'ASSIGNMENTS' | 'CERTIFICATES'>('IN_PROGRESS');
+  const [activeTab, setActiveTab] = useState<'IN_PROGRESS' | 'COMPLETED' | 'ASSESSMENTS' | 'ASSIGNMENTS'>('IN_PROGRESS');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -126,10 +126,17 @@ export default function MyLearningScreen({ navigation }: any) {
       setLoading(true);
       const { requestCourseCompletion } = require('../../api/learner.service');
       await requestCourseCompletion(courseId);
-      alert('Completion request submitted successfully!');
-      loadMyLearning();
+      Alert.alert(
+        'Request Submitted! 🏆',
+        'Your completion request has been submitted. You can track approval status and download your PDF under the Certificates tab in the bottom bar.',
+        [
+          { text: 'View Certificates', onPress: () => navigation?.navigate('MainTabs', { screen: 'CertificatesTab' }) },
+          { text: 'OK', onPress: () => loadMyLearning() },
+        ]
+      );
     } catch (err: any) {
-      alert(err.response?.data?.error || err.message || 'Failed to request completion');
+      Alert.alert('Notice', err.response?.data?.error || err.message || 'Failed to request completion');
+    } finally {
       setLoading(false);
     }
   };
@@ -224,15 +231,6 @@ export default function MyLearningScreen({ navigation }: any) {
           >
             <Text style={[styles.tabPillText, activeTab === 'ASSIGNMENTS' && styles.tabPillTextActive]}>
               Assignments ({assignments.length})
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.tabPill, activeTab === 'CERTIFICATES' && styles.tabPillActive]}
-            onPress={() => setActiveTab('CERTIFICATES')}
-          >
-            <Text style={[styles.tabPillText, activeTab === 'CERTIFICATES' && styles.tabPillTextActive]}>
-              Certificates 🏆 ({certificates.length})
             </Text>
           </TouchableOpacity>
         </ScrollView>
@@ -351,66 +349,6 @@ export default function MyLearningScreen({ navigation }: any) {
             );
           }}
         />
-      ) : activeTab === 'CERTIFICATES' ? (
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.listContainer}>
-          {certificates.length === 0 && completionRequests.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyTitle}>No Certificates Yet 🏆</Text>
-              <Text style={styles.emptySubtitle}>Complete a course 100% and request a certificate from your instructor.</Text>
-            </View>
-          ) : (
-            <>
-              {/* Issued Certificates */}
-              {certificates.map((cert) => (
-                <View key={cert.id} style={styles.card}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                    <Text style={styles.courseTitle} numberOfLines={1}>{cert.course?.title || 'Certificate of Completion'}</Text>
-                    <View style={{ backgroundColor: '#DCFCE7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
-                      <Text style={{ color: '#15803D', fontSize: 11, fontWeight: '700' }}>✓ ISSUED</Text>
-                    </View>
-                  </View>
-                  <Text style={{ fontSize: 12, color: '#64748B', marginBottom: 14 }}>
-                    Issued on {new Date(cert.issueDate || cert.createdAt).toLocaleDateString()}
-                  </Text>
-                  <TouchableOpacity
-                    style={[styles.continueBtn, { backgroundColor: '#064E3B' }]}
-                    onPress={() => downloadCertificate(cert)}
-                  >
-                    <Text style={styles.continueBtnText}>Download PDF Certificate 📄</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-
-              {/* Pending Requests */}
-              {completionRequests.map((req) => (
-                <View key={req.id} style={styles.card}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                    <Text style={styles.courseTitle} numberOfLines={1}>{req.course?.title || 'Course'}</Text>
-                    <View style={{ backgroundColor: req.status === 'REJECTED' ? '#FEE2E2' : '#FEF3C7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
-                      <Text style={{ color: req.status === 'REJECTED' ? '#DC2626' : '#D97706', fontSize: 11, fontWeight: '700' }}>{req.status}</Text>
-                    </View>
-                  </View>
-                  <Text style={{ fontSize: 12, color: '#64748B', marginBottom: 12 }}>
-                    Requested on {new Date(req.requestedAt || req.createdAt).toLocaleDateString()}
-                  </Text>
-                  {req.status === 'REJECTED' && req.rejectionReason && (
-                    <View style={{ backgroundColor: '#FEF2F2', padding: 10, borderRadius: 8, marginBottom: 12 }}>
-                      <Text style={{ fontSize: 13, color: '#991B1B' }}>
-                        <Text style={{ fontWeight: 'bold' }}>Reason: </Text>
-                        {req.rejectionReason}
-                      </Text>
-                    </View>
-                  )}
-                  {req.status === 'PENDING' && (
-                    <Text style={{ fontSize: 13, color: '#94A3B8', fontStyle: 'italic' }}>
-                      ⏳ Waiting for Skill Sharer approval. Once verified, your certificate PDF will appear here.
-                    </Text>
-                  )}
-                </View>
-              ))}
-            </>
-          )}
-        </ScrollView>
       ) : (activeTab === 'IN_PROGRESS' ? inProgressCourses : completedCourses).length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyTitle}>
@@ -480,9 +418,9 @@ export default function MyLearningScreen({ navigation }: any) {
                   <View style={{ gap: 8 }}>
                     <TouchableOpacity
                       style={[styles.continueBtn, { backgroundColor: '#064E3B' }]}
-                      onPress={() => downloadCertificate(issuedCert)}
+                      onPress={() => navigation?.navigate('MainTabs', { screen: 'CertificatesTab' })}
                     >
-                      <Text style={styles.continueBtnText}>Download Certificate PDF 📄</Text>
+                      <Text style={styles.continueBtnText}>View Certificate in Certificates Tab 🎖️</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[styles.continueBtn, { backgroundColor: '#FEF3C7', borderWidth: 1, borderColor: '#FDE68A' }]}
@@ -509,10 +447,10 @@ export default function MyLearningScreen({ navigation }: any) {
                   <View style={{ gap: 8 }}>
                     <TouchableOpacity
                       style={[styles.continueBtn, { backgroundColor: '#FEF3C7' }]}
-                      onPress={() => setActiveTab('CERTIFICATES')}
+                      onPress={() => navigation?.navigate('MainTabs', { screen: 'CertificatesTab' })}
                     >
                       <Text style={[styles.continueBtnText, { color: '#D97706' }]}>
-                        Certificate Request Pending ⏳
+                        Certificate Request Pending ⏳ (View Status)
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity

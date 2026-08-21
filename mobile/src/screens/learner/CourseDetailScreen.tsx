@@ -436,7 +436,7 @@ export default function CourseDetailScreen({ route, navigation }: any) {
             {progressPct >= 100 ? (
               <TouchableOpacity
                 style={styles.continueBtn}
-                onPress={() => navigation?.navigate('MyLearning')}
+                onPress={() => navigation?.navigate('MainTabs', { screen: 'CertificatesTab' })}
               >
                 <Text style={styles.actionBtnText}>Go to Certificates 🎓</Text>
               </TouchableOpacity>
