@@ -45,13 +45,13 @@ export class CourseController {
       return res.status(200).json({
         success: true,
         data: courses,
-      } as ApiResponse<any>);
+      });
     } catch (error) {
       console.error('Error getting courses:', error);
       return res.status(500).json({
         success: false,
         error: 'Internal server error',
-      } as ApiResponse<null>);
+      });
     }
   }
 
@@ -158,7 +158,7 @@ export class CourseController {
     }
   }
 
-  // Delete course (draft only)
+  // ✅ FIXED: Delete course (draft only)
   async deleteCourse(req: Request, res: Response) {
     try {
       const creatorId = (req as any).user.id;
@@ -171,6 +171,23 @@ export class CourseController {
         } as ApiResponse<null>);
       }
 
+      // ✅ First check if the course exists and is a draft
+      const course = await courseService.getCourseById(id, creatorId);
+      
+      if (!course) {
+        return res.status(404).json({
+          success: false,
+          error: 'Course not found',
+        } as ApiResponse<null>);
+      }
+
+      if (course.status !== 'DRAFT') {
+        return res.status(400).json({
+          success: false,
+          error: `Only draft courses can be deleted. Current status: ${course.status}`,
+        } as ApiResponse<null>);
+      }
+
       await courseService.deleteCourse(id, creatorId);
 
       return res.status(200).json({
@@ -178,13 +195,6 @@ export class CourseController {
         message: 'Course deleted successfully',
       } as ApiResponse<null>);
     } catch (error) {
-      const err = error as Error;
-      if (err.message === 'Only draft courses can be deleted') {
-        return res.status(400).json({
-          success: false,
-          error: err.message,
-        } as ApiResponse<null>);
-      }
       console.error('Error deleting course:', error);
       return res.status(500).json({
         success: false,

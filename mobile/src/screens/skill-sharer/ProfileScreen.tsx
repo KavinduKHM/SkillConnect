@@ -43,10 +43,17 @@ export default function ProfileScreen() {
   });
   const [newSkill, setNewSkill] = useState('');
 
+  const normalizeUrl = (value?: string): string | undefined => {
+    const trimmed = value?.trim();
+    if (!trimmed) return undefined;
+    if (/^https?:\/\//i.test(trimmed)) return trimmed;
+    return `https://${trimmed}`;
+  };
+
   const loadProfile = async () => {
     try {
       const response = await profileService.getMyProfile();
-      const data = response.data;
+      const data = response?.data?.data ?? response?.data ?? {};
       setProfile({
         bio: data.bio || '',
         skills: data.skills || [],
@@ -59,7 +66,8 @@ export default function ProfileScreen() {
 
       // Get user name
       const userResponse = await authService.getMe();
-      setUserName(userResponse.data.name || '');
+      const userData = userResponse?.data?.data ?? userResponse?.data ?? {};
+      setUserName(userData.name || '');
     } catch (error) {
       Alert.alert('Error', 'Failed to load profile');
     } finally {
@@ -76,10 +84,29 @@ export default function ProfileScreen() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await profileService.updateProfile(profile);
+      const payload = {
+        bio: profile.bio.trim() || undefined,
+        skills: profile.skills.map((s) => s.trim()).filter(Boolean),
+        experience: profile.experience.trim() || undefined,
+        portfolio: profile.portfolio,
+        location: profile.location.trim() || undefined,
+        website: normalizeUrl(profile.website),
+        socialLinks: {
+          linkedin: normalizeUrl(profile.socialLinks?.linkedin),
+          github: normalizeUrl(profile.socialLinks?.github),
+          twitter: normalizeUrl(profile.socialLinks?.twitter),
+        },
+      };
+
+      const hasSocialLinks = Object.values(payload.socialLinks).some(Boolean);
+      await profileService.updateProfile({
+        ...payload,
+        socialLinks: hasSocialLinks ? payload.socialLinks : undefined,
+      });
       Alert.alert('Success', 'Profile updated successfully');
     } catch (error: any) {
-      Alert.alert('Error', error.error || 'Failed to update profile');
+      const firstValidationError = error?.errors?.[0]?.msg;
+      Alert.alert('Error', firstValidationError || error.message || error.error || 'Failed to update profile');
     } finally {
       setSaving(false);
     }

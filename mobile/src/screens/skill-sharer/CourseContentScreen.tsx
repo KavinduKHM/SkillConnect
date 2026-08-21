@@ -11,6 +11,7 @@ import {
   TextInput,
   RefreshControl,
   ScrollView,
+  Platform,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -47,6 +48,7 @@ interface Material {
 
 export default function CourseContentScreen({ route, navigation }: any) {
   const { courseId } = route.params;
+  console.log('📚 courseId from route:', courseId);
   const [course, setCourse] = useState<any>(null);
   const [modules, setModules] = useState<Module[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,10 +64,12 @@ export default function CourseContentScreen({ route, navigation }: any) {
   const loadData = async () => {
     try {
       const courseResponse = await courseService.getCourse(courseId);
-      setCourse(courseResponse.data);
+      const coursePayload = (courseResponse as any)?.data?.data ?? (courseResponse as any)?.data ?? courseResponse;
+      setCourse(coursePayload);
 
       const modulesResponse = await moduleService.getModules(courseId);
-      setModules(modulesResponse.data || []);
+      const modulesPayload = (modulesResponse as any)?.data?.data ?? (modulesResponse as any)?.data ?? modulesResponse;
+      setModules(Array.isArray(modulesPayload) ? modulesPayload : []);
     } catch (error) {
       Alert.alert('Error', 'Failed to load course content');
     } finally {
@@ -84,30 +88,52 @@ export default function CourseContentScreen({ route, navigation }: any) {
     setRefreshing(true);
     loadData();
   };
+// Inside CourseContentScreen.tsx - The handleAddModule function
 
-  const handleAddModule = async () => {
-    if (!formTitle.trim()) {
-      Alert.alert('Error', 'Please enter a module title');
-      return;
-    }
+// Inside CourseContentScreen.tsx
 
-    try {
-      const order = modules.length + 1;
-      await moduleService.createModule({
-        courseId,
-        title: formTitle.trim(),
-        description: formDescription.trim() || undefined,
-        order,
-      });
-      setModalVisible(false);
-      setFormTitle('');
-      setFormDescription('');
-      loadData();
-    } catch (error: any) {
-      Alert.alert('Error', error.error || 'Failed to create module');
-    }
-  };
+// Inside CourseContentScreen.tsx - The handleAddModule function
 
+// Inside CourseContentScreen.tsx
+
+// Inside CourseContentScreen.tsx - The handleAddModule function
+
+const handleAddModule = async () => {
+  // ✅ Validate title
+  if (!formTitle.trim()) {
+    Alert.alert('Error', 'Please enter a module title');
+    return;
+  }
+
+  try {
+    // Keep order valid even if modules payload shape changes.
+    const order = Array.isArray(modules) ? modules.length + 1 : 1;
+    
+    // ✅ Build data object
+    const moduleData = {
+      courseId: courseId,
+      title: formTitle.trim(),
+      description: formDescription.trim() || undefined,
+      order: order,
+    };
+    
+    console.log('📤 Sending module data:', JSON.stringify(moduleData, null, 2));
+
+    // ✅ Call API
+    const response = await moduleService.createModule(moduleData);
+    console.log('✅ Module created:', response);
+    
+    // ✅ Reset form and refresh
+    setModalVisible(false);
+    setFormTitle('');
+    setFormDescription('');
+    loadData();
+  } catch (error: any) {
+    console.error('❌ Error creating module:', error);
+    const errorMsg = error.error || error.message || 'Failed to create module';
+    Alert.alert('Error', errorMsg);
+  }
+};
   const handleDeleteModule = (moduleId: string) => {
     Alert.alert(
       'Delete Module',
@@ -218,12 +244,25 @@ export default function CourseContentScreen({ route, navigation }: any) {
       formData.append('type', fileType);
       formData.append('order', '1');
 
-      if (file.uri) {
+      if (Platform.OS === 'web') {
+        const webFile = (file as any).file as File | undefined;
+        if (webFile) {
+          formData.append('file', webFile);
+        } else if (file.uri) {
+          const fileBlob = await fetch(file.uri).then((res) => res.blob());
+          formData.append('file', fileBlob, file.name || 'file');
+        }
+      } else if (file.uri) {
         formData.append('file', {
           uri: file.uri,
           type: file.mimeType || 'application/octet-stream',
           name: file.name || 'file',
         } as any);
+      }
+
+      if (!formData.get('file')) {
+        Alert.alert('Error', 'Could not attach the selected file. Please try again.');
+        return;
       }
 
       setUploading(true);

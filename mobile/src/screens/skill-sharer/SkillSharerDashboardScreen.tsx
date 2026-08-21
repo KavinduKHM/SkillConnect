@@ -57,7 +57,46 @@ export default function SkillSharerDashboardScreen({ navigation }: any) {
   const loadCourses = async () => {
     try {
       const response = await courseService.getMyCourses();
-      setCourses(response.data || []);
+      const responseData = response.data;
+
+      let courseData: Course[] = [];
+
+      if (responseData) {
+        if (Array.isArray(responseData)) {
+          courseData = responseData;
+        } else if (responseData.data && Array.isArray(responseData.data)) {
+          courseData = responseData.data;
+        } else if (responseData.courses && Array.isArray(responseData.courses)) {
+          courseData = responseData.courses;
+        } else if (responseData.items && Array.isArray(responseData.items)) {
+          courseData = responseData.items;
+        } else if (responseData.result && Array.isArray(responseData.result)) {
+          courseData = responseData.result;
+        } else if (responseData.success && responseData.data && Array.isArray(responseData.data)) {
+          courseData = responseData.data;
+        } else {
+          for (const key in responseData) {
+            if (responseData[key] && Array.isArray(responseData[key])) {
+              courseData = responseData[key];
+              break;
+            }
+          }
+        }
+      }
+
+      const formattedCourses = courseData.map((course: any) => ({
+        id: course.id || '',
+        title: course.title || '',
+        description: course.description || '',
+        difficulty: course.difficulty || 'BEGINNER',
+        status: course.status || 'DRAFT',
+        enrolledCount: course.enrolledCount || 0,
+        rating: course.rating || null,
+        thumbnail: course.thumbnail || null,
+        createdAt: course.createdAt || new Date().toISOString(),
+      }));
+
+      setCourses(formattedCourses);
     } catch (error: any) {
       console.error('Error loading courses:', error);
       Alert.alert('Error', error.error || 'Failed to load courses');
@@ -78,7 +117,10 @@ export default function SkillSharerDashboardScreen({ navigation }: any) {
     loadCourses();
   };
 
+  // ✅ COMPLETE FIX: Delete handler with maximum debugging
   const handleDeleteCourse = (courseId: string, title: string) => {
+    console.log(`🗑️ Delete requested for: ${courseId} - ${title}`);
+
     Alert.alert(
       'Delete Course',
       `Are you sure you want to delete "${title}"? This cannot be undone.`,
@@ -87,28 +129,84 @@ export default function SkillSharerDashboardScreen({ navigation }: any) {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: async () => {
-            try {
-              await courseService.deleteCourse(courseId);
-              setCourses(courses.filter((c) => c.id !== courseId));
-              Alert.alert('Success', 'Course deleted successfully');
-            } catch (error: any) {
-              Alert.alert('Error', error.error || 'Failed to delete course');
-            }
+          onPress: () => {
+            console.log(`🗑️ Delete confirmed for: ${courseId}`);
+            performDelete(courseId, title);
           },
         },
       ]
     );
   };
 
+  // ✅ Separate function for the actual delete
+  const performDelete = async (courseId: string, title: string) => {
+    try {
+      console.log(`📤 PERFORMING DELETE for: ${courseId}`);
+
+      // ✅ Verify the course exists and is a draft
+      const course = courses.find((c) => c.id === courseId);
+      if (!course) {
+        Alert.alert('Error', 'Course not found');
+        return;
+      }
+
+      console.log(`📚 Course status: ${course.status}`);
+
+      if (course.status !== 'DRAFT') {
+        Alert.alert(
+          'Error',
+          `Only draft courses can be deleted. Current status: ${course.status}`
+        );
+        return;
+      }
+
+      // ✅ Call the delete API
+      console.log(`📤 Calling DELETE /courses/${courseId}`);
+      
+      const response = await courseService.deleteCourse(courseId);
+      
+      console.log(`✅ DELETE response:`, JSON.stringify(response, null, 2));
+      console.log(`✅ DELETE response data:`, response.data);
+
+      // ✅ Check if successful
+      if (response.status === 200 || response.status === 204) {
+        setCourses((prevCourses) => prevCourses.filter((c) => c.id !== courseId));
+        Alert.alert('Success', 'Course deleted successfully');
+      } else {
+        throw new Error(response.data?.error || 'Delete failed');
+      }
+    } catch (error: any) {
+      console.error('❌ Delete error:', error);
+      
+      let errorMsg = 'Failed to delete course';
+      if (error.response) {
+        console.error('Error response status:', error.response.status);
+        console.error('Error response data:', error.response.data);
+        errorMsg = error.response.data?.error || error.response.data?.message || errorMsg;
+      } else if (error.message) {
+        errorMsg = error.message;
+      }
+      
+      Alert.alert('Error', errorMsg);
+    }
+  };
+
   const handleSubmitCourse = async (courseId: string) => {
     try {
-      await courseService.submitCourse(courseId);
+      console.log(`📤 Submitting course: ${courseId}`);
+      const response = await courseService.submitCourse(courseId);
+      console.log('✅ Submit response:', response);
       Alert.alert('Success', 'Course submitted for approval');
-      loadCourses();
+      await loadCourses();
     } catch (error: any) {
+      console.error('❌ Submit error:', error);
       Alert.alert('Error', error.error || 'Failed to submit course');
     }
+  };
+
+  const handleEditCourse = (courseId: string) => {
+    console.log(`✏️ Editing course: ${courseId}`);
+    navigation.navigate('CourseForm', { courseId });
   };
 
   const renderCourseItem = ({ item }: { item: Course }) => (
@@ -160,9 +258,7 @@ export default function SkillSharerDashboardScreen({ navigation }: any) {
           <>
             <TouchableOpacity
               style={[styles.actionButton, styles.editButton]}
-              onPress={() =>
-                navigation.navigate('CourseForm', { courseId: item.id })
-              }
+              onPress={() => handleEditCourse(item.id)}
             >
               <Ionicons name="create-outline" size={16} color="#FFFFFF" />
               <Text style={styles.actionButtonText}>Edit</Text>
@@ -227,13 +323,22 @@ export default function SkillSharerDashboardScreen({ navigation }: any) {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>My Courses</Text>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => navigation.navigate('CourseForm')}
-        >
-          <Ionicons name="add" size={24} color="#FFFFFF" />
-          <Text style={styles.addButtonText}>New Course</Text>
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.profileButton}
+            onPress={() => navigation.navigate('Profile')}
+          >
+            <Ionicons name="person-circle-outline" size={20} color="#4F46E5" />
+            <Text style={styles.profileButtonText}>Profile</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => navigation.navigate('CourseForm')}
+          >
+            <Ionicons name="add" size={24} color="#FFFFFF" />
+            <Text style={styles.addButtonText}>New Course</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {courses.length === 0 ? (
@@ -287,6 +392,26 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: 'bold',
     color: '#111827',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  profileButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+    backgroundColor: '#EEF2FF',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  profileButtonText: {
+    color: '#4F46E5',
+    fontWeight: '600',
+    marginLeft: 4,
   },
   addButton: {
     flexDirection: 'row',

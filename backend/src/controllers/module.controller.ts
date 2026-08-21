@@ -9,8 +9,11 @@ export class ModuleController {
   // Create module
   async createModule(req: Request, res: Response) {
     try {
+      console.log('📤 Request body:', req.body); // ✅ Debug: Log the entire request body
+
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
+        console.log('❌ Validation errors:', JSON.stringify(errors.array(), null, 2)); // ✅ Debug: Log validation errors
         return res.status(400).json({
           success: false,
           errors: errors.array(),
@@ -19,6 +22,16 @@ export class ModuleController {
 
       const userId = (req as any).user.id;
       const { courseId, ...data } = req.body;
+
+      // ✅ Validate courseId
+      if (!courseId) {
+        return res.status(400).json({
+          success: false,
+          error: 'courseId is required',
+        } as ApiResponse<null>);
+      }
+
+      console.log('📤 Creating module with:', { userId, courseId, data }); // ✅ Debug
 
       const module = await moduleService.createModule(userId, courseId, data);
 
@@ -42,6 +55,13 @@ export class ModuleController {
       const userId = (req as any).user.id;
       const { courseId } = req.params;
 
+      if (!courseId) {
+        return res.status(400).json({
+          success: false,
+          error: 'courseId is required',
+        } as ApiResponse<null>);
+      }
+
       const modules = await moduleService.getModulesByCourseId(courseId, userId);
 
       return res.status(200).json({
@@ -62,6 +82,13 @@ export class ModuleController {
     try {
       const userId = (req as any).user.id;
       const { id } = req.params;
+
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          error: 'Module ID is required',
+        } as ApiResponse<null>);
+      }
 
       const module = await moduleService.getModuleById(id, userId);
 
@@ -100,6 +127,13 @@ export class ModuleController {
       const { id } = req.params;
       const data = req.body;
 
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          error: 'Module ID is required',
+        } as ApiResponse<null>);
+      }
+
       const module = await moduleService.updateModule(id, userId, data);
 
       return res.status(200).json({
@@ -122,6 +156,13 @@ export class ModuleController {
       const userId = (req as any).user.id;
       const { id } = req.params;
 
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          error: 'Module ID is required',
+        } as ApiResponse<null>);
+      }
+
       await moduleService.deleteModule(id, userId);
 
       return res.status(200).json({
@@ -143,6 +184,13 @@ export class ModuleController {
       const userId = (req as any).user.id;
       const { courseId } = req.params;
       const { moduleIds } = req.body;
+
+      if (!courseId) {
+        return res.status(400).json({
+          success: false,
+          error: 'courseId is required',
+        } as ApiResponse<null>);
+      }
 
       if (!moduleIds || !Array.isArray(moduleIds)) {
         return res.status(400).json({
