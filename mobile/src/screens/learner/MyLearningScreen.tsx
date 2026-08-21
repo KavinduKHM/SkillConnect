@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   ScrollView,
+  Image,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -35,7 +36,7 @@ export default function MyLearningScreen({ navigation }: any) {
         setInProgressCourses(res.inProgress || []);
         setCompletedCourses(res.completed || []);
       }
-      
+
       const quizRes: any = await fetchMyQuizzes();
       const quizzes = quizRes?.quizzes || quizRes?.data || (Array.isArray(quizRes) ? quizRes : []);
       setAssessments(quizzes);
@@ -83,18 +84,30 @@ export default function MyLearningScreen({ navigation }: any) {
       setAssignments(allAssignments);
     } catch (err) {
       console.log('Error fetching my-learning from API, using demo data:', err);
-      // Fallback demo data if backend is offline
       setInProgressCourses([
         {
           id: 'e1',
           courseId: 'c1',
           progressPercentage: 80,
           course: {
-            title: 'React Native & Mobile App Development',
-            category: { name: 'Software Engineering' },
-            creator: { name: 'Senior Dev John' },
+            title: 'React Native Development',
+            category: { name: 'Mobile Development' },
+            creator: { name: 'John Perera', verifiedBadge: true },
+            thumbnail: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=600&q=80',
           },
           courseProgress: { completedLessons: 16, totalLessons: 20 },
+        },
+        {
+          id: 'e2',
+          courseId: 'c2',
+          progressPercentage: 35,
+          course: {
+            title: 'UX Research Fundamentals',
+            category: { name: 'Design & Arts' },
+            creator: { name: 'Sarah Chen', verifiedBadge: true },
+            thumbnail: 'https://images.unsplash.com/photo-1531403009284-440f080d1e12?auto=format&fit=crop&w=600&q=80',
+          },
+          courseProgress: { completedLessons: 7, totalLessons: 20 },
         },
       ]);
     } finally {
@@ -140,10 +153,11 @@ export default function MyLearningScreen({ navigation }: any) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#4F46E5" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FAF9F6" />
 
       {/* Header */}
       <View style={styles.header}>
+        <Text style={styles.headerTitle}>My Learning</Text>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation?.goBack()}>
           <Text style={styles.backBtnText}>← Back to Browse</Text>
         </TouchableOpacity>
@@ -160,26 +174,24 @@ export default function MyLearningScreen({ navigation }: any) {
       </View>
 
       {/* Filter Tabs */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabScrollContainer}>
-        <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={[styles.tabButton, activeTab === 'IN_PROGRESS' && styles.tabButtonActive]}
-            onPress={() => setActiveTab('IN_PROGRESS')}
-          >
-            <Text style={[styles.tabText, activeTab === 'IN_PROGRESS' && styles.tabTextActive]}>
-              In Progress ({inProgressCourses.length})
-            </Text>
-          </TouchableOpacity>
+      <View style={styles.tabSection}>
+        <TouchableOpacity
+          style={[styles.tabPill, activeTab === 'IN_PROGRESS' && styles.tabPillActive]}
+          onPress={() => setActiveTab('IN_PROGRESS')}
+        >
+          <Text style={[styles.tabPillText, activeTab === 'IN_PROGRESS' && styles.tabPillTextActive]}>
+            In Progress
+          </Text>
+        </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.tabButton, activeTab === 'COMPLETED' && styles.tabButtonActive]}
-            onPress={() => setActiveTab('COMPLETED')}
-          >
-            <Text style={[styles.tabText, activeTab === 'COMPLETED' && styles.tabTextActive]}>
-              Completed ({completedCourses.length})
-            </Text>
-          </TouchableOpacity>
-
+        <TouchableOpacity
+          style={[styles.tabPill, activeTab === 'COMPLETED' && styles.tabPillActive]}
+          onPress={() => setActiveTab('COMPLETED')}
+        >
+          <Text style={[styles.tabPillText, activeTab === 'COMPLETED' && styles.tabPillTextActive]}>
+            Completed
+          </Text>
+        </TouchableOpacity>
           <TouchableOpacity
             style={[styles.tabButton, activeTab === 'ASSESSMENTS' && styles.tabButtonActive]}
             onPress={() => setActiveTab('ASSESSMENTS')}
@@ -198,65 +210,66 @@ export default function MyLearningScreen({ navigation }: any) {
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.tabButton, activeTab === 'CERTIFICATES' && styles.tabButtonActive]}
-            onPress={() => setActiveTab('CERTIFICATES')}
-          >
-            <Text style={[styles.tabText, activeTab === 'CERTIFICATES' && styles.tabTextActive]}>
-              Certificates
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+        <TouchableOpacity
+          style={[styles.tabPill, activeTab === 'ASSESSMENTS' && styles.tabPillActive]}
+          onPress={() => setActiveTab('ASSESSMENTS')}
+        >
+          <Text style={[styles.tabPillText, activeTab === 'ASSESSMENTS' && styles.tabPillTextActive]}>
+            Assessments
+          </Text>
+        </TouchableOpacity>
+      </View>
 
-      {/* Course List */}
+      {/* Content List */}
       {loading && !refreshing ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#4F46E5" />
-          <Text style={styles.loadingText}>Loading your learning dashboard...</Text>
+          <ActivityIndicator size="large" color="#064E3B" />
+          <Text style={styles.loadingText}>Loading dashboard...</Text>
         </View>
       ) : activeTab === 'ASSESSMENTS' ? (
         <FlatList
           data={assessments}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContainer}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyTitle}>No Assessments Available</Text>
-              <Text style={styles.emptySubtitle}>You will see quizzes here once you enroll in courses with assessments.</Text>
-              <TouchableOpacity style={styles.browseBtn} onPress={() => navigation?.navigate('CourseList')}>
-                <Text style={styles.browseBtnText}>Explore Courses</Text>
-              </TouchableOpacity>
-            </View>
-          }
-          renderItem={({ item }) => {
-            const status = item.completions && item.completions.length > 0 ? item.completions[0].status : 'PENDING';
-            const courseName = item.course?.title || 'Unknown Course';
-            const dueDate = item.dueDate ? new Date(item.dueDate).toLocaleDateString() : 'No due date';
-
-            return (
-              <View style={styles.card}>
-                <View style={styles.cardHeader}>
-                  <Text style={styles.courseTitle}>{courseName}</Text>
-                  <View style={{ backgroundColor: status === 'PENDING' ? '#FEF3C7' : '#D1FAE5', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
-                    <Text style={{ color: status === 'PENDING' ? '#D97706' : '#059669', fontSize: 11, fontWeight: '700' }}>
-                      {status}
-                    </Text>
-                  </View>
-                </View>
-                <Text style={{ fontSize: 13, color: '#6B7280', marginBottom: 12 }}>Due Date: {dueDate}</Text>
-                
-                <TouchableOpacity
-                  style={[styles.continueBtn, { backgroundColor: status === 'COMPLETED' ? '#F3F4F6' : '#EEF2FF' }]}
-                  onPress={() => navigation?.navigate('AssessmentDetail', { assessment: item, status, courseName, dueDate, loadMyLearning })}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.card}
+              onPress={() =>
+                navigation?.navigate('AssessmentDetail', {
+                  assessment: item,
+                  courseName: item.course?.title,
+                  status: item.completions?.[0]?.status || 'PENDING',
+                  loadMyLearning,
+                })
+              }
+            >
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Text style={styles.courseTitle}>{item.course?.title || 'React Native Mobile App Development'}</Text>
+                <View
+                  style={{
+                    backgroundColor: item.completions?.[0]?.status === 'COMPLETED' ? '#DCFCE7' : '#FEF3C7',
+                    paddingHorizontal: 8,
+                    paddingVertical: 3,
+                    borderRadius: 8,
+                  }}
                 >
-                  <Text style={[styles.continueBtnText, { color: item.status === 'COMPLETED' ? '#6B7280' : '#4F46E5' }]}>
-                    {item.status === 'COMPLETED' ? 'View Details' : 'Take Assessment →'}
+                  <Text
+                    style={{
+                      color: item.completions?.[0]?.status === 'COMPLETED' ? '#15803D' : '#D97706',
+                      fontSize: 11,
+                      fontWeight: '700',
+                    }}
+                  >
+                    {item.completions?.[0]?.status === 'COMPLETED' ? '✓ Completed' : 'Pending'}
                   </Text>
-                </TouchableOpacity>
+                </View>
               </View>
-            );
-          }}
+              <Text style={styles.creatorName}>{item.title || 'React Native Development Final Assessment'}</Text>
+              <Text style={{ fontSize: 12, color: '#064E3B', fontWeight: '600', marginTop: 8 }}>
+                Take Assessment / View Details →
+              </Text>
+            </TouchableOpacity>
+          )}
         />
       ) : activeTab === 'ASSIGNMENTS' ? (
         <FlatList
@@ -379,16 +392,17 @@ export default function MyLearningScreen({ navigation }: any) {
         </View>
       ) : (
         <FlatList
-          data={displayList}
-          keyExtractor={(item) => item.id || item.courseId}
+          data={activeTab === 'IN_PROGRESS' ? inProgressCourses : completedCourses}
+          keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContainer}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadMyLearning(); }} />
           }
           renderItem={({ item }) => {
             const course = item.course || {};
-            const progress = item.courseProgress || { completedLessons: 0, totalLessons: 10 };
-            const percent = Math.round(item.progressPercentage || 0);
+            const pct = item.progressPercentage ?? item.courseProgress?.progressPercentage ?? 80;
+            const completedLessons = item.courseProgress?.completedLessons ?? 16;
+            const totalLessons = item.courseProgress?.totalLessons ?? 20;
 
             const courseId = item.courseId || item.course?.id;
             const issuedCert = certificates.find((c) => c.courseId === courseId || c.course?.id === courseId);
@@ -397,26 +411,48 @@ export default function MyLearningScreen({ navigation }: any) {
 
             return (
               <View style={styles.card}>
-                <View style={styles.cardHeader}>
-                  <Text style={styles.categoryBadge}>{course.category?.name || 'General'}</Text>
-                  <Text style={styles.creatorText}>Instructor: {course.creator?.name || 'Instructor'}</Text>
+                <View style={styles.cardTopRow}>
+                  <Image
+                    source={{
+                      uri:
+                        course.thumbnail ||
+                        'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=600&q=80',
+                    }}
+                    style={styles.cardThumbnail}
+                  />
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={styles.courseTitle}>{course.title || 'React Native Development'}</Text>
+                    <View style={styles.creatorRow}>
+                      <Text style={styles.creatorName}>{course.creator?.name || 'John Perera'}</Text>
+                      {course.creator?.verifiedBadge && (
+                        <View style={styles.verifiedBadge}>
+                          <Text style={styles.verifiedText}>✓</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={styles.lastAccessedText}>Last accessed: 2 hours ago</Text>
+                  </View>
                 </View>
 
-                <Text style={styles.courseTitle}>{course.title || 'Course Title'}</Text>
-
-                {/* Progress Stats */}
-                <View style={styles.progressRow}>
+                {/* Green Progress Track */}
+                <View style={styles.progressSection}>
+                  <View style={styles.progressTrack}>
+                    <View style={[styles.progressFill, { width: `${pct}%` }]} />
+                  </View>
                   <Text style={styles.progressText}>
-                    {progress.completedLessons} / {progress.totalLessons || 10} lessons completed
+                    {completedLessons}/{totalLessons} lessons completed ({pct}%)
                   </Text>
-                  <Text style={styles.percentText}>{percent}%</Text>
                 </View>
 
-                {/* Progress Bar */}
-                <View style={styles.progressBarBackground}>
-                  <View style={[styles.progressBarFill, { width: `${percent}%` }]} />
-                </View>
-
+                {/* Continue Learning Button */}
+                <TouchableOpacity
+                  style={styles.continueBtn}
+                  onPress={() =>
+                    navigation?.navigate('CourseDetail', { courseId: item.courseId || course.id, course })
+                  }
+                >
+                  <Text style={styles.continueBtnText}>Continue Learning</Text>
+                </TouchableOpacity>
                 {/* Action Buttons */}
                 {issuedCert ? (
                   <View>
@@ -495,44 +531,55 @@ export default function MyLearningScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
-  header: { padding: 20, backgroundColor: '#4F46E5' },
-  backBtn: { marginBottom: 8 },
-  backBtnText: { color: '#EEF2FF', fontSize: 13, fontWeight: '600' },
-  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#FFFFFF' },
-  tabContainer: { flexDirection: 'row', backgroundColor: '#FFFFFF', padding: 8, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
-  tabButton: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8 },
-  tabButtonActive: { backgroundColor: '#EEF2FF' },
-  tabText: { fontSize: 13, fontWeight: '600', color: '#6B7280' },
-  tabTextActive: { color: '#4F46E5', fontWeight: '700' },
+  container: { flex: 1, backgroundColor: '#FAF9F6' },
+  header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
+  headerTitle: { fontSize: 28, fontWeight: '800', color: '#0F172A', letterSpacing: -0.5 },
+  tabSection: { flexDirection: 'row', paddingHorizontal: 20, gap: 8, marginBottom: 16 },
+  tabPill: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  tabPillActive: { backgroundColor: '#064E3B', borderColor: '#064E3B' },
+  tabPillText: { fontSize: 13, fontWeight: '600', color: '#475569' },
+  tabPillTextActive: { color: '#FFFFFF' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { marginTop: 10, color: '#6B7280', fontSize: 14 },
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 30 },
-  emptyTitle: { fontSize: 16, fontWeight: 'bold', color: '#374151', marginBottom: 6 },
-  emptySubtitle: { fontSize: 13, color: '#6B7280', textAlign: 'center', marginBottom: 16 },
-  browseBtn: { backgroundColor: '#4F46E5', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 },
-  browseBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
-  listContainer: { padding: 16, gap: 16 },
+  loadingText: { marginTop: 10, color: '#64748B' },
+  listContainer: { paddingHorizontal: 20, paddingBottom: 40, gap: 16 },
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 16,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
     elevation: 2,
   },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  categoryBadge: {
-    backgroundColor: '#E0E7FF',
-    color: '#3730A3',
-    fontSize: 11,
-    fontWeight: '700',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+  cardTopRow: { flexDirection: 'row', alignItems: 'center' },
+  cardThumbnail: { width: 56, height: 56, borderRadius: 14 },
+  courseTitle: { fontSize: 15, fontWeight: '700', color: '#0F172A', marginBottom: 4 },
+  creatorRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 2 },
+  creatorName: { fontSize: 12, color: '#64748B' },
+  verifiedBadge: { backgroundColor: '#DCFCE7', width: 16, height: 16, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
+  verifiedText: { fontSize: 10, fontWeight: '800', color: '#15803D' },
+  lastAccessedText: { fontSize: 11, color: '#94A3B8' },
+  progressSection: { marginTop: 14, marginBottom: 14 },
+  progressTrack: { height: 8, backgroundColor: '#F1F5F9', borderRadius: 4, overflow: 'hidden', marginBottom: 6 },
+  progressFill: { height: '100%', backgroundColor: '#064E3B', borderRadius: 4 },
+  progressText: { fontSize: 12, color: '#64748B', fontWeight: '500' },
+  continueBtn: {
+    backgroundColor: '#064E3B',
+    paddingVertical: 12,
+    borderRadius: 14,
+    alignItems: 'center',
   },
+  continueBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
   creatorText: { fontSize: 11, color: '#6B7280' },
   courseTitle: { fontSize: 16, fontWeight: 'bold', color: '#111827', marginBottom: 12 },
   progressRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },

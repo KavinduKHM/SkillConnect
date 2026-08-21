@@ -51,6 +51,11 @@ export const fetchCategories = async () => {
   return response.data;
 };
 
+export const fetchSharerProfile = async (sharerId: string) => {
+  const response = await client.get(`/learner/sharers/${sharerId}`);
+  return response.data;
+};
+
 export const enrollCourse = async (courseId: string) => {
   const response = await client.post('/learner/enrollments', { courseId });
   return response.data;
@@ -71,8 +76,8 @@ export const fetchLessonContent = async (lessonId: string) => {
   return response.data;
 };
 
-export const completeLesson = async (courseId: string, lessonId: string) => {
-  const response = await client.post('/learner/progress/complete', { courseId, lessonId });
+export const completeLesson = async (courseId: string, lessonId: string, completed?: boolean) => {
+  const response = await client.post('/learner/progress/complete', { courseId, lessonId, completed });
   return response.data;
 };
 
