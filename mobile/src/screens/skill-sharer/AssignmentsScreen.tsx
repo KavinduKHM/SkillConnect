@@ -263,24 +263,40 @@ export const AssignmentsScreen = ({ navigation }: any) => {
                 <View style={styles.quizActions}>
                   <TouchableOpacity
                     style={styles.iconBtn}
-                    onPress={() => navigation.navigate('AssignmentSubmissions', { assignmentId: assignment.id, assignmentTitle: assignment.title })}
-                  >
-                    <Ionicons name="people-outline" size={20} color="#4F46E5" />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.iconBtn}
                     onPress={() => handleOpenEditModal(item.id, assignment)}
                   >
-                    <Ionicons name="pencil-outline" size={20} color="#6B7280" />
+                    <Ionicons name="pencil-outline" size={18} color="#6B7280" />
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={styles.iconBtn}
+                    style={[styles.iconBtn, { marginLeft: 6 }]}
                     onPress={() => handleDeleteAssignment(assignment)}
                   >
-                    <Ionicons name="trash-outline" size={20} color="#EF4444" />
+                    <Ionicons name="trash-outline" size={18} color="#EF4444" />
                   </TouchableOpacity>
                 </View>
               </View>
+
+              {/* Instructions preview */}
+              {assignment.instructions ? (
+                <Text style={styles.quizInstructions} numberOfLines={2}>
+                  "{assignment.instructions}"
+                </Text>
+              ) : null}
+
+              {/* View Submissions & Grade Button */}
+              <TouchableOpacity
+                style={styles.viewSubmissionsBtn}
+                onPress={() =>
+                  navigation.navigate('AssignmentSubmissions', {
+                    assignmentId: assignment.id,
+                    assignmentTitle: assignment.title,
+                    maxMarks: assignment.maxMarks || 100,
+                  })
+                }
+              >
+                <Ionicons name="documents-outline" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                <Text style={styles.viewSubmissionsBtnText}>View Submissions & Grade Answers →</Text>
+              </TouchableOpacity>
             </View>
           ))}
         </View>
@@ -704,4 +720,27 @@ const styles = StyleSheet.create({
   },
   saveBtnDisabled: { opacity: 0.7 },
   saveBtnText: { color: '#FFF', fontSize: 16, fontWeight: '600' },
+  quizInstructions: {
+    fontSize: 12,
+    color: '#4B5563',
+    fontStyle: 'italic',
+    marginTop: 6,
+    backgroundColor: '#F9FAFB',
+    padding: 8,
+    borderRadius: 6,
+  },
+  viewSubmissionsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#4F46E5',
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 10,
+  },
+  viewSubmissionsBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
 });
