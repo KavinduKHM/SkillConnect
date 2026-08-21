@@ -73,8 +73,6 @@ export const getSkillSharerProfile = async (sharerId: string) => {
     select: {
       id: true,
       name: true,
-      email: true,
-      role: true,
       verifiedBadge: true,
       profilePicture: true,
       profile: true,

@@ -36,17 +36,22 @@ export const AssessmentDetailScreen = ({ route, navigation }: any) => {
   const courseTitle = route.params?.courseName || assessment.course?.title || 'React Native Mobile App Development';
   const assessmentTitle = assessment.title || `${courseTitle} - Final Assessment`;
   const dueDate = route.params?.dueDate || (assessment.dueDate ? new Date(assessment.dueDate).toLocaleDateString() : 'No due date');
-  const googleFormUrl = assessment.url || assessment.formUrl || 'https://forms.google.com';
+  const googleFormUrl = assessment.url || assessment.formUrl;
 
   const handleOpenForm = async () => {
     try {
       if (!googleFormUrl) {
-        Alert.alert('Error', 'No Google Form link provided.');
+        Alert.alert('Notice', 'No Google Form link provided for this assessment.');
         return;
       }
-      await Linking.openURL(googleFormUrl);
+      const canOpen = await Linking.canOpenURL(googleFormUrl);
+      if (canOpen) {
+        await Linking.openURL(googleFormUrl);
+      } else {
+        Alert.alert('Error', 'Cannot open the provided form URL.');
+      }
     } catch (error) {
-      Alert.alert('Notice', 'Opening assessment form link...');
+      Alert.alert('Error', 'Failed to open assessment form link.');
     }
   };
 

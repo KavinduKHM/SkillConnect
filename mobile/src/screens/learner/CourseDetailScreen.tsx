@@ -56,11 +56,9 @@ export default function CourseDetailScreen({ route, navigation }: any) {
 
       await completeLesson(courseId, lessonId, targetState);
 
-      if (targetState) {
-        setCompletedLessonIds([...completedLessonIds, lessonId]);
-      } else {
-        setCompletedLessonIds(completedLessonIds.filter((id) => id !== lessonId));
-      }
+      setCompletedLessonIds((prev) =>
+        targetState ? (prev.includes(lessonId) ? prev : [...prev, lessonId]) : prev.filter((id) => id !== lessonId)
+      );
       loadDetails();
     } catch (err: any) {
       Alert.alert('Notice', err.response?.data?.error || err.message || 'Updated lesson progress');

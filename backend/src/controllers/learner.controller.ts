@@ -60,7 +60,7 @@ export const listCategories = async (req: Request, res: Response): Promise<void>
 export const getSharerProfile = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const profile = await getSkillSharerProfile(id);
+    const profile = await getSkillSharerProfile(id as string);
     res.status(200).json(profile);
   } catch (error: any) {
     logger.error('Error in getSharerProfile controller:', error);

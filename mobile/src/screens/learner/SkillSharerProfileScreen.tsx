@@ -39,13 +39,13 @@ export default function SkillSharerProfileScreen({ route, navigation }: any) {
     loadProfile();
   }, [sharerId]);
 
-  const profile = profileData?.user?.profile || profileData?.profile || {};
-  const user = profileData?.user || {
+  const user = profileData?.user || profileData || {
     name: sharerName,
     verifiedBadge: true,
   };
+  const profile = user.profile || profileData?.profile || {};
 
-  const coursesTaught = profileData?.publishedCourses || [
+  const coursesTaught = profileData?.courses || profileData?.publishedCourses || [
     {
       id: 'c1',
       title: 'React Native Development',
@@ -93,13 +93,15 @@ export default function SkillSharerProfileScreen({ route, navigation }: any) {
                 source={{
                   uri:
                     profile.avatar ||
+                    profile.profilePicture ||
+                    user.profilePicture ||
                     'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
                 }}
                 style={styles.avatarImage}
               />
               <View style={styles.nameRow}>
                 <Text style={styles.sharerName}>{user.name || sharerName}</Text>
-                {(user.verifiedBadge || true) && (
+                {Boolean(user.verifiedBadge) && (
                   <View style={styles.verifiedBadge}>
                     <Text style={styles.verifiedText}>✓ Verified</Text>
                   </View>

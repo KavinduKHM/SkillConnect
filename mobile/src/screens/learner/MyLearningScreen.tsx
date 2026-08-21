@@ -194,9 +194,11 @@ export default function MyLearningScreen({ navigation }: any) {
                     <Text style={styles.courseTitle}>{course.title || 'React Native Development'}</Text>
                     <View style={styles.creatorRow}>
                       <Text style={styles.creatorName}>{course.creator?.name || 'John Perera'}</Text>
-                      <View style={styles.verifiedBadge}>
-                        <Text style={styles.verifiedText}>✓</Text>
-                      </View>
+                      {course.creator?.verifiedBadge && (
+                        <View style={styles.verifiedBadge}>
+                          <Text style={styles.verifiedText}>✓</Text>
+                        </View>
+                      )}
                     </View>
                     <Text style={styles.lastAccessedText}>Last accessed: 2 hours ago</Text>
                   </View>

@@ -43,11 +43,9 @@ export default function LessonPlayerScreen({ route, navigation }: any) {
   }, [lessonId]);
 
   const toggleMaterialCheck = (matId: string) => {
-    if (completedMaterials.includes(matId)) {
-      setCompletedMaterials(completedMaterials.filter((id) => id !== matId));
-    } else {
-      setCompletedMaterials([...completedMaterials, matId]);
-    }
+    setCompletedMaterials((prev) =>
+      prev.includes(matId) ? prev.filter((id) => id !== matId) : [...prev, matId]
+    );
   };
 
   const handleMarkComplete = async () => {

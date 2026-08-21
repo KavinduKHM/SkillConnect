@@ -116,12 +116,26 @@ export default function CourseListScreen({ navigation }: any) {
       selectedDifficulty === 'All' ||
       course.difficulty?.toUpperCase() === selectedDifficulty.toUpperCase();
 
+    const matchesDuration =
+      selectedDuration === 'All' ||
+      (() => {
+        const durStr = (course.duration || '').toLowerCase();
+        const match = durStr.match(/(\d+)/);
+        if (!match) return true;
+        const num = parseInt(match[1], 10);
+        const isHours = durStr.includes('hour');
+        const weeks = isHours ? Math.ceil(num / 40) : num;
+        if (selectedDuration === 'Short (< 5 wks)') return weeks < 5;
+        if (selectedDuration === 'Long (5+ wks)') return weeks >= 5;
+        return true;
+      })();
+
     const matchesRating =
       selectedRating === 'All' ||
       (selectedRating === '4.8+' && (course.rating || 4.8) >= 4.8) ||
       (selectedRating === '4.5+' && (course.rating || 4.8) >= 4.5);
 
-    return matchesSearch && matchesCat && matchesDiff && matchesRating;
+    return matchesSearch && matchesCat && matchesDiff && matchesDuration && matchesRating;
   });
 
   const clearAllFilters = () => {
@@ -197,7 +211,7 @@ export default function CourseListScreen({ navigation }: any) {
         </ScrollView>
 
         {/* Active Filter Tags */}
-        {(selectedCategory !== 'All' || selectedDifficulty !== 'All' || selectedRating !== 'All') && (
+        {(selectedCategory !== 'All' || selectedDifficulty !== 'All' || selectedDuration !== 'All' || selectedRating !== 'All') && (
           <View style={styles.activeTagsRow}>
             {selectedCategory !== 'All' && (
               <TouchableOpacity style={styles.activeTag} onPress={() => setSelectedCategory('All')}>
@@ -207,6 +221,11 @@ export default function CourseListScreen({ navigation }: any) {
             {selectedDifficulty !== 'All' && (
               <TouchableOpacity style={styles.activeTag} onPress={() => setSelectedDifficulty('All')}>
                 <Text style={styles.activeTagText}>{selectedDifficulty} ⊗</Text>
+              </TouchableOpacity>
+            )}
+            {selectedDuration !== 'All' && (
+              <TouchableOpacity style={styles.activeTag} onPress={() => setSelectedDuration('All')}>
+                <Text style={styles.activeTagText}>{selectedDuration} ⊗</Text>
               </TouchableOpacity>
             )}
             {selectedRating !== 'All' && (
@@ -302,7 +321,10 @@ export default function CourseListScreen({ navigation }: any) {
 
             {activeModal === 'CATEGORY' && (
               <View style={styles.optionList}>
-                {['All', 'Web Development', 'Mobile Development', 'Software Engineering', 'Arts & Design', 'Business'].map((cat) => (
+                {(categories.length > 0
+                  ? ['All', ...Array.from(new Set(categories.map((c) => (typeof c === 'string' ? c : c.name))))]
+                  : ['All', 'Web Development', 'Mobile Development', 'Software Engineering', 'Arts & Design', 'Business']
+                ).map((cat) => (
                   <TouchableOpacity
                     key={cat}
                     style={styles.optionItem}
