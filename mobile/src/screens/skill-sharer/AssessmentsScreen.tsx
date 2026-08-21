@@ -46,6 +46,12 @@ export const AssessmentsScreen = ({ navigation }: any) => {
   const [isEditing, setIsEditing] = useState(false);
   const [currentQuizId, setCurrentQuizId] = useState<string | null>(null);
 
+  // Completions State
+  const [completionsModalVisible, setCompletionsModalVisible] = useState(false);
+  const [selectedQuizForCompletions, setSelectedQuizForCompletions] = useState<Quiz | null>(null);
+  const [completions, setCompletions] = useState<any[]>([]);
+  const [completionsLoading, setCompletionsLoading] = useState(false);
+
   // Form Fields
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
   const [title, setTitle] = useState('');
@@ -55,6 +61,22 @@ export const AssessmentsScreen = ({ navigation }: any) => {
   const [requireForCompletion, setRequireForCompletion] = useState(true);
   const [dueDays, setDueDays] = useState('7');
   const [isSaving, setIsSaving] = useState(false);
+
+  const handleViewCompletions = async (quiz: Quiz) => {
+    setSelectedQuizForCompletions(quiz);
+    setCompletionsModalVisible(true);
+    setCompletionsLoading(true);
+    try {
+      const res: any = await quizApi.getQuizCompletions(quiz.id);
+      const data = res?.completions || res?.data?.completions || (Array.isArray(res) ? res : []);
+      setCompletions(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Error fetching quiz completions:', error);
+      setCompletions([]);
+    } finally {
+      setCompletionsLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchCoursesAndAssessments();
@@ -280,6 +302,17 @@ export const AssessmentsScreen = ({ navigation }: any) => {
                   "{quiz.instructions}"
                 </Text>
               ) : null}
+
+              {/* View Submissions & Scores Button */}
+              <TouchableOpacity
+                style={styles.viewSubmissionsBtn}
+                onPress={() => handleViewCompletions(quiz)}
+              >
+                <Ionicons name="people-outline" size={16} color="#4F46E5" style={{ marginRight: 6 }} />
+                <Text style={styles.viewSubmissionsBtnText}>
+                  View Learner Submissions ({quiz.completionCount || 0}) →
+                </Text>
+              </TouchableOpacity>
             </View>
           ))}
         </View>
@@ -485,6 +518,85 @@ export const AssessmentsScreen = ({ navigation }: any) => {
                 )}
               </TouchableOpacity>
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Completions Modal */}
+      <Modal
+        visible={completionsModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setCompletionsModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { maxHeight: '80%' }]}>
+            <View style={styles.modalHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.modalTitle}>Learner Submissions</Text>
+                <Text style={styles.modalSubtitle} numberOfLines={1}>
+                  {selectedQuizForCompletions?.title || 'Assessment'}
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setCompletionsModalVisible(false)} style={styles.closeBtn}>
+                <Ionicons name="close" size={24} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+
+            {completionsLoading ? (
+              <View style={{ padding: 40, alignItems: 'center' }}>
+                <ActivityIndicator size="large" color="#4F46E5" />
+                <Text style={{ marginTop: 10, color: '#6B7280' }}>Loading submissions...</Text>
+              </View>
+            ) : completions.length === 0 ? (
+              <View style={{ padding: 40, alignItems: 'center' }}>
+                <Ionicons name="people-outline" size={48} color="#D1D5DB" />
+                <Text style={{ fontSize: 16, fontWeight: '700', color: '#374151', marginTop: 12 }}>
+                  No Submissions Yet
+                </Text>
+                <Text style={{ fontSize: 13, color: '#6B7280', textAlign: 'center', marginTop: 6 }}>
+                  Learners who finish this assessment will appear here with their scores and completion dates.
+                </Text>
+              </View>
+            ) : (
+              <FlatList
+                data={completions}
+                keyExtractor={(item) => item.id}
+                contentContainerStyle={{ padding: 16, gap: 12 }}
+                renderItem={({ item }) => {
+                  const passed = item.passed ?? (item.score !== null ? item.score >= (selectedQuizForCompletions?.passingScore || 80) : true);
+                  return (
+                    <View style={styles.completionCard}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                          <View style={styles.learnerAvatar}>
+                            <Text style={styles.learnerAvatarText}>{(item.learner?.name || 'L')[0]}</Text>
+                          </View>
+                          <View>
+                            <Text style={styles.completionLearnerName}>{item.learner?.name || 'Learner'}</Text>
+                            <Text style={styles.completionLearnerEmail}>{item.learner?.email || ''}</Text>
+                          </View>
+                        </View>
+                        <View style={[styles.passBadge, { backgroundColor: passed ? '#DEF7EC' : '#FDE8E8' }]}>
+                          <Text style={[styles.passBadgeText, { color: passed ? '#03543F' : '#9B1C1C' }]}>
+                            {passed ? 'PASSED ✓' : 'FAILED'}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.completionMetaRow}>
+                        <Text style={styles.completionMetaText}>
+                          Score: {item.score !== null ? `${item.score}%` : 'Recorded'}
+                        </Text>
+                        <Text style={styles.completionMetaText}>
+                          Date: {new Date(item.completedAt).toLocaleDateString()}
+                        </Text>
+                      </View>
+                    </View>
+                  );
+                }}
+              />
+            )}
           </View>
         </View>
       </Modal>
@@ -864,5 +976,83 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  viewSubmissionsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EEF2FF',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+  },
+  viewSubmissionsBtnText: {
+    color: '#4F46E5',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  completionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  learnerAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#EEF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  learnerAvatarText: {
+    color: '#4F46E5',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  completionLearnerName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  completionLearnerEmail: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  passBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  passBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  completionMetaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  completionMetaText: {
+    fontSize: 12,
+    color: '#4B5563',
+    fontWeight: '500',
   },
 });

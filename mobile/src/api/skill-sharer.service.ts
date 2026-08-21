@@ -133,7 +133,11 @@ export const quizApi = {
 
   getCourseQuizzes: (courseId: string): Promise<ApiResponse<any[]>> => {
     return apiClient.get(`/assessments/quizzes/course/${courseId}`);
-  }
+  },
+
+  getQuizCompletions: (id: string): Promise<ApiResponse<any[]>> => {
+    return apiClient.get(`/assessments/quizzes/${id}/completions`);
+  },
 };
 
 // ============================================================
