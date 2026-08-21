@@ -174,6 +174,10 @@ export const MyCoursesScreen: React.FC = ({ navigation }: any) => {
               onEdit={() => handleEdit(course)}
               onDelete={() => handleDelete(course)}
               onSubmit={() => handleSubmit(course)}
+              onViewReviews={() => navigation.navigate('CourseReview', {
+                courseId: course.id,
+                courseTitle: course.title,
+              })}
             />
           ))
         )}

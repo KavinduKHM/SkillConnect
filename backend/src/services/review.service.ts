@@ -26,13 +26,21 @@ const updateCourseAggregateRating = async (courseId: string) => {
   });
 };
 
-export const createReview = async (learnerId: string, data: { courseId: string; rating: number; review?: string }) => {
-  // Verify completion
+export const createReview = async (learnerId: string, data: { courseId: string; rating: number; review?: string; comment?: string }) => {
+  // Verify completion (via enrollment status, 100% progress, or certificate)
   const completion = await prisma.enrollment.findUnique({
     where: { courseId_learnerId: { courseId: data.courseId, learnerId } },
   });
 
-  if (!completion || completion.status !== 'COMPLETED') {
+  const certificate = await prisma.certificate.findFirst({
+    where: { courseId: data.courseId, learnerId, status: 'ACTIVE' },
+  });
+
+  const isCompleted =
+    (completion && (completion.status === 'COMPLETED' || (completion.progressPercentage != null && completion.progressPercentage >= 100))) ||
+    !!certificate;
+
+  if (!isCompleted) {
     throw new Error('You must complete the course before leaving a review.');
   }
 
@@ -41,8 +49,24 @@ export const createReview = async (learnerId: string, data: { courseId: string; 
     where: { courseId_learnerId: { courseId: data.courseId, learnerId } },
   });
 
+  const reviewText = data.review !== undefined ? data.review : (data.comment !== undefined ? data.comment : null);
+
   if (existingReview) {
-    throw new Error('You have already reviewed this course. You can edit your existing review.');
+    // Update existing review seamlessly if user submits again
+    const updatedReview = await prisma.courseReview.update({
+      where: { id: existingReview.id },
+      data: {
+        rating: data.rating,
+        review: reviewText,
+        isEdited: true,
+        editedAt: new Date(),
+      },
+      include: {
+        learner: { select: { id: true, name: true, profilePicture: true } },
+      },
+    });
+    await updateCourseAggregateRating(data.courseId);
+    return { ...updatedReview, comment: updatedReview.review };
   }
 
   const review = await prisma.courseReview.create({
@@ -50,32 +74,40 @@ export const createReview = async (learnerId: string, data: { courseId: string; 
       courseId: data.courseId,
       learnerId,
       rating: data.rating,
-      review: data.review ?? null,
+      review: reviewText,
       isVerified: true,
+    },
+    include: {
+      learner: { select: { id: true, name: true, profilePicture: true } },
     },
   });
 
   await updateCourseAggregateRating(data.courseId);
-  return review;
+  return { ...review, comment: review.review };
 };
 
-export const updateReview = async (learnerId: string, reviewId: string, data: { rating?: number; review?: string }) => {
+export const updateReview = async (learnerId: string, reviewId: string, data: { rating?: number; review?: string; comment?: string }) => {
   const existingReview = await prisma.courseReview.findUnique({ where: { id: reviewId } });
   if (!existingReview) throw new Error('Review not found');
   if (existingReview.learnerId !== learnerId) throw new Error('Unauthorized');
+
+  const reviewText = data.review !== undefined ? data.review : (data.comment !== undefined ? data.comment : undefined);
 
   const updatedReview = await prisma.courseReview.update({
     where: { id: reviewId },
     data: {
       ...(data.rating !== undefined && { rating: data.rating }),
-      ...(data.review !== undefined && { review: data.review ?? null }),
+      ...(reviewText !== undefined && { review: reviewText }),
       isEdited: true,
       editedAt: new Date(),
+    },
+    include: {
+      learner: { select: { id: true, name: true, profilePicture: true } },
     },
   });
 
   await updateCourseAggregateRating(updatedReview.courseId);
-  return updatedReview;
+  return { ...updatedReview, comment: updatedReview.review };
 };
 
 export const deleteReview = async (learnerId: string, reviewId: string) => {
@@ -89,11 +121,16 @@ export const deleteReview = async (learnerId: string, reviewId: string) => {
 };
 
 export const getCourseReviews = async (courseId: string) => {
-  return prisma.courseReview.findMany({
+  const reviews = await prisma.courseReview.findMany({
     where: { courseId },
     include: {
-      learner: { select: { name: true, profilePicture: true } },
+      learner: { select: { id: true, name: true, profilePicture: true } },
     },
     orderBy: { createdAt: 'desc' },
   });
+
+  return reviews.map((r) => ({
+    ...r,
+    comment: r.review,
+  }));
 };

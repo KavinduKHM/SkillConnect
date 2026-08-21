@@ -144,8 +144,17 @@ export default function MyLearningScreen({ navigation }: any) {
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation?.goBack()}>
-          <Text style={styles.backBtnText}>← Back to Browse</Text>
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={() => {
+            if (navigation?.canGoBack && navigation.canGoBack()) {
+              navigation.goBack();
+            } else {
+              navigation?.navigate('CourseList');
+            }
+          }}
+        >
+          <Text style={styles.backBtnText}>🔍 Browse Courses</Text>
         </TouchableOpacity>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <Text style={styles.headerTitle}>My Learning Dashboard 📊</Text>
@@ -429,11 +438,23 @@ export default function MyLearningScreen({ navigation }: any) {
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
+                      style={[styles.continueBtn, { backgroundColor: '#FFFBEB', marginBottom: 8, borderWidth: 1, borderColor: '#FDE68A' }]}
+                      onPress={() => navigation?.navigate('CourseReview', {
+                        courseId,
+                        courseTitle: course.title,
+                        hasCompleted: true,
+                      })}
+                    >
+                      <Text style={[styles.continueBtnText, { color: '#B45309', fontWeight: 'bold' }]}>
+                        ⭐ Rate & Review Course
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
                       style={[styles.continueBtn, { backgroundColor: '#F3F4F6' }]}
                       onPress={() => navigation?.navigate('CourseDetail', { courseId })}
                     >
                       <Text style={[styles.continueBtnText, { color: '#4B5563' }]}>
-                        Review Course ✓
+                        Course Details ✓
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -448,11 +469,23 @@ export default function MyLearningScreen({ navigation }: any) {
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
+                      style={[styles.continueBtn, { backgroundColor: '#FFFBEB', marginBottom: 8, borderWidth: 1, borderColor: '#FDE68A' }]}
+                      onPress={() => navigation?.navigate('CourseReview', {
+                        courseId,
+                        courseTitle: course.title,
+                        hasCompleted: true,
+                      })}
+                    >
+                      <Text style={[styles.continueBtnText, { color: '#B45309', fontWeight: 'bold' }]}>
+                        ⭐ Rate & Review Course
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
                       style={[styles.continueBtn, { backgroundColor: '#F3F4F6' }]}
                       onPress={() => navigation?.navigate('CourseDetail', { courseId })}
                     >
                       <Text style={[styles.continueBtnText, { color: '#4B5563' }]}>
-                        Review Course ✓
+                        Course Details ✓
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -467,11 +500,23 @@ export default function MyLearningScreen({ navigation }: any) {
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
+                      style={[styles.continueBtn, { backgroundColor: '#FFFBEB', marginBottom: 8, borderWidth: 1, borderColor: '#FDE68A' }]}
+                      onPress={() => navigation?.navigate('CourseReview', {
+                        courseId,
+                        courseTitle: course.title,
+                        hasCompleted: true,
+                      })}
+                    >
+                      <Text style={[styles.continueBtnText, { color: '#B45309', fontWeight: 'bold' }]}>
+                        ⭐ Rate & Review Course
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
                       style={[styles.continueBtn, { backgroundColor: '#F3F4F6' }]}
                       onPress={() => navigation?.navigate('CourseDetail', { courseId })}
                     >
                       <Text style={[styles.continueBtnText, { color: '#4B5563' }]}>
-                        Review Course ✓
+                        Course Details ✓
                       </Text>
                     </TouchableOpacity>
                   </View>

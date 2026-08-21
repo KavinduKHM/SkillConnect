@@ -10,15 +10,16 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
-  FlatList,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   fetchCourseReviews,
   createCourseReview,
   updateCourseReview,
   deleteCourseReview,
+  fetchCourseDetails,
 } from '../../api/learner.service';
 
 const STAR_COUNT = 5;
@@ -45,24 +46,65 @@ function StarRating({ rating, onRate, size = 28, readonly = false }: { rating: n
 }
 
 export default function CourseReviewScreen({ route, navigation }: any) {
-  const { courseId, courseTitle, hasCompleted } = route.params;
+  const { courseId, courseTitle, hasCompleted: routeHasCompleted } = route.params || {};
 
   const [reviews, setReviews] = useState<any[]>([]);
   const [myReview, setMyReview] = useState<any | null>(null);
+  const [hasCompleted, setHasCompleted] = useState<boolean>(routeHasCompleted ?? true);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   // Form state
-  const [rating, setRating] = useState(0);
+  const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
   const [isEditing, setIsEditing] = useState(false);
 
   const loadReviews = async () => {
     try {
       setLoading(true);
+
+      // 1. Get current logged-in user
+      let userId: string | null = null;
+      try {
+        const userStr = await AsyncStorage.getItem('user');
+        if (userStr) {
+          const u = JSON.parse(userStr);
+          userId = u.id || u.userId;
+          setCurrentUserId(userId);
+        }
+      } catch (e) {}
+
+      // 2. Fetch all reviews for this course
       const res = await fetchCourseReviews(courseId);
-      const allReviews = res?.reviews || res?.data || [];
+      const allReviews: any[] = res?.reviews || res?.data || (Array.isArray(res) ? res : []);
       setReviews(allReviews);
+
+      // 3. Find if user already submitted a review
+      if (userId) {
+        const found = allReviews.find((r: any) => (r.learnerId && r.learnerId === userId) || (r.learner?.id && r.learner.id === userId));
+        if (found) {
+          setMyReview(found);
+        }
+      }
+
+      // 4. Verify completion status if not explicitly passed as true
+      if (routeHasCompleted === undefined) {
+        try {
+          const courseRes = await fetchCourseDetails(courseId);
+          const enrollment = courseRes?.userEnrollment;
+          if (enrollment) {
+            const isDone = enrollment.status === 'COMPLETED' || (enrollment.progressPercentage != null && enrollment.progressPercentage >= 100);
+            setHasCompleted(isDone);
+          } else {
+            setHasCompleted(true);
+          }
+        } catch (e) {
+          setHasCompleted(true);
+        }
+      } else {
+        setHasCompleted(routeHasCompleted);
+      }
     } catch (err) {
       console.log('Failed to load reviews', err);
     } finally {
@@ -70,7 +112,7 @@ export default function CourseReviewScreen({ route, navigation }: any) {
     }
   };
 
-  useFocusEffect(useCallback(() => { loadReviews(); }, []));
+  useFocusEffect(useCallback(() => { loadReviews(); }, [courseId]));
 
   const avgRating = reviews.length > 0
     ? reviews.reduce((sum: number, r: any) => sum + (r.rating || 0), 0) / reviews.length
@@ -78,25 +120,24 @@ export default function CourseReviewScreen({ route, navigation }: any) {
 
   const handleSubmitReview = async () => {
     if (rating === 0) {
-      Alert.alert('Rating Required', 'Please select a star rating before submitting.');
+      Alert.alert('Rating Required', 'Please select a star rating between 1 and 5.');
       return;
     }
     try {
       setSubmitting(true);
       if (isEditing && myReview) {
-        await updateCourseReview(myReview.id, { rating, comment });
+        await updateCourseReview(myReview.id, { rating, comment, review: comment } as any);
         Alert.alert('Success', 'Your review has been updated!');
       } else {
-        await createCourseReview({ courseId, rating, comment });
+        await createCourseReview({ courseId, rating, comment, review: comment } as any);
         Alert.alert('Success', 'Your review has been submitted!');
       }
       setIsEditing(false);
-      setRating(0);
       setComment('');
-      setMyReview(null);
       loadReviews();
     } catch (err: any) {
-      Alert.alert('Error', err?.error || err?.message || 'Failed to submit review.');
+      const errMsg = err?.response?.data?.error || err?.error || err?.message || 'Failed to submit review.';
+      Alert.alert('Notice', errMsg);
     } finally {
       setSubmitting(false);
     }
@@ -104,8 +145,8 @@ export default function CourseReviewScreen({ route, navigation }: any) {
 
   const handleEditReview = (review: any) => {
     setMyReview(review);
-    setRating(review.rating);
-    setComment(review.comment || '');
+    setRating(review.rating || 5);
+    setComment(review.comment || review.review || '');
     setIsEditing(true);
   };
 
@@ -118,12 +159,12 @@ export default function CourseReviewScreen({ route, navigation }: any) {
           try {
             await deleteCourseReview(reviewId);
             setIsEditing(false);
-            setRating(0);
+            setRating(5);
             setComment('');
             setMyReview(null);
             loadReviews();
           } catch (err: any) {
-            Alert.alert('Error', err?.error || 'Failed to delete review.');
+            Alert.alert('Error', err?.error || err?.message || 'Failed to delete review.');
           }
         }
       }
@@ -135,18 +176,29 @@ export default function CourseReviewScreen({ route, navigation }: any) {
     count: reviews.filter((r: any) => r.rating === star).length,
   }));
 
+  const canReview = hasCompleted || !!myReview;
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#4F46E5" />
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backBtn}>
+        <TouchableOpacity
+          onPress={() => {
+            if (navigation?.canGoBack && navigation.canGoBack()) {
+              navigation.goBack();
+            } else {
+              navigation?.navigate('CourseList');
+            }
+          }}
+          style={styles.backBtn}
+        >
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
         <View style={{ flex: 1, marginLeft: 12 }}>
           <Text style={styles.headerTitle}>Ratings & Reviews</Text>
-          <Text style={styles.headerSub} numberOfLines={1}>{courseTitle}</Text>
+          <Text style={styles.headerSub} numberOfLines={1}>{courseTitle || 'Course Reviews'}</Text>
         </View>
       </View>
 
@@ -176,13 +228,15 @@ export default function CourseReviewScreen({ route, navigation }: any) {
         )}
 
         {/* ── Write / Edit Review ── */}
-        {hasCompleted && (
+        {canReview ? (
           <View style={styles.writeCard}>
             <Text style={styles.sectionTitle}>
-              {isEditing ? '✏️ Edit Your Review' : '⭐ Write a Review'}
+              {isEditing || myReview ? '✏️ Your Review' : '⭐ Write a Review'}
             </Text>
             <Text style={styles.sectionSub}>
-              {isEditing ? 'Update your rating and comment below.' : 'Share your experience with this course.'}
+              {isEditing || myReview
+                ? 'Update your rating and feedback for this course.'
+                : 'Share your learning experience with other students.'}
             </Text>
 
             <View style={styles.starRow}>
@@ -196,7 +250,7 @@ export default function CourseReviewScreen({ route, navigation }: any) {
 
             <TextInput
               style={styles.commentInput}
-              placeholder="Write your comment (optional)..."
+              placeholder="Write your review and feedback..."
               placeholderTextColor="#9CA3AF"
               value={comment}
               onChangeText={setComment}
@@ -209,7 +263,10 @@ export default function CourseReviewScreen({ route, navigation }: any) {
               {isEditing && (
                 <TouchableOpacity
                   style={styles.cancelBtn}
-                  onPress={() => { setIsEditing(false); setRating(0); setComment(''); setMyReview(null); }}
+                  onPress={() => {
+                    setIsEditing(false);
+                    setComment('');
+                  }}
                 >
                   <Text style={styles.cancelBtnText}>Cancel</Text>
                 </TouchableOpacity>
@@ -222,9 +279,19 @@ export default function CourseReviewScreen({ route, navigation }: any) {
                 {submitting ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Text style={styles.submitBtnText}>{isEditing ? 'Update Review' : 'Submit Review'}</Text>
+                  <Text style={styles.submitBtnText}>{isEditing || myReview ? 'Update Review' : 'Submit Review'}</Text>
                 )}
               </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.noticeCard}>
+            <Ionicons name="ribbon-outline" size={24} color="#6366F1" />
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <Text style={styles.noticeTitle}>Completed Learners Only</Text>
+              <Text style={styles.noticeText}>
+                Complete all course lessons (100% progress) to unlock rating and reviewing.
+              </Text>
             </View>
           </View>
         )}
@@ -244,29 +311,43 @@ export default function CourseReviewScreen({ route, navigation }: any) {
           </View>
         ) : (
           reviews.map((review: any) => {
-            const isOwn = review.learnerId && myReview?.id === review.id;
-            const reviewDate = review.createdAt ? new Date(review.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '';
+            const isOwn =
+              (currentUserId && (review.learnerId === currentUserId || review.learner?.id === currentUserId)) ||
+              (myReview && myReview.id === review.id) ||
+              review.isMyReview;
+
+            const reviewDate = review.createdAt
+              ? new Date(review.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+              : '';
+
+            const commentContent = review.comment || review.review;
+
             return (
-              <View key={review.id} style={[styles.reviewCard, isEditing && myReview?.id === review.id && styles.reviewCardEditing]}>
+              <View
+                key={review.id}
+                style={[styles.reviewCard, isOwn && styles.reviewCardEditing]}
+              >
                 <View style={styles.reviewHeader}>
-                  <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>
+                  <View style={[styles.avatar, isOwn && { backgroundColor: '#4F46E5' }]}>
+                    <Text style={[styles.avatarText, isOwn && { color: '#fff' }]}>
                       {(review.learner?.name || review.learner?.email || '?')[0].toUpperCase()}
                     </Text>
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.reviewerName}>{review.learner?.name || 'Learner'}</Text>
+                    <Text style={styles.reviewerName}>
+                      {review.learner?.name || 'Learner'} {isOwn ? '(You)' : ''}
+                    </Text>
                     <Text style={styles.reviewDate}>{reviewDate}</Text>
                   </View>
                   <StarRating rating={review.rating} size={14} readonly />
                 </View>
 
-                {review.comment ? (
-                  <Text style={styles.reviewComment}>{review.comment}</Text>
+                {commentContent ? (
+                  <Text style={styles.reviewComment}>{commentContent}</Text>
                 ) : null}
 
-                {/* Show edit/delete only for own review — use learner field from server */}
-                {review.isMyReview && (
+                {/* Show edit/delete for own review */}
+                {isOwn && (
                   <View style={styles.reviewActions}>
                     <TouchableOpacity style={styles.editBtn} onPress={() => handleEditReview(review)}>
                       <Ionicons name="pencil-outline" size={14} color="#4F46E5" />
@@ -323,6 +404,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff', borderRadius: 16, padding: 20,
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3,
   },
+  noticeCard: {
+    backgroundColor: '#EFF6FF', borderRadius: 14, padding: 16,
+    flexDirection: 'row', alignItems: 'center',
+    borderWidth: 1, borderColor: '#BFDBFE',
+  },
+  noticeTitle: { fontSize: 14, fontWeight: '700', color: '#1E40AF' },
+  noticeText: { fontSize: 12, color: '#3B82F6', marginTop: 2, lineHeight: 18 },
+
   sectionTitle: { fontSize: 16, fontWeight: '700', color: '#111827', marginBottom: 4 },
   sectionSub: { fontSize: 13, color: '#6B7280', marginBottom: 16 },
   starRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
@@ -349,7 +438,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff', borderRadius: 16, padding: 16,
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,
   },
-  reviewCardEditing: { borderWidth: 2, borderColor: '#4F46E5' },
+  reviewCardEditing: { borderWidth: 1.5, borderColor: '#4F46E5' },
   reviewHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, gap: 10 },
   avatar: {
     width: 38, height: 38, borderRadius: 19,

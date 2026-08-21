@@ -38,7 +38,16 @@ export default function MyRecommendationsScreen({ navigation }: any) {
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backBtn}>
+        <TouchableOpacity
+          onPress={() => {
+            if (navigation?.canGoBack && navigation.canGoBack()) {
+              navigation.goBack();
+            } else {
+              navigation?.navigate('MyLearning');
+            }
+          }}
+          style={styles.backBtn}
+        >
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
         <View style={{ flex: 1, marginLeft: 12 }}>
