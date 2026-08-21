@@ -11,10 +11,11 @@ import {
   RefreshControl,
   ScrollView,
   Image,
+  Platform,
+  Linking,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { Platform, Linking } from 'react-native';
 import { fetchMyLearning, fetchMyQuizzes } from '../../api/learner.service';
 
 export default function MyLearningScreen({ navigation }: any) {
@@ -24,7 +25,7 @@ export default function MyLearningScreen({ navigation }: any) {
   const [assignments, setAssignments] = useState<any[]>([]);
   const [certificates, setCertificates] = useState<any[]>([]);
   const [completionRequests, setCompletionRequests] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'IN_PROGRESS' | 'COMPLETED' | 'ASSESSMENTS' | 'ASSIGNMENTS' | 'CERTIFICATES'>('IN_PROGRESS');
+  const [activeTab, setActiveTab] = useState<'IN_PROGRESS' | 'COMPLETED' | 'ASSESSMENTS' | 'ASSIGNMENTS'>('IN_PROGRESS');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -44,8 +45,7 @@ export default function MyLearningScreen({ navigation }: any) {
       // Fetch assignments for all enrolled courses
       const allAssignments: any[] = [];
       const enrolledCourseIds = [...(res?.inProgress || []), ...(res?.completed || [])].map((c: any) => c.courseId);
-      
-      // I'll import fetchCourseAssignments dynamically or at top
+
       const { fetchCourseAssignments, fetchLearnerSubmissions, fetchMyCertificates, fetchMyCompletionRequests } = require('../../api/learner.service');
 
       const certsRes = await fetchMyCertificates();
@@ -57,12 +57,12 @@ export default function MyLearningScreen({ navigation }: any) {
         const pendingOrRejected = (reqsRes.requests || []).filter((req: any) => req.status !== 'APPROVED');
         setCompletionRequests(pendingOrRejected);
       }
-      
+
       for (const cId of Array.from(new Set(enrolledCourseIds))) {
         try {
           const assignRes: any = await fetchCourseAssignments(cId as string);
           const courseAssignments = assignRes?.assignments || assignRes?.data?.assignments || [];
-          
+
           for (const assignment of courseAssignments) {
             try {
               const subRes: any = await fetchLearnerSubmissions(assignment.id);
@@ -71,10 +71,9 @@ export default function MyLearningScreen({ navigation }: any) {
             } catch (e) {
               assignment.mySubmission = null;
             }
-            // attach course info if missing
             const matchedCourse = [...(res?.inProgress || []), ...(res?.completed || [])].find((c: any) => c.courseId === cId)?.course;
             if (matchedCourse && !assignment.course) assignment.course = matchedCourse;
-            
+
             allAssignments.push(assignment);
           }
         } catch (e) {
@@ -83,7 +82,7 @@ export default function MyLearningScreen({ navigation }: any) {
       }
       setAssignments(allAssignments);
     } catch (err) {
-      console.log('Error fetching my-learning from API, using demo data:', err);
+      console.log('Error fetching my-learning from API, using fallback data:', err);
       setInProgressCourses([
         {
           id: 'e1',
@@ -127,10 +126,17 @@ export default function MyLearningScreen({ navigation }: any) {
       setLoading(true);
       const { requestCourseCompletion } = require('../../api/learner.service');
       await requestCourseCompletion(courseId);
-      alert('Completion request submitted successfully!');
-      loadMyLearning();
+      Alert.alert(
+        'Request Submitted! 🏆',
+        'Your completion request has been submitted. You can track approval status and download your PDF under the Certificates tab in the bottom bar.',
+        [
+          { text: 'View Certificates', onPress: () => navigation?.navigate('MainTabs', { screen: 'CertificatesTab' }) },
+          { text: 'OK', onPress: () => loadMyLearning() },
+        ]
+      );
     } catch (err: any) {
-      alert(err.response?.data?.error || err.message || 'Failed to request completion');
+      Alert.alert('Notice', err.response?.data?.error || err.message || 'Failed to request completion');
+    } finally {
       setLoading(false);
     }
   };
@@ -149,7 +155,13 @@ export default function MyLearningScreen({ navigation }: any) {
     }
   };
 
-  const displayList = activeTab === 'IN_PROGRESS' ? inProgressCourses : completedCourses;
+  const handleBrowseCourses = () => {
+    if (navigation?.canGoBack && navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      navigation?.navigate('CourseList');
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -157,67 +169,71 @@ export default function MyLearningScreen({ navigation }: any) {
 
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>My Learning</Text>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation?.goBack()}>
-          <Text style={styles.backBtnText}>← Back to Browse</Text>
-        </TouchableOpacity>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text style={styles.headerTitle}>My Learning Dashboard 📊</Text>
-          <TouchableOpacity
-            style={styles.recBtn}
-            onPress={() => navigation?.navigate('MyRecommendations')}
-          >
-            <Ionicons name="ribbon-outline" size={14} color="#F59E0B" />
-            <Text style={styles.recBtnText}>Recommendations</Text>
-          </TouchableOpacity>
+        <View style={styles.headerTopRow}>
+          <Text style={styles.headerTitle}>My Learning</Text>
+          <View style={styles.headerButtonsRow}>
+            <TouchableOpacity
+              style={styles.browseBtn}
+              onPress={handleBrowseCourses}
+            >
+              <Ionicons name="search" size={13} color="#064E3B" style={{ marginRight: 4 }} />
+              <Text style={styles.browseBtnText}>Browse</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.recBtn}
+              onPress={() => navigation?.navigate('MyRecommendations')}
+            >
+              <Ionicons name="ribbon-outline" size={14} color="#D97706" style={{ marginRight: 4 }} />
+              <Text style={styles.recBtnText}>Recommendations</Text>
+            </TouchableOpacity>
+          </View>
         </View>
+        <Text style={styles.headerSubtitle}>Continue your progression and earn certificates</Text>
       </View>
 
-      {/* Filter Tabs */}
-      <View style={styles.tabSection}>
-        <TouchableOpacity
-          style={[styles.tabPill, activeTab === 'IN_PROGRESS' && styles.tabPillActive]}
-          onPress={() => setActiveTab('IN_PROGRESS')}
+      {/* Filter Tabs (Horizontal Scroll) */}
+      <View style={styles.tabSectionWrapper}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tabScrollContent}
         >
-          <Text style={[styles.tabPillText, activeTab === 'IN_PROGRESS' && styles.tabPillTextActive]}>
-            In Progress
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.tabPill, activeTab === 'COMPLETED' && styles.tabPillActive]}
-          onPress={() => setActiveTab('COMPLETED')}
-        >
-          <Text style={[styles.tabPillText, activeTab === 'COMPLETED' && styles.tabPillTextActive]}>
-            Completed
-          </Text>
-        </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.tabButton, activeTab === 'ASSESSMENTS' && styles.tabButtonActive]}
+            style={[styles.tabPill, activeTab === 'IN_PROGRESS' && styles.tabPillActive]}
+            onPress={() => setActiveTab('IN_PROGRESS')}
+          >
+            <Text style={[styles.tabPillText, activeTab === 'IN_PROGRESS' && styles.tabPillTextActive]}>
+              In Progress ({inProgressCourses.length})
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.tabPill, activeTab === 'COMPLETED' && styles.tabPillActive]}
+            onPress={() => setActiveTab('COMPLETED')}
+          >
+            <Text style={[styles.tabPillText, activeTab === 'COMPLETED' && styles.tabPillTextActive]}>
+              Completed ({completedCourses.length})
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.tabPill, activeTab === 'ASSESSMENTS' && styles.tabPillActive]}
             onPress={() => setActiveTab('ASSESSMENTS')}
           >
-            <Text style={[styles.tabText, activeTab === 'ASSESSMENTS' && styles.tabTextActive]}>
-              Quizzes
+            <Text style={[styles.tabPillText, activeTab === 'ASSESSMENTS' && styles.tabPillTextActive]}>
+              Assessments ({assessments.length})
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.tabButton, activeTab === 'ASSIGNMENTS' && styles.tabButtonActive]}
+            style={[styles.tabPill, activeTab === 'ASSIGNMENTS' && styles.tabPillActive]}
             onPress={() => setActiveTab('ASSIGNMENTS')}
           >
-            <Text style={[styles.tabText, activeTab === 'ASSIGNMENTS' && styles.tabTextActive]}>
-              Assignments
+            <Text style={[styles.tabPillText, activeTab === 'ASSIGNMENTS' && styles.tabPillTextActive]}>
+              Assignments ({assignments.length})
             </Text>
           </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.tabPill, activeTab === 'ASSESSMENTS' && styles.tabPillActive]}
-          onPress={() => setActiveTab('ASSESSMENTS')}
-        >
-          <Text style={[styles.tabPillText, activeTab === 'ASSESSMENTS' && styles.tabPillTextActive]}>
-            Assessments
-          </Text>
-        </TouchableOpacity>
+        </ScrollView>
       </View>
 
       {/* Content List */}
@@ -231,6 +247,15 @@ export default function MyLearningScreen({ navigation }: any) {
           data={assessments}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContainer}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyTitle}>No Assessments Available</Text>
+              <Text style={styles.emptySubtitle}>You will see quizzes here once you enroll in courses with assessments.</Text>
+              <TouchableOpacity style={styles.exploreBtn} onPress={handleBrowseCourses}>
+                <Text style={styles.exploreBtnText}>Explore Courses</Text>
+              </TouchableOpacity>
+            </View>
+          }
           renderItem={({ item }) => (
             <TouchableOpacity
               style={styles.card}
@@ -243,8 +268,8 @@ export default function MyLearningScreen({ navigation }: any) {
                 })
               }
             >
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={styles.courseTitle}>{item.course?.title || 'React Native Mobile App Development'}</Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <Text style={styles.courseTitle} numberOfLines={1}>{item.course?.title || 'Course Assessment'}</Text>
                 <View
                   style={{
                     backgroundColor: item.completions?.[0]?.status === 'COMPLETED' ? '#DCFCE7' : '#FEF3C7',
@@ -264,8 +289,8 @@ export default function MyLearningScreen({ navigation }: any) {
                   </Text>
                 </View>
               </View>
-              <Text style={styles.creatorName}>{item.title || 'React Native Development Final Assessment'}</Text>
-              <Text style={{ fontSize: 12, color: '#064E3B', fontWeight: '600', marginTop: 8 }}>
+              <Text style={styles.creatorName}>{item.title || 'Course Quiz Assessment'}</Text>
+              <Text style={{ fontSize: 13, color: '#15803D', fontWeight: '700', marginTop: 10 }}>
                 Take Assessment / View Details →
               </Text>
             </TouchableOpacity>
@@ -286,37 +311,37 @@ export default function MyLearningScreen({ navigation }: any) {
             const hasSubmission = Boolean(item.mySubmission);
             const isGraded = Boolean(item.mySubmission && (item.mySubmission.status === 'COMPLETED' || item.mySubmission.status === 'GRADED' || (item.mySubmission.grade !== null && item.mySubmission.grade !== undefined)));
             const status = isGraded ? 'GRADED' : (hasSubmission ? (item.mySubmission.status || 'SUBMITTED') : 'PENDING');
-            const courseName = item.course?.title || 'Unknown Course';
+            const courseName = item.course?.title || 'Course';
             const dueDate = item.deadline ? new Date(item.deadline).toLocaleDateString() : 'No deadline';
-            
+
             return (
               <View style={styles.card}>
-                <View style={styles.cardHeader}>
-                  <Text style={styles.courseTitle}>{courseName}</Text>
-                  <View style={{ backgroundColor: isGraded ? '#D1FAE5' : status === 'PENDING' ? '#FEF3C7' : '#EEF2FF', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
-                    <Text style={{ color: isGraded ? '#059669' : status === 'PENDING' ? '#D97706' : '#4F46E5', fontSize: 11, fontWeight: '700' }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <Text style={styles.courseTitle} numberOfLines={1}>{courseName}</Text>
+                  <View style={{ backgroundColor: isGraded ? '#DCFCE7' : status === 'PENDING' ? '#FEF3C7' : '#EEF2FF', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                    <Text style={{ color: isGraded ? '#15803D' : status === 'PENDING' ? '#D97706' : '#4F46E5', fontSize: 11, fontWeight: '700' }}>
                       {status}
                     </Text>
                   </View>
                 </View>
-                <Text style={styles.courseTitle}>{item.title}</Text>
-                
-                {isGraded && item.mySubmission.grade !== null && item.mySubmission.grade !== undefined ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, backgroundColor: '#F0FDF4', padding: 8, borderRadius: 6 }}>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: '#334155', marginBottom: 4 }}>{item.title}</Text>
+
+                {isGraded && item.mySubmission?.grade !== null && item.mySubmission?.grade !== undefined ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, backgroundColor: '#F0FDF4', padding: 8, borderRadius: 8 }}>
                     <Ionicons name="ribbon-outline" size={16} color="#059669" style={{ marginRight: 6 }} />
                     <Text style={{ fontSize: 13, fontWeight: '700', color: '#065F46' }}>
-                      Grade: {item.mySubmission.grade} / {item.maxMarks}
+                      Grade: {item.mySubmission.grade} / {item.maxMarks || 100}
                     </Text>
                   </View>
                 ) : null}
 
-                <Text style={{ fontSize: 13, color: '#6B7280', marginBottom: 12 }}>Due Date: {dueDate}</Text>
-                
+                <Text style={{ fontSize: 12, color: '#94A3B8', marginBottom: 12 }}>Due Date: {dueDate}</Text>
+
                 <TouchableOpacity
-                  style={[styles.continueBtn, { backgroundColor: isGraded ? '#F0FDF4' : '#EEF2FF' }]}
+                  style={[styles.continueBtn, { backgroundColor: isGraded ? '#F0FDF4' : '#064E3B' }]}
                   onPress={() => navigation?.navigate('AssignmentDetail', { assignmentId: item.id })}
                 >
-                  <Text style={[styles.continueBtnText, { color: isGraded ? '#059669' : '#4F46E5' }]}>
+                  <Text style={[styles.continueBtnText, { color: isGraded ? '#059669' : '#FFFFFF' }]}>
                     {isGraded ? 'View Grade & Feedback →' : hasSubmission ? 'View Submission →' : 'Submit Assignment →'}
                   </Text>
                 </TouchableOpacity>
@@ -324,85 +349,29 @@ export default function MyLearningScreen({ navigation }: any) {
             );
           }}
         />
-      ) : activeTab === 'CERTIFICATES' ? (
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.listContainer}>
-          {certificates.length === 0 && completionRequests.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyTitle}>No Certificates Yet</Text>
-              <Text style={styles.emptySubtitle}>Complete a course 100% and request a certificate to see it here.</Text>
-            </View>
-          ) : (
-            <>
-              {/* Issued Certificates */}
-              {certificates.map((cert) => (
-                <View key={cert.id} style={styles.card}>
-                  <View style={styles.cardHeader}>
-                    <Text style={styles.courseTitle}>{cert.course?.title}</Text>
-                    <View style={{ backgroundColor: '#D1FAE5', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
-                      <Text style={{ color: '#059669', fontSize: 11, fontWeight: '700' }}>ISSUED</Text>
-                    </View>
-                  </View>
-                  <Text style={{ fontSize: 13, color: '#6B7280', marginBottom: 12 }}>
-                    Issued on {new Date(cert.issueDate).toLocaleDateString()}
-                  </Text>
-                  <TouchableOpacity
-                    style={[styles.continueBtn, { backgroundColor: '#EEF2FF' }]}
-                    onPress={() => downloadCertificate(cert)}
-                  >
-                    <Text style={[styles.continueBtnText, { color: '#4F46E5' }]}>Download PDF 📄</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-
-              {/* Pending Requests */}
-              {completionRequests.map((req) => (
-                <View key={req.id} style={styles.card}>
-                  <View style={styles.cardHeader}>
-                    <Text style={styles.courseTitle}>{req.course?.title}</Text>
-                    <View style={{ backgroundColor: req.status === 'REJECTED' ? '#FEE2E2' : '#FEF3C7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
-                      <Text style={{ color: req.status === 'REJECTED' ? '#DC2626' : '#D97706', fontSize: 11, fontWeight: '700' }}>{req.status}</Text>
-                    </View>
-                  </View>
-                  <Text style={{ fontSize: 13, color: '#6B7280', marginBottom: 12 }}>
-                    Requested on {new Date(req.requestedAt).toLocaleDateString()}
-                  </Text>
-                  {req.status === 'REJECTED' && req.rejectionReason && (
-                    <View style={{ backgroundColor: '#FEF2F2', padding: 8, borderRadius: 6, marginBottom: 12 }}>
-                      <Text style={{ fontSize: 13, color: '#991B1B' }}>
-                        <Text style={{ fontWeight: 'bold' }}>Reason: </Text>
-                        {req.rejectionReason}
-                      </Text>
-                    </View>
-                  )}
-                  {req.status === 'PENDING' && (
-                    <Text style={{ fontSize: 13, color: '#9CA3AF', fontStyle: 'italic' }}>Waiting for skill sharer to approve.</Text>
-                  )}
-                </View>
-              ))}
-            </>
-          )}
-        </ScrollView>
-      ) : displayList.length === 0 ? (
+      ) : (activeTab === 'IN_PROGRESS' ? inProgressCourses : completedCourses).length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyTitle}>No courses found in this view</Text>
-          <Text style={styles.emptySubtitle}>Explore the course catalog to enroll in new skills!</Text>
-          <TouchableOpacity style={styles.browseBtn} onPress={() => navigation?.navigate('CourseList')}>
-            <Text style={styles.browseBtnText}>Explore Courses</Text>
+          <Text style={styles.emptyTitle}>
+            {activeTab === 'IN_PROGRESS' ? 'No Courses In Progress' : 'No Completed Courses Yet'}
+          </Text>
+          <Text style={styles.emptySubtitle}>Explore the course catalog to start learning new skills!</Text>
+          <TouchableOpacity style={styles.exploreBtn} onPress={handleBrowseCourses}>
+            <Text style={styles.exploreBtnText}>Explore Courses 🎓</Text>
           </TouchableOpacity>
         </View>
       ) : (
         <FlatList
           data={activeTab === 'IN_PROGRESS' ? inProgressCourses : completedCourses}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item.id || item.courseId}
           contentContainerStyle={styles.listContainer}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadMyLearning(); }} />
           }
           renderItem={({ item }) => {
             const course = item.course || {};
-            const pct = item.progressPercentage ?? item.courseProgress?.progressPercentage ?? 80;
-            const completedLessons = item.courseProgress?.completedLessons ?? 16;
-            const totalLessons = item.courseProgress?.totalLessons ?? 20;
+            const pct = item.progressPercentage ?? item.courseProgress?.progressPercentage ?? (activeTab === 'COMPLETED' ? 100 : 0);
+            const completedLessons = item.courseProgress?.completedLessons ?? 0;
+            const totalLessons = item.courseProgress?.totalLessons ?? (completedLessons || 1);
 
             const courseId = item.courseId || item.course?.id;
             const issuedCert = certificates.find((c) => c.courseId === courseId || c.course?.id === courseId);
@@ -421,104 +390,127 @@ export default function MyLearningScreen({ navigation }: any) {
                     style={styles.cardThumbnail}
                   />
                   <View style={{ flex: 1, marginLeft: 12 }}>
-                    <Text style={styles.courseTitle}>{course.title || 'React Native Development'}</Text>
+                    <Text style={styles.courseTitle}>{course.title || 'Course'}</Text>
                     <View style={styles.creatorRow}>
-                      <Text style={styles.creatorName}>{course.creator?.name || 'John Perera'}</Text>
+                      <Text style={styles.creatorName}>{course.creator?.name || 'Skill Sharer'}</Text>
                       {course.creator?.verifiedBadge && (
                         <View style={styles.verifiedBadge}>
                           <Text style={styles.verifiedText}>✓</Text>
                         </View>
                       )}
                     </View>
-                    <Text style={styles.lastAccessedText}>Last accessed: 2 hours ago</Text>
+                    <Text style={styles.lastAccessedText}>Category: {course.category?.name || 'General'}</Text>
                   </View>
                 </View>
 
-                {/* Green Progress Track */}
+                {/* Progress Track */}
                 <View style={styles.progressSection}>
                   <View style={styles.progressTrack}>
-                    <View style={[styles.progressFill, { width: `${pct}%` }]} />
+                    <View style={[styles.progressFill, { width: `${Math.min(100, Math.max(0, pct))}%` }]} />
                   </View>
                   <Text style={styles.progressText}>
-                    {completedLessons}/{totalLessons} lessons completed ({pct}%)
+                    {completedLessons > 0 ? `${completedLessons}/${totalLessons} lessons completed (${pct}%)` : `Progress: ${pct}%`}
                   </Text>
                 </View>
 
-                {/* Continue Learning Button */}
-                <TouchableOpacity
-                  style={styles.continueBtn}
-                  onPress={() =>
-                    navigation?.navigate('CourseDetail', { courseId: item.courseId || course.id, course })
-                  }
-                >
-                  <Text style={styles.continueBtnText}>Continue Learning</Text>
-                </TouchableOpacity>
-                {/* Action Buttons */}
+                {/* Dynamic Actions */}
                 {issuedCert ? (
-                  <View>
+                  <View style={{ gap: 8 }}>
                     <TouchableOpacity
-                      style={[styles.continueBtn, { backgroundColor: '#F0FDF4', marginBottom: 8 }]}
-                      onPress={() => downloadCertificate(issuedCert)}
+                      style={[styles.continueBtn, { backgroundColor: '#064E3B' }]}
+                      onPress={() => navigation?.navigate('MainTabs', { screen: 'CertificatesTab' })}
                     >
-                      <Text style={[styles.continueBtnText, { color: '#059669', fontWeight: 'bold' }]}>
-                        Download PDF 📄
+                      <Text style={styles.continueBtnText}>View Certificate in Certificates Tab 🎖️</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.continueBtn, { backgroundColor: '#FEF3C7', borderWidth: 1, borderColor: '#FDE68A' }]}
+                      onPress={() => navigation?.navigate('CourseReview', {
+                        courseId,
+                        courseTitle: course.title,
+                        hasCompleted: true,
+                      })}
+                    >
+                      <Text style={[styles.continueBtnText, { color: '#B45309' }]}>
+                        ⭐ Rate & Review Course
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                      style={[styles.continueBtn, { backgroundColor: '#F3F4F6' }]}
-                      onPress={() => navigation?.navigate('CourseDetail', { courseId })}
+                      style={[styles.continueBtn, { backgroundColor: '#F1F5F9' }]}
+                      onPress={() => navigation?.navigate('CourseDetail', { courseId, course })}
                     >
-                      <Text style={[styles.continueBtnText, { color: '#4B5563' }]}>
-                        Review Course ✓
+                      <Text style={[styles.continueBtnText, { color: '#475569' }]}>
+                        View Course Details
                       </Text>
                     </TouchableOpacity>
                   </View>
                 ) : pendingReq ? (
-                  <View>
+                  <View style={{ gap: 8 }}>
                     <TouchableOpacity
-                      style={[styles.continueBtn, { backgroundColor: '#FEF3C7', marginBottom: 8 }]}
-                      onPress={() => setActiveTab('CERTIFICATES')}
+                      style={[styles.continueBtn, { backgroundColor: '#FEF3C7' }]}
+                      onPress={() => navigation?.navigate('MainTabs', { screen: 'CertificatesTab' })}
                     >
-                      <Text style={[styles.continueBtnText, { color: '#D97706', fontWeight: 'bold' }]}>
-                        Certificate Request Pending ⏳
+                      <Text style={[styles.continueBtnText, { color: '#D97706' }]}>
+                        Certificate Request Pending ⏳ (View Status)
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                      style={[styles.continueBtn, { backgroundColor: '#F3F4F6' }]}
-                      onPress={() => navigation?.navigate('CourseDetail', { courseId })}
+                      style={[styles.continueBtn, { backgroundColor: '#F0FDF4', borderWidth: 1, borderColor: '#BBF7D0' }]}
+                      onPress={() => navigation?.navigate('CourseReview', {
+                        courseId,
+                        courseTitle: course.title,
+                        hasCompleted: true,
+                      })}
                     >
-                      <Text style={[styles.continueBtnText, { color: '#4B5563' }]}>
-                        Review Course ✓
+                      <Text style={[styles.continueBtnText, { color: '#15803D' }]}>
+                        ⭐ Rate & Review Course
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.continueBtn, { backgroundColor: '#F1F5F9' }]}
+                      onPress={() => navigation?.navigate('CourseDetail', { courseId, course })}
+                    >
+                      <Text style={[styles.continueBtnText, { color: '#475569' }]}>
+                        View Course Details
                       </Text>
                     </TouchableOpacity>
                   </View>
-                ) : percent >= 100 ? (
-                  <View>
+                ) : pct >= 100 ? (
+                  <View style={{ gap: 8 }}>
                     <TouchableOpacity
-                      style={[styles.continueBtn, { backgroundColor: '#EEF2FF', marginBottom: 8 }]}
+                      style={[styles.continueBtn, { backgroundColor: '#064E3B' }]}
                       onPress={() => handleRequestCompletion(courseId)}
                     >
-                      <Text style={[styles.continueBtnText, { color: '#4F46E5', fontWeight: 'bold' }]}>
+                      <Text style={styles.continueBtnText}>
                         {rejectedReq ? 'Resubmit Certificate Request 🏆' : 'Request Certificate 🏆'}
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                      style={[styles.continueBtn, { backgroundColor: '#F3F4F6' }]}
-                      onPress={() => navigation?.navigate('CourseDetail', { courseId })}
+                      style={[styles.continueBtn, { backgroundColor: '#FEF3C7', borderWidth: 1, borderColor: '#FDE68A' }]}
+                      onPress={() => navigation?.navigate('CourseReview', {
+                        courseId,
+                        courseTitle: course.title,
+                        hasCompleted: true,
+                      })}
                     >
-                      <Text style={[styles.continueBtnText, { color: '#4B5563' }]}>
-                        Review Course ✓
+                      <Text style={[styles.continueBtnText, { color: '#B45309' }]}>
+                        ⭐ Rate & Review Course
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.continueBtn, { backgroundColor: '#F1F5F9' }]}
+                      onPress={() => navigation?.navigate('CourseDetail', { courseId, course })}
+                    >
+                      <Text style={[styles.continueBtnText, { color: '#475569' }]}>
+                        View Course Details
                       </Text>
                     </TouchableOpacity>
                   </View>
                 ) : (
                   <TouchableOpacity
                     style={styles.continueBtn}
-                    onPress={() => navigation?.navigate('CourseDetail', { courseId })}
+                    onPress={() => navigation?.navigate('CourseDetail', { courseId, course })}
                   >
-                    <Text style={styles.continueBtnText}>
-                      Continue Learning →
-                    </Text>
+                    <Text style={styles.continueBtnText}>Continue Learning →</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -532,9 +524,25 @@ export default function MyLearningScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FAF9F6' },
-  header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
-  headerTitle: { fontSize: 28, fontWeight: '800', color: '#0F172A', letterSpacing: -0.5 },
-  tabSection: { flexDirection: 'row', paddingHorizontal: 20, gap: 8, marginBottom: 16 },
+  header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 10 },
+  headerTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  headerTitle: { fontSize: 26, fontWeight: '800', color: '#0F172A', letterSpacing: -0.5 },
+  headerSubtitle: { fontSize: 13, color: '#64748B' },
+  headerButtonsRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  browseBtn: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#DCFCE7', paddingHorizontal: 12, paddingVertical: 6,
+    borderRadius: 16, borderWidth: 1, borderColor: '#BBF7D0',
+  },
+  browseBtnText: { fontSize: 12, fontWeight: '700', color: '#166534' },
+  recBtn: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#FEF3C7', paddingHorizontal: 12, paddingVertical: 6,
+    borderRadius: 16, borderWidth: 1, borderColor: '#FDE68A',
+  },
+  recBtnText: { fontSize: 12, fontWeight: '700', color: '#B45309' },
+  tabSectionWrapper: { marginBottom: 16 },
+  tabScrollContent: { paddingHorizontal: 20, gap: 8 },
   tabPill: {
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 16,
@@ -562,7 +570,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   cardTopRow: { flexDirection: 'row', alignItems: 'center' },
-  cardThumbnail: { width: 56, height: 56, borderRadius: 14 },
+  cardThumbnail: { width: 56, height: 56, borderRadius: 14, backgroundColor: '#E2E8F0' },
   courseTitle: { fontSize: 15, fontWeight: '700', color: '#0F172A', marginBottom: 4 },
   creatorRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 2 },
   creatorName: { fontSize: 12, color: '#64748B' },
@@ -578,23 +586,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 14,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   continueBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
-  creatorText: { fontSize: 11, color: '#6B7280' },
-  courseTitle: { fontSize: 16, fontWeight: 'bold', color: '#111827', marginBottom: 12 },
-  progressRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  progressText: { fontSize: 12, color: '#6B7280' },
-  percentText: { fontSize: 13, fontWeight: 'bold', color: '#4F46E5' },
-  progressBarBackground: { height: 8, backgroundColor: '#E5E7EB', borderRadius: 4, overflow: 'hidden', marginBottom: 16 },
-  progressBarFill: { height: '100%', backgroundColor: '#4F46E5', borderRadius: 4 },
-  continueBtn: { backgroundColor: '#F3F4F6', paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
-  continueBtnText: { color: '#4F46E5', fontSize: 13, fontWeight: '700' },
-  tabScrollContainer: { flexGrow: 0, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
-  recBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
-    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20,
-    borderWidth: 1, borderColor: '#F59E0B',
-  },
-  recBtnText: { fontSize: 11, fontWeight: '700', color: '#F59E0B' },
+  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 30 },
+  emptyTitle: { fontSize: 16, fontWeight: 'bold', color: '#334155', marginBottom: 6 },
+  emptySubtitle: { fontSize: 13, color: '#64748B', textAlign: 'center', marginBottom: 16 },
+  exploreBtn: { backgroundColor: '#064E3B', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12 },
+  exploreBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
 });

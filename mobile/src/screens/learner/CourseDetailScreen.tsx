@@ -11,6 +11,7 @@ import {
   Alert,
   Image,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fetchCourseDetails, enrollCourse, cancelEnrollment, completeLesson } from '../../api/learner.service';
 
 export default function CourseDetailScreen({ route, navigation }: any) {
@@ -19,6 +20,7 @@ export default function CourseDetailScreen({ route, navigation }: any) {
 
   const [courseData, setCourseData] = useState<any>(initialCourseData || null);
   const [userEnrollment, setUserEnrollment] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [completedLessonIds, setCompletedLessonIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -26,7 +28,13 @@ export default function CourseDetailScreen({ route, navigation }: any) {
   const loadDetails = async () => {
     try {
       setLoading(true);
-      const res = await fetchCourseDetails(courseId);
+      const [res, userStr] = await Promise.all([
+        fetchCourseDetails(courseId),
+        AsyncStorage.getItem('user'),
+      ]);
+      if (userStr) {
+        try { setCurrentUser(JSON.parse(userStr)); } catch (e) {}
+      }
       if (res?.course) {
         setCourseData(res.course);
         setUserEnrollment(res.userEnrollment);
@@ -47,6 +55,14 @@ export default function CourseDetailScreen({ route, navigation }: any) {
   useEffect(() => {
     loadDetails();
   }, [courseId]);
+
+  const handleBack = () => {
+    if (navigation?.canGoBack && navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      navigation?.navigate('CourseList');
+    }
+  };
 
   const handleToggleLesson = async (lessonId: string) => {
     try {
@@ -142,6 +158,12 @@ export default function CourseDetailScreen({ route, navigation }: any) {
 
   const isEnrolled = !!(userEnrollment && userEnrollment.status !== 'CANCELLED');
   const progressPct = userEnrollment?.courseProgress?.progressPercentage ?? userEnrollment?.progressPercentage ?? 0;
+  const isOwner = currentUser && (
+    currentUser.id === course.creatorId ||
+    currentUser.id === course.creator?.id ||
+    currentUser.role === 'SKILL_SHARER' ||
+    currentUser.role === 'INSTRUCTOR'
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -149,15 +171,22 @@ export default function CourseDetailScreen({ route, navigation }: any) {
 
       {/* Navigation Header */}
       <View style={styles.topHeader}>
-        <TouchableOpacity style={styles.circleBtn} onPress={() => navigation?.goBack()}>
+        <TouchableOpacity style={styles.circleBtn} onPress={handleBack}>
           <Text style={styles.circleBtnText}>←</Text>
         </TouchableOpacity>
         <View style={styles.rightIcons}>
-          <TouchableOpacity style={styles.circleBtn}>
-            <Text style={styles.circleBtnText}>🔗</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.circleBtn}>
-            <Text style={styles.circleBtnText}>🔖</Text>
+          <TouchableOpacity
+            style={styles.reviewQuickBtn}
+            onPress={() => {
+              const isDone = userEnrollment?.status === 'COMPLETED' || (userEnrollment?.progressPercentage != null && userEnrollment.progressPercentage >= 100);
+              navigation?.navigate('CourseReview', {
+                courseId,
+                courseTitle: course.title,
+                hasCompleted: isDone,
+              });
+            }}
+          >
+            <Text style={{ fontSize: 13, fontWeight: '700', color: '#15803D' }}>⭐ Reviews</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -168,10 +197,17 @@ export default function CourseDetailScreen({ route, navigation }: any) {
           <Text style={styles.loadingText}>Loading course details...</Text>
         </View>
       ) : (
-        <ScrollView style={styles.scrollContent} contentContainerStyle={{ paddingBottom: 100 }}>
+        <ScrollView style={styles.scrollContent} contentContainerStyle={{ paddingBottom: 110 }}>
           <View style={styles.contentPadding}>
             {/* Hero Image Banner */}
-            <Image source={{ uri: course.thumbnail || 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=800&q=80' }} style={styles.heroImage} />
+            <Image
+              source={{
+                uri:
+                  course.thumbnail ||
+                  'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=800&q=80',
+              }}
+              style={styles.heroImage}
+            />
 
             {/* Enrolled Badge */}
             {isEnrolled && (
@@ -200,9 +236,11 @@ export default function CourseDetailScreen({ route, navigation }: any) {
               <View style={{ flex: 1, marginLeft: 12 }}>
                 <View style={styles.nameBadgeRow}>
                   <Text style={styles.instructorName}>{course.creator?.name || 'John Perera'}</Text>
-                  <View style={styles.verifiedPill}>
-                    <Text style={styles.verifiedPillText}>✓ Verified</Text>
-                  </View>
+                  {course.creator?.verifiedBadge && (
+                    <View style={styles.verifiedPill}>
+                      <Text style={styles.verifiedPillText}>✓ Verified</Text>
+                    </View>
+                  )}
                 </View>
               </View>
               <Text style={styles.viewProfileLink}>View Profile</Text>
@@ -212,21 +250,21 @@ export default function CourseDetailScreen({ route, navigation }: any) {
             <View style={styles.metricsGrid}>
               <View style={styles.metricCol}>
                 <Text style={styles.metricValue}>⭐ {course.rating || 4.8}</Text>
-                <Text style={styles.metricSub}>({course.reviewCount || 245} reviews)</Text>
+                <Text style={styles.metricSub}>({course.reviewCount || course.courseReviews?.length || 0} reviews)</Text>
               </View>
               <View style={styles.metricDivider} />
               <View style={styles.metricCol}>
-                <Text style={styles.metricValue}>{course.enrolledCount || '3.4k'}</Text>
+                <Text style={styles.metricValue}>{course.enrolledCount || '0'}</Text>
                 <Text style={styles.metricSub}>learners</Text>
               </View>
               <View style={styles.metricDivider} />
               <View style={styles.metricCol}>
-                <Text style={styles.metricValue}>{course.difficulty || 'Intermed.'}</Text>
+                <Text style={styles.metricValue}>{course.difficulty || 'All Levels'}</Text>
                 <Text style={styles.metricSub}>difficulty</Text>
               </View>
               <View style={styles.metricDivider} />
               <View style={styles.metricCol}>
-                <Text style={styles.metricValue}>{course.duration || '20 hours'}</Text>
+                <Text style={styles.metricValue}>{course.duration || 'Flexible'}</Text>
                 <Text style={styles.metricSub}>duration</Text>
               </View>
             </View>
@@ -251,10 +289,10 @@ export default function CourseDetailScreen({ route, navigation }: any) {
             {/* What You'll Learn */}
             <Text style={styles.sectionHeading}>What You'll Learn</Text>
             <View style={styles.outcomeList}>
-              <Text style={styles.outcomeItem}>✓ Build cross-platform mobile apps</Text>
-              <Text style={styles.outcomeItem}>✓ Master React Native components</Text>
-              <Text style={styles.outcomeItem}>✓ Implement navigation and state management</Text>
-              <Text style={styles.outcomeItem}>✓ Deploy to App Store and Google Play</Text>
+              <Text style={styles.outcomeItem}>✓ Build cross-platform mobile apps with modern tools</Text>
+              <Text style={styles.outcomeItem}>✓ Master core components, styling & layout systems</Text>
+              <Text style={styles.outcomeItem}>✓ Implement navigation, authentication & global state</Text>
+              <Text style={styles.outcomeItem}>✓ Confidently build, test & deploy production features</Text>
             </View>
 
             {/* Course Content / Syllabus */}
@@ -264,7 +302,7 @@ export default function CourseDetailScreen({ route, navigation }: any) {
                 <View key={mod.id || idx} style={styles.moduleCard}>
                   <View style={styles.moduleHeaderRow}>
                     <Text style={styles.moduleTitle}>{mod.title}</Text>
-                    <Text style={styles.moduleMetaText}>{mod.lessons?.length || 3} lessons</Text>
+                    <Text style={styles.moduleMetaText}>{mod.lessons?.length || 0} lessons</Text>
                   </View>
 
                   {mod.lessons?.map((les: any, lIdx: number) => {
@@ -296,33 +334,74 @@ export default function CourseDetailScreen({ route, navigation }: any) {
                   })}
                 </View>
               ))
-            ) : null}
             ) : (
               <View style={styles.moduleCard}>
-                <Text style={styles.moduleTitle}>Module 1: Foundations</Text>
-                <Text style={styles.lessonItem}>• Introduction & Course Setup (20 mins)</Text>
+                <Text style={styles.moduleTitle}>Module 1: Introduction</Text>
+                <Text style={styles.lessonItem}>• Course Overview & Fundamentals (20 mins)</Text>
               </View>
             )}
 
-            {/* Reviews Section */}
-            <TouchableOpacity
-              style={styles.reviewsCtaRow}
-              onPress={() => navigation?.navigate('CourseReview', {
-                courseId,
-                courseTitle: course.title,
-                hasCompleted: userEnrollment?.status === 'COMPLETED',
-              })}
-            >
-              <View>
-                <Text style={styles.reviewsCtaTitle}>⭐ Ratings & Reviews</Text>
-                {course.courseReviews && course.courseReviews.length > 0 ? (
-                  <Text style={styles.reviewsCtaSub}>{course.courseReviews.length} review{course.courseReviews.length !== 1 ? 's' : ''} from learners</Text>
-                ) : (
-                  <Text style={styles.reviewsCtaSub}>Be the first to review this course</Text>
-                )}
+            {/* Public Reviews Section */}
+            <View style={styles.reviewsSection}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <Text style={styles.sectionHeading}>Learner Reviews ⭐</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    const isDone = userEnrollment?.status === 'COMPLETED' || (userEnrollment?.progressPercentage != null && userEnrollment.progressPercentage >= 100);
+                    navigation?.navigate('CourseReview', {
+                      courseId,
+                      courseTitle: course.title,
+                      hasCompleted: isDone,
+                    });
+                  }}
+                >
+                  <Text style={{ fontSize: 13, color: '#15803D', fontWeight: '700' }}>View All →</Text>
+                </TouchableOpacity>
               </View>
-              <Text style={{ fontSize: 18, color: '#4F46E5' }}>›</Text>
-            </TouchableOpacity>
+
+              {course.courseReviews && course.courseReviews.length > 0 ? (
+                course.courseReviews.map((rev: any, rIdx: number) => (
+                  <View key={rev.id || rIdx} style={styles.publicReviewCard}>
+                    <View style={styles.publicReviewHeader}>
+                      <View style={styles.publicReviewAvatar}>
+                        <Text style={styles.publicReviewAvatarText}>
+                          {(rev.learner?.name || rev.learner?.email || '?')[0].toUpperCase()}
+                        </Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.reviewAuthor}>{rev.learner?.name || 'Learner'}</Text>
+                        <Text style={styles.starText}>{'⭐'.repeat(rev.rating || 5)}</Text>
+                      </View>
+                    </View>
+                    {(rev.review || rev.comment) ? (
+                      <Text style={styles.reviewComment}>{rev.review || rev.comment}</Text>
+                    ) : null}
+                  </View>
+                ))
+              ) : (
+                <View style={styles.noReviewsBox}>
+                  <Text style={styles.noReviewsText}>No reviews yet. Complete the course and be the first to share your experience!</Text>
+                </View>
+              )}
+
+              <TouchableOpacity
+                style={styles.reviewsCtaRow}
+                onPress={() => {
+                  const isDone = userEnrollment?.status === 'COMPLETED' || (userEnrollment?.progressPercentage != null && userEnrollment.progressPercentage >= 100);
+                  navigation?.navigate('CourseReview', {
+                    courseId,
+                    courseTitle: course.title,
+                    hasCompleted: isDone,
+                  });
+                }}
+              >
+                <View>
+                  <Text style={styles.reviewsCtaTitle}>⭐ Write / Read All Reviews</Text>
+                  <Text style={styles.reviewsCtaSub}>See complete rating breakdowns and feedback</Text>
+                </View>
+                <Text style={{ fontSize: 18, color: '#15803D', fontWeight: 'bold' }}>›</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </ScrollView>
       )}
@@ -331,20 +410,35 @@ export default function CourseDetailScreen({ route, navigation }: any) {
       <View style={styles.bottomBar}>
         {actionLoading ? (
           <ActivityIndicator color="#064E3B" />
+        ) : isOwner ? (
+          <View style={styles.enrolledActionRow}>
+            <TouchableOpacity
+              style={styles.continueBtn}
+              onPress={() => navigation?.navigate('CourseCreator', { courseId })}
+            >
+              <Text style={styles.actionBtnText}>✏️ Edit Course</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.reviewBtn}
+              onPress={() => {
+                navigation?.navigate('CourseReview', {
+                  courseId,
+                  courseTitle: course.title,
+                  hasCompleted: false,
+                });
+              }}
+            >
+              <Text style={styles.reviewBtnText}>⭐ Reviews</Text>
+            </TouchableOpacity>
+          </View>
         ) : isEnrolled ? (
           <View style={styles.enrolledActionRow}>
             {progressPct >= 100 ? (
               <TouchableOpacity
                 style={styles.continueBtn}
-                onPress={() =>
-                  Alert.alert(
-                    'Completion Request Sent! 🎓',
-                    'Your course completion request has been submitted to your instructor. Once verified, your course certificate will be available under the Certificates tab!',
-                    [{ text: 'View My Dashboard', onPress: () => navigation?.navigate('MyLearningTab') }]
-                  )
-                }
+                onPress={() => navigation?.navigate('MainTabs', { screen: 'CertificatesTab' })}
               >
-                <Text style={styles.actionBtnText}>Send Completion Request 🎓</Text>
+                <Text style={styles.actionBtnText}>Go to Certificates 🎓</Text>
               </TouchableOpacity>
             ) : (
               <TouchableOpacity
@@ -360,16 +454,16 @@ export default function CourseDetailScreen({ route, navigation }: any) {
                 <Text style={styles.actionBtnText}>Continue Learning ▶</Text>
               </TouchableOpacity>
             )}
-            <TouchableOpacity style={styles.continueBtn} onPress={() => navigation?.navigate('MyLearning')}>
-              <Text style={styles.actionBtnText}>Continue Learning →</Text>
-            </TouchableOpacity>
             <TouchableOpacity
               style={styles.reviewBtn}
-              onPress={() => navigation?.navigate('CourseReview', {
-                courseId,
-                courseTitle: course.title,
-                hasCompleted: userEnrollment?.status === 'COMPLETED',
-              })}
+              onPress={() => {
+                const isDone = userEnrollment?.status === 'COMPLETED' || (userEnrollment?.progressPercentage != null && userEnrollment.progressPercentage >= 100);
+                navigation?.navigate('CourseReview', {
+                  courseId,
+                  courseTitle: course.title,
+                  hasCompleted: isDone,
+                });
+              }}
             >
               <Text style={styles.reviewBtnText}>⭐ Review</Text>
             </TouchableOpacity>
@@ -407,8 +501,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
-  circleBtnText: { fontSize: 16, color: '#0F172A' },
-  rightIcons: { flexDirection: 'row', gap: 10 },
+  circleBtnText: { fontSize: 18, color: '#0F172A', fontWeight: 'bold' },
+  rightIcons: { flexDirection: 'row', gap: 10, alignItems: 'center' },
+  reviewQuickBtn: {
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: { marginTop: 10, color: '#64748B' },
   scrollContent: { flex: 1 },
@@ -498,6 +600,10 @@ const styles = StyleSheet.create({
   lessonItemDone: { textDecorationLine: 'line-through', color: '#15803D', fontWeight: '600' },
   playTag: { fontSize: 12, color: '#15803D', fontWeight: '700' },
   bottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     paddingHorizontal: 20,
     paddingVertical: 14,
     backgroundColor: '#FFFFFF',
@@ -507,19 +613,39 @@ const styles = StyleSheet.create({
   enrollBtn: { backgroundColor: '#064E3B', paddingVertical: 14, borderRadius: 14, alignItems: 'center' },
   enrolledActionRow: { flexDirection: 'row', gap: 10 },
   continueBtn: { flex: 1, backgroundColor: '#064E3B', paddingVertical: 14, borderRadius: 14, alignItems: 'center' },
-  cancelBtn: { backgroundColor: '#EF4444', paddingVertical: 14, paddingHorizontal: 20, borderRadius: 14, alignItems: 'center' },
+  cancelBtn: { backgroundColor: '#EF4444', paddingVertical: 14, paddingHorizontal: 16, borderRadius: 14, alignItems: 'center' },
   cancelBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
-  actionBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
+  actionBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: 'bold' },
   reviewBtn: {
-    backgroundColor: '#EEF2FF', paddingVertical: 14, paddingHorizontal: 16,
-    borderRadius: 12, alignItems: 'center', borderWidth: 1.5, borderColor: '#4F46E5',
+    backgroundColor: '#F0FDF4', paddingVertical: 14, paddingHorizontal: 14,
+    borderRadius: 14, alignItems: 'center', borderWidth: 1.5, borderColor: '#15803D',
   },
-  reviewBtnText: { color: '#4F46E5', fontWeight: '700', fontSize: 13 },
+  reviewBtnText: { color: '#15803D', fontWeight: '700', fontSize: 13 },
+  reviewsSection: { marginTop: 12 },
+  publicReviewCard: {
+    backgroundColor: '#FFFFFF', padding: 14, borderRadius: 14,
+    borderWidth: 1, borderColor: '#F1F5F9', marginBottom: 10,
+  },
+  publicReviewHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
+  publicReviewAvatar: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: '#DCFCE7', alignItems: 'center', justifyContent: 'center',
+  },
+  publicReviewAvatarText: { fontSize: 13, fontWeight: '700', color: '#15803D' },
+  reviewAuthor: { fontSize: 14, fontWeight: '700', color: '#0F172A' },
+  starText: { fontSize: 12, marginTop: 2 },
+  reviewComment: { fontSize: 13, color: '#475569', marginTop: 4, lineHeight: 19 },
+  noReviewsBox: {
+    backgroundColor: '#FFFFFF', padding: 16, borderRadius: 14,
+    alignItems: 'center', marginBottom: 12,
+    borderWidth: 1, borderColor: '#E2E8F0', borderStyle: 'dashed',
+  },
+  noReviewsText: { fontSize: 13, color: '#94A3B8', textAlign: 'center' },
   reviewsCtaRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: '#EEF2FF', padding: 14, borderRadius: 12,
-    borderWidth: 1, borderColor: '#C7D2FE',
+    backgroundColor: '#DCFCE7', padding: 14, borderRadius: 14,
+    borderWidth: 1, borderColor: '#BBF7D0',
   },
-  reviewsCtaTitle: { fontSize: 15, fontWeight: '700', color: '#4F46E5' },
-  reviewsCtaSub: { fontSize: 12, color: '#6B7280', marginTop: 2 },
+  reviewsCtaTitle: { fontSize: 15, fontWeight: '700', color: '#166534' },
+  reviewsCtaSub: { fontSize: 12, color: '#15803D', marginTop: 2 },
 });

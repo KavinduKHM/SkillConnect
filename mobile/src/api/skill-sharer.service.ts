@@ -194,7 +194,7 @@ export const recommendationApi = {
 
   // Get all learners who completed my courses (to recommend)
   getMyCourseLearners: (courseId: string): Promise<ApiResponse<any>> => {
-    return apiClient.get(`/certificates/course/${courseId}/requests`);
+    return apiClient.get(`/recommendations/course/${courseId}/learners`);
   },
 
   // Update a recommendation

@@ -10,6 +10,7 @@ interface CourseCardProps {
   onEdit?: () => void;
   onDelete?: () => void;
   onSubmit?: () => void;
+  onViewReviews?: () => void;
 }
 
 const getStatusColor = (status: string) => {
@@ -106,7 +107,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
         </View>
       </TouchableOpacity>
 
-      {(isDraft || isSubmitted) && (
+      {(isDraft || isSubmitted) ? (
         <View style={styles.actions}>
           {isDraft && (
             <>
@@ -129,6 +130,15 @@ export const CourseCard: React.FC<CourseCardProps> = ({
           {isSubmitted && (
             <Text style={styles.pendingText}>Waiting for admin review...</Text>
           )}
+        </View>
+      ) : (
+        <View style={styles.actions}>
+          <TouchableOpacity style={styles.actionButton} onPress={onViewReviews}>
+            <Ionicons name="star" size={16} color="#F59E0B" />
+            <Text style={[styles.actionText, { color: '#B45309', fontWeight: '600' }]}>
+              {course.rating > 0 ? `Learner Reviews (${course.rating.toFixed(1)} ⭐)` : 'Learner Reviews ⭐'}
+            </Text>
+          </TouchableOpacity>
         </View>
       )}
     </Card>

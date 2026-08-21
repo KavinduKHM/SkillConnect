@@ -46,13 +46,25 @@ export function RecommendationScreen({ navigation }: any) {
     try {
       setLoadingLearners(true);
       setCompletedLearners([]);
-      const res: any = await certificateApi.getCourseCompletionRequests(courseId);
-      const requests = res?.data || res?.requests || [];
-      // Only show approved requests (completed learners with certificates)
-      const approved = requests.filter((r: any) => r.status === 'APPROVED');
-      setCompletedLearners(approved);
+      const res: any = await recommendationApi.getMyCourseLearners(courseId);
+      const learners = res?.data || res?.learners || (Array.isArray(res) ? res : []);
+      if (Array.isArray(learners) && learners.length > 0) {
+        setCompletedLearners(learners);
+      } else {
+        // Fallback to completion requests
+        const reqRes: any = await certificateApi.getCourseCompletionRequests(courseId);
+        const requests = reqRes?.data || reqRes?.requests || [];
+        setCompletedLearners(requests);
+      }
     } catch (err) {
       console.log('Failed to load learners', err);
+      try {
+        const reqRes: any = await certificateApi.getCourseCompletionRequests(courseId);
+        const requests = reqRes?.data || reqRes?.requests || [];
+        setCompletedLearners(requests);
+      } catch (e) {
+        console.log('Fallback failed too', e);
+      }
     } finally {
       setLoadingLearners(false);
     }
@@ -73,21 +85,24 @@ export function RecommendationScreen({ navigation }: any) {
       Alert.alert('Title Required', 'Please provide a short title for the recommendation.');
       return;
     }
-    if (!content.trim() || content.trim().length < 20) {
-      Alert.alert('Content Required', 'Please write at least 20 characters for the recommendation.');
+    if (!content.trim() || content.trim().length < 5) {
+      Alert.alert('Content Required', 'Please write at least 5 characters for the recommendation.');
       return;
     }
     try {
       setSubmitting(true);
+      const learnerId = selectedLearner.learnerId || selectedLearner.learner?.id || selectedLearner.id;
       const data = {
-        learnerId: selectedLearner.learnerId,
+        learnerId,
         courseId: selectedCourse.id,
         title: title.trim(),
         content: content.trim(),
+        message: content.trim(),
+        skillDemonstrated: title.trim(),
         isPublic,
       };
       if (editingRec) {
-        await recommendationApi.update(editingRec.id, { title: data.title, content: data.content, isPublic });
+        await recommendationApi.update(editingRec.id, { title: data.title, content: data.content, message: data.message, isPublic });
         Alert.alert('Updated!', 'Recommendation updated successfully.');
       } else {
         await recommendationApi.create(data);
@@ -188,14 +203,17 @@ export function RecommendationScreen({ navigation }: any) {
               </View>
             ) : (
               <View style={{ gap: 8, marginTop: 8 }}>
-                {completedLearners.map((req: any) => {
-                  const learner = req.learner;
-                  const isSelected = selectedLearner?.learnerId === req.learnerId;
+                {completedLearners.map((item: any) => {
+                  const learner = item.learner || item;
+                  const itemLearnerId = item.learnerId || item.learner?.id || item.id;
+                  const selectedId = selectedLearner?.learnerId || selectedLearner?.learner?.id || selectedLearner?.id;
+                  const isSelected = selectedId === itemLearnerId;
+                  const progress = item.progressPercentage ?? 100;
                   return (
                     <TouchableOpacity
-                      key={req.id}
+                      key={item.id || itemLearnerId}
                       style={[styles.learnerRow, isSelected && styles.learnerRowActive]}
-                      onPress={() => setSelectedLearner(req)}
+                      onPress={() => setSelectedLearner({ ...item, learnerId: itemLearnerId, learner })}
                     >
                       <View style={[styles.learnerAvatar, isSelected && { backgroundColor: '#4F46E5' }]}>
                         <Text style={[styles.learnerAvatarText, isSelected && { color: '#fff' }]}>
@@ -207,6 +225,9 @@ export function RecommendationScreen({ navigation }: any) {
                           {learner?.name || 'Learner'}
                         </Text>
                         <Text style={styles.learnerEmail}>{learner?.email || ''}</Text>
+                        <Text style={{ fontSize: 11, color: '#059669', fontWeight: '600', marginTop: 2 }}>
+                          ✓ Completed ({Math.round(progress)}%)
+                        </Text>
                       </View>
                       {isSelected && (
                         <Ionicons name="checkmark-circle" size={20} color="#4F46E5" />
@@ -250,7 +271,7 @@ export function RecommendationScreen({ navigation }: any) {
             <Text style={styles.charCount}>{content.length} characters (min 20)</Text>
 
             {/* Preview Card */}
-            {title.trim() && content.trim() && (
+            {Boolean(title.trim() && content.trim()) && (
               <View style={styles.previewCard}>
                 <Text style={styles.previewLabel}>Preview</Text>
                 <View style={styles.previewInner}>
@@ -260,7 +281,7 @@ export function RecommendationScreen({ navigation }: any) {
                     <View style={styles.previewAvatar}>
                       <Text style={styles.previewAvatarText}>Y</Text>
                     </View>
-                    <Text style={styles.previewAuthor}>You · {selectedCourse?.title}</Text>
+                    <Text style={styles.previewAuthor}>You · {selectedCourse?.title || 'Course'}</Text>
                   </View>
                 </View>
               </View>
