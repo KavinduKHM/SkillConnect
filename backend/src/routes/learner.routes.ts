@@ -1,9 +1,10 @@
 import express from 'express';
-import { isAuthenticated } from '../middleware/auth.middleware.js';
+import { isAuthenticated, optionalAuth } from '../middleware/auth.middleware.js';
 import {
   listCourses,
   getCourseById,
   listCategories,
+  getSharerProfile,
   enroll,
   cancel,
   getMyLearningDashboard,
@@ -18,8 +19,10 @@ const router = express.Router();
 // PUBLIC DISCOVERY ROUTES
 // -------------------------------------------------------------
 router.get('/courses', listCourses);
-router.get('/courses/:id', getCourseById);
+router.get('/courses/categories', listCategories);
 router.get('/categories', listCategories);
+router.get('/sharers/:id', optionalAuth, getSharerProfile);
+router.get('/courses/:id', optionalAuth, getCourseById);
 
 // -------------------------------------------------------------
 // PROTECTED LEARNER ROUTES (Requires Authentication)
