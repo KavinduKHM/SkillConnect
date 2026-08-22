@@ -12,6 +12,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { courseService } from '../../api/skill-sharer.service';
+import { authService } from '../../api/auth.service';
 
 interface Course {
   id: string;
@@ -53,6 +54,19 @@ export default function SkillSharerDashboardScreen({ navigation }: any) {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [userStatus, setUserStatus] = useState('ACTIVE');
+  const [verifiedBadge, setVerifiedBadge] = useState(false);
+
+  const loadUserStatus = async () => {
+    try {
+      const response = await authService.getMe();
+      const user = response?.data?.data ?? response?.data ?? {};
+      setUserStatus(user.status || 'ACTIVE');
+      setVerifiedBadge(Boolean(user.verifiedBadge));
+    } catch (error) {
+      console.error('Error loading skill sharer status:', error);
+    }
+  };
 
   const loadCourses = async () => {
     try {
@@ -109,12 +123,25 @@ export default function SkillSharerDashboardScreen({ navigation }: any) {
   useFocusEffect(
     useCallback(() => {
       loadCourses();
+      loadUserStatus();
     }, [])
   );
 
   const onRefresh = () => {
     setRefreshing(true);
     loadCourses();
+  };
+
+  const handleCreateCourse = () => {
+    if (!verifiedBadge) {
+      Alert.alert(
+        'Verification Required',
+        'An admin must assign your Verified badge before you can create a course.'
+      );
+      return;
+    }
+
+    navigation.navigate('CourseForm');
   };
 
   const handleDeleteCourse = (courseId: string, title: string) => {
@@ -321,7 +348,22 @@ export default function SkillSharerDashboardScreen({ navigation }: any) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>SkillSharer Dashboard</Text>
+        <View style={styles.headerTitleContainer}>
+          <Text style={styles.headerTitle}>SkillSharer Dashboard</Text>
+          <View style={styles.badgesRow}>
+            <View style={[styles.accountStatusBadge, { backgroundColor: userStatus === 'ACTIVE' ? '#D1FAE5' : '#FEE2E2' }]}>
+              <Text style={[styles.accountStatusText, { color: userStatus === 'ACTIVE' ? '#047857' : '#B91C1C' }]}>
+                {userStatus}
+              </Text>
+            </View>
+            {verifiedBadge && (
+              <View style={styles.verifiedBadge}>
+                <Ionicons name="checkmark-circle" size={14} color="#047857" />
+                <Text style={styles.verifiedBadgeText}>Verified</Text>
+              </View>
+            )}
+          </View>
+        </View>
         <View style={styles.headerActions}>
           <TouchableOpacity
             style={styles.profileButton}
@@ -339,7 +381,7 @@ export default function SkillSharerDashboardScreen({ navigation }: any) {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.addButton}
-            onPress={() => navigation.navigate('CourseForm')}
+            onPress={handleCreateCourse}
           >
             <Ionicons name="add" size={24} color="#FFFFFF" />
             <Text style={styles.addButtonText}>New Course</Text>
@@ -356,7 +398,7 @@ export default function SkillSharerDashboardScreen({ navigation }: any) {
           </Text>
           <TouchableOpacity
             style={styles.emptyAddButton}
-            onPress={() => navigation.navigate('CourseForm')}
+            onPress={handleCreateCourse}
           >
             <Text style={styles.emptyAddButtonText}>Create Course</Text>
           </TouchableOpacity>
@@ -398,6 +440,39 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: 'bold',
     color: '#111827',
+  },
+  headerTitleContainer: {
+    flex: 1,
+    marginRight: 8,
+  },
+  badgesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 6,
+  },
+  accountStatusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  accountStatusText: {
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  verifiedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#D1FAE5',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  verifiedBadgeText: {
+    color: '#047857',
+    fontSize: 10,
+    fontWeight: '700',
+    marginLeft: 3,
   },
   headerActions: {
     flexDirection: 'row',
