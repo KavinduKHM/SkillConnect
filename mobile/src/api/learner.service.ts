@@ -51,6 +51,11 @@ export const fetchCategories = async () => {
   return response.data;
 };
 
+export const fetchSharerProfile = async (sharerId: string) => {
+  const response = await client.get(`/learner/sharers/${sharerId}`);
+  return response.data;
+};
+
 export const enrollCourse = async (courseId: string) => {
   const response = await client.post('/learner/enrollments', { courseId });
   return response.data;
@@ -71,8 +76,8 @@ export const fetchLessonContent = async (lessonId: string) => {
   return response.data;
 };
 
-export const completeLesson = async (courseId: string, lessonId: string) => {
-  const response = await client.post('/learner/progress/complete', { courseId, lessonId });
+export const completeLesson = async (courseId: string, lessonId: string, completed?: boolean) => {
+  const response = await client.post('/learner/progress/complete', { courseId, lessonId, completed });
   return response.data;
 };
 
@@ -88,4 +93,99 @@ export const fetchMyQuizzes = async () => {
 export const completeQuiz = async (quizId: string) => {
   const response: any = await client.post(`/assessments/quizzes/${quizId}/complete`, { passed: true });
   return response;
+};
+
+// ============================================================
+// Assignment APIs
+// ============================================================
+
+export const fetchCourseAssignments = async (courseId: string) => {
+  const response: any = await client.get(`/assignments/course/${courseId}`);
+  return response;
+};
+
+export const fetchSingleAssignment = async (id: string) => {
+  const response: any = await client.get(`/assignments/${id}`);
+  return response;
+};
+
+export const fetchLearnerSubmissions = async (id: string) => {
+  const response: any = await client.get(`/assignments/${id}/my-submissions`);
+  return response;
+};
+
+export const submitAssignmentWork = async (id: string, data: { fileUrls?: string[]; githubLink?: string; textSubmission?: string }) => {
+  const response: any = await client.post(`/assignments/${id}/submit`, data);
+  return response;
+};
+
+export const uploadAssessmentFiles = async (formData: FormData) => {
+  const response: any = await client.post('/assessments/upload', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response;
+};
+
+export const deleteAssignmentSubmission = async (submissionId: string) => {
+  const response: any = await client.delete(`/assignments/submissions/${submissionId}`);
+  return response;
+};
+
+export const deleteLearnerSubmission = async (assignmentId: string, versionNumber: number) => {
+  const response = await client.delete(`/learner/assignments/${assignmentId}/submissions/${versionNumber}`);
+  return response.data;
+};
+
+// ============================================================
+// CERTIFICATES & COMPLETIONS
+// ============================================================
+
+export const requestCourseCompletion = async (courseId: string) => {
+  const response = await client.post(`/certificates/request/${courseId}`);
+  return response.data;
+};
+
+export const fetchMyCompletionRequests = async () => {
+  const response = await client.get('/certificates/my-requests');
+  return response.data;
+};
+
+export const fetchMyCertificates = async () => {
+  const response = await client.get('/certificates/my-certificates');
+  return response.data;
+};
+
+// ============================================================
+// RATINGS & REVIEWS
+// ============================================================
+
+export const fetchCourseReviews = async (courseId: string) => {
+  const response = await client.get(`/recognition/reviews/course/${courseId}`);
+  return response.data;
+};
+
+export const createCourseReview = async (data: { courseId: string; rating: number; comment?: string }) => {
+  const response = await client.post('/recognition/reviews', data);
+  return response.data;
+};
+
+export const updateCourseReview = async (reviewId: string, data: { rating: number; comment?: string }) => {
+  const response = await client.put(`/recognition/reviews/${reviewId}`, data);
+  return response.data;
+};
+
+export const deleteCourseReview = async (reviewId: string) => {
+  const response = await client.delete(`/recognition/reviews/${reviewId}`);
+  return response.data;
+};
+
+// ============================================================
+// RECOMMENDATIONS (Learner: view my recommendations)
+// ============================================================
+
+export const fetchMyRecommendations = async () => {
+  const response = await client.get('/recommendations/me');
+  return response.data;
 };

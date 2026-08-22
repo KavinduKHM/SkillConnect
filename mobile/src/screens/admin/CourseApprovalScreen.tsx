@@ -6,8 +6,10 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Platform,
   RefreshControl,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminService, Course } from '../../api/admin.service';
 import { StatusBadge } from '../../components/admin/StatusBadge';
@@ -24,54 +26,71 @@ export const CourseApprovalScreen = () => {
   });
 
   const handleApprove = async (id: string, title: string) => {
-    Alert.alert(
-      'Approve Course',
-      `Are you sure you want to approve "${title}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Approve',
-          onPress: async () => {
-            try {
-              await adminService.approveCourse(id);
-              Alert.alert('Success', 'Course approved and published');
-              queryClient.invalidateQueries({ queryKey: ['pending-courses'] });
-              refetch();
-            } catch (error: any) {
-              Alert.alert('Error', error.response?.data?.error || 'Failed to approve');
-            }
-          },
-        },
-      ]
-    );
+    const action = async () => {
+      queryClient.setQueryData(['pending-courses'], (old: any) => 
+        Array.isArray(old) ? old.filter((c: any) => c.id !== id) : old
+      );
+      try {
+        await adminService.approveCourse(id);
+        Toast.show({ type: 'success', text1: 'Success', text2: 'Course approved and published' });
+        queryClient.invalidateQueries({ queryKey: ['pending-courses'] });
+        refetch();
+      } catch (error: any) {
+        Toast.show({ type: 'error', text1: 'Error', text2: error.response?.data?.error || 'Failed to approve' });
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Are you sure you want to approve "${title}"?`)) {
+        action();
+      }
+    } else {
+      Alert.alert(
+        'Approve Course',
+        `Are you sure you want to approve "${title}"?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Approve', onPress: action },
+        ]
+      );
+    }
   };
 
   const handleReject = async (id: string, title: string) => {
-    Alert.prompt(
-      'Reject Course',
-      `Please enter a reason for rejecting "${title}":`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reject',
-          onPress: async (reason?: string) => {
-            if (!reason) {
-              Alert.alert('Error', 'Please provide a reason');
-              return;
-            }
-            try {
-              await adminService.rejectCourse(id, reason);
-              Alert.alert('Success', 'Course rejected');
-              queryClient.invalidateQueries({ queryKey: ['pending-courses'] });
-              refetch();
-            } catch (error: any) {
-              Alert.alert('Error', error.response?.data?.error || 'Failed to reject');
-            }
-          },
-        },
-      ],
-      'plain-text'
-    );
+    const action = async (reason?: string) => {
+      if (!reason) {
+        Toast.show({ type: 'error', text1: 'Error', text2: 'Please provide a reason' });
+        return;
+      }
+      queryClient.setQueryData(['pending-courses'], (old: any) => 
+        Array.isArray(old) ? old.filter((c: any) => c.id !== id) : old
+      );
+      try {
+        await adminService.rejectCourse(id, reason);
+        Toast.show({ type: 'success', text1: 'Success', text2: 'Course rejected' });
+        queryClient.invalidateQueries({ queryKey: ['pending-courses'] });
+        refetch();
+      } catch (error: any) {
+        Toast.show({ type: 'error', text1: 'Error', text2: error.response?.data?.error || 'Failed to reject' });
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      const reason = window.prompt(`Please enter a reason for rejecting "${title}":`);
+      if (reason !== null) {
+        action(reason);
+      }
+    } else {
+      Alert.prompt(
+        'Reject Course',
+        `Please enter a reason for rejecting "${title}":`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Reject', onPress: action },
+        ],
+        'plain-text'
+      );
+    }
   };
 
   const courses: Course[] = Array.isArray(data) ? data : [];
@@ -79,6 +98,7 @@ export const CourseApprovalScreen = () => {
   return (
     <ScrollView
       style={styles.container}
+      contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
       refreshControl={
         <RefreshControl refreshing={isLoading} onRefresh={refetch} />
       }

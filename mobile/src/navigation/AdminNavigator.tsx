@@ -14,9 +14,8 @@ export const AdminNavigator = () => {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: '#fff' },
-        headerTitleStyle: { fontWeight: '600' },
-        headerShadowVisible: false,
+        headerShown: false,
+        cardStyle: { flex: 1 },
       }}
     >
       <Stack.Screen name="Dashboard" component={AdminDashboardScreen} options={{ title: 'Admin Panel' }} />

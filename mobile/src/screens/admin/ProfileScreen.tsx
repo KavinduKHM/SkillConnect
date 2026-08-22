@@ -9,6 +9,7 @@ import {
   TextInput,
   Modal,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -63,22 +64,42 @@ export const ProfileScreen = ({ navigation }: any) => {
   }, [data]);
 
   const handleLogout = async () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            await AsyncStorage.removeItem('token');
-            await AsyncStorage.removeItem('user');
-            navigation.replace('Login');
+    const doLogout = async () => {
+      await AsyncStorage.removeItem('token');
+      await AsyncStorage.removeItem('user');
+      if (Platform.OS === 'web') {
+        window.location.replace('/');
+      } else {
+        try {
+          if (typeof (navigation as any).replace === 'function') {
+            (navigation as any).replace('Auth');
+          } else {
+            (navigation as any).navigate('Auth');
+          }
+        } catch (e) {
+          (navigation as any).navigate('Auth');
+        }
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm('Are you sure you want to logout?')) {
+        doLogout();
+      }
+    } else {
+      Alert.alert(
+        'Logout',
+        'Are you sure you want to logout?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Logout',
+            style: 'destructive',
+            onPress: doLogout,
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
 
   const handleUpdateProfile = async () => {
@@ -127,7 +148,7 @@ export const ProfileScreen = ({ navigation }: any) => {
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}>
       {/* Profile Header */}
       <View style={styles.headerCard}>
         <View style={styles.avatarContainer}>

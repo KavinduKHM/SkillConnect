@@ -19,6 +19,7 @@ import {
   getSingleAssignment,
   getLearnerSubmissions,
   submitAssignment,
+  deleteLearnerSubmission,
 } from '../controllers/assignment.controller.js';
 
 const router = express.Router();
@@ -41,6 +42,9 @@ router.get('/:id/my-submissions', getLearnerSubmissions);
 
 // POST /api/assignments/:id/submit
 router.post('/:id/submit', submitAssignmentValidator, validate, submitAssignment);
+
+// DELETE /api/assignments/submissions/:submissionId
+router.delete('/submissions/:submissionId', deleteLearnerSubmission);
 
 // ============================================================
 // INSTRUCTOR ROUTES

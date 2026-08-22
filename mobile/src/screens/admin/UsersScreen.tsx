@@ -7,8 +7,10 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  Platform,
   RefreshControl,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminService, User } from '../../api/admin.service';
 import { StatusBadge } from '../../components/admin/StatusBadge';
@@ -30,49 +32,66 @@ export const UsersScreen = ({ navigation }: any) => {
   });
 
   const handleSuspend = async (user: User) => {
-    Alert.alert(
-      'Suspend User',
-      `Are you sure you want to suspend ${user.name}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Suspend',
-          style: 'destructive',
-          onPress: async () => {
-            const reason = 'Violation of platform guidelines';
-            try {
-              await adminService.suspendUser(user.id, reason);
-              Alert.alert('Success', 'User suspended');
-              queryClient.invalidateQueries({ queryKey: ['users'] });
-            } catch (error: any) {
-              Alert.alert('Error', error.response?.data?.error || 'Failed to suspend user');
-            }
-          },
-        },
-      ]
-    );
+    const action = async () => {
+      queryClient.setQueryData(['users', search, roleFilter, statusFilter], (old: any) => {
+        if (!old?.data?.users) return old;
+        return { ...old, data: { ...old.data, users: old.data.users.map((u: any) => u.id === user.id ? { ...u, status: 'SUSPENDED' } : u) } };
+      });
+      const reason = 'Violation of platform guidelines';
+      try {
+        await adminService.suspendUser(user.id, reason);
+        Toast.show({ type: 'success', text1: 'Success', text2: 'User suspended' });
+        queryClient.invalidateQueries({ queryKey: ['users'] });
+      } catch (error: any) {
+        Toast.show({ type: 'error', text1: 'Error', text2: error.response?.data?.error || 'Failed to suspend user' });
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Are you sure you want to suspend ${user.name}?`)) {
+        action();
+      }
+    } else {
+      Alert.alert(
+        'Suspend User',
+        `Are you sure you want to suspend ${user.name}?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Suspend', style: 'destructive', onPress: action },
+        ]
+      );
+    }
   };
 
   const handleRestore = async (user: User) => {
-    Alert.alert(
-      'Restore User',
-      `Are you sure you want to restore ${user.name}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Restore',
-          onPress: async () => {
-            try {
-              await adminService.restoreUser(user.id);
-              Alert.alert('Success', 'User restored');
-              queryClient.invalidateQueries({ queryKey: ['users'] });
-            } catch (error: any) {
-              Alert.alert('Error', error.response?.data?.error || 'Failed to restore user');
-            }
-          },
-        },
-      ]
-    );
+    const action = async () => {
+      queryClient.setQueryData(['users', search, roleFilter, statusFilter], (old: any) => {
+        if (!old?.data?.users) return old;
+        return { ...old, data: { ...old.data, users: old.data.users.map((u: any) => u.id === user.id ? { ...u, status: 'ACTIVE' } : u) } };
+      });
+      try {
+        await adminService.restoreUser(user.id);
+        Toast.show({ type: 'success', text1: 'Success', text2: 'User restored' });
+        queryClient.invalidateQueries({ queryKey: ['users'] });
+      } catch (error: any) {
+        Toast.show({ type: 'error', text1: 'Error', text2: error.response?.data?.error || 'Failed to restore user' });
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Are you sure you want to restore ${user.name}?`)) {
+        action();
+      }
+    } else {
+      Alert.alert(
+        'Restore User',
+        `Are you sure you want to restore ${user.name}?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Restore', onPress: action },
+        ]
+      );
+    }
   };
 
   const users = data?.data?.users || [];
@@ -80,6 +99,7 @@ export const UsersScreen = ({ navigation }: any) => {
   return (
     <ScrollView
       style={styles.container}
+      contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
       refreshControl={
         <RefreshControl refreshing={isLoading} onRefresh={refetch} />
       }
