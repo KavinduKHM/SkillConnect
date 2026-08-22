@@ -88,15 +88,6 @@ export default function CourseContentScreen({ route, navigation }: any) {
     setRefreshing(true);
     loadData();
   };
-// Inside CourseContentScreen.tsx - The handleAddModule function
-
-// Inside CourseContentScreen.tsx
-
-// Inside CourseContentScreen.tsx - The handleAddModule function
-
-// Inside CourseContentScreen.tsx
-
-// Inside CourseContentScreen.tsx - The handleAddModule function
 
 const handleAddModule = async () => {
   // ✅ Validate title

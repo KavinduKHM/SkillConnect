@@ -117,7 +117,6 @@ export default function SkillSharerDashboardScreen({ navigation }: any) {
     loadCourses();
   };
 
-  // ✅ COMPLETE FIX: Delete handler with maximum debugging
   const handleDeleteCourse = (courseId: string, title: string) => {
     console.log(`🗑️ Delete requested for: ${courseId} - ${title}`);
 
@@ -322,7 +321,7 @@ export default function SkillSharerDashboardScreen({ navigation }: any) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>My Courses</Text>
+        <Text style={styles.headerTitle}>SkillSharer Dashboard</Text>
         <View style={styles.headerActions}>
           <TouchableOpacity
             style={styles.profileButton}
