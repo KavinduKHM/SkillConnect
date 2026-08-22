@@ -42,7 +42,8 @@ export default function LearnerProgressScreen() {
   const loadData = async () => {
     try {
       const response = await progressService.getLearnersProgress(courseId);
-      setLearners(response.data || []);
+      const responseData = response?.data?.data ?? response?.data;
+      setLearners(Array.isArray(responseData) ? responseData : []);
     } catch (error: any) {
       Alert.alert('Error', error.error || 'Failed to load learners');
     } finally {
