@@ -5,10 +5,12 @@ import {
   Alert,
   ScrollView,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { Header } from '../../components/common/Header';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { CourseForm } from '../../components/skill-sharer/CourseForm';
 import { courseApi } from '../../api/skill-sharer.service';
+import { fetchCategories } from '../../api/learner.service';
 import { Category } from '../../types';
 
 export const CourseCreatorScreen: React.FC = ({ navigation }: any) => {
@@ -16,18 +18,27 @@ export const CourseCreatorScreen: React.FC = ({ navigation }: any) => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
 
-  // Load categories (this would come from SKIL-4 eventually)
   useEffect(() => {
-    // For now, use dummy categories or fetch from admin endpoint
-    // This is a placeholder - you'd fetch real categories from the admin API
-    const dummyCategories: Category[] = [
-      { id: '1', name: 'Technology', description: 'Tech courses', courseCount: 0 },
-      { id: '2', name: 'Arts', description: 'Creative courses', courseCount: 0 },
-      { id: '3', name: 'Business', description: 'Business courses', courseCount: 0 },
-      { id: '4', name: 'Health', description: 'Health courses', courseCount: 0 },
-    ];
-    setCategories(dummyCategories);
-    setLoadingCategories(false);
+    const loadCategories = async () => {
+      try {
+        const res = await fetchCategories();
+        if (res.success && res.data) {
+          setCategories(res.data);
+        } else if (Array.isArray(res)) {
+          setCategories(res);
+        } else if (res.data && Array.isArray(res.data)) {
+          setCategories(res.data);
+        } else {
+          setCategories([]);
+        }
+      } catch (err) {
+        console.error('Failed to load categories', err);
+        Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to load categories. Please try again.' });
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+    loadCategories();
   }, []);
 
   const handleSubmit = async (data: any) => {
@@ -36,29 +47,21 @@ export const CourseCreatorScreen: React.FC = ({ navigation }: any) => {
       
       // Ensure categoryId is valid
       if (!data.categoryId) {
-        Alert.alert('Error', 'Please select a category');
+        Toast.show({ type: 'error', text1: 'Error', text2: 'Please select a category' });
         return;
       }
 
       const response = await courseApi.createCourse(data);
       
       if (response.success) {
-        Alert.alert(
-          'Success',
-          'Course draft created successfully! You can now add content to your course.',
-          [
-            {
-              text: 'OK',
-              onPress: () => navigation.goBack(),
-            },
-          ]
-        );
+        Toast.show({ type: 'success', text1: 'Success', text2: 'Course draft created successfully! You can now add content to your course.' });
+        setTimeout(() => navigation.goBack(), 1500);
       } else {
-        Alert.alert('Error', response.error || 'Failed to create course');
+        Toast.show({ type: 'error', text1: 'Error', text2: response.error || 'Failed to create course' });
       }
     } catch (error: any) {
       console.error('Error creating course:', error);
-      Alert.alert('Error', error?.message || 'Failed to create course');
+      Toast.show({ type: 'error', text1: 'Error', text2: error?.message || 'Failed to create course' });
     } finally {
       setLoading(false);
     }

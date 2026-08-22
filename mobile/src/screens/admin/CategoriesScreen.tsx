@@ -8,8 +8,10 @@ import {
   Alert,
   TextInput,
   Modal,
+  Platform,
   RefreshControl,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminService, Category } from '../../api/admin.service';
 
@@ -33,17 +35,17 @@ export const CategoriesScreen = () => {
 
   const handleSave = async () => {
     if (!formData.name) {
-      Alert.alert('Error', 'Category name is required');
+      Toast.show({ type: 'error', text1: 'Error', text2: 'Category name is required' });
       return;
     }
 
     try {
       if (editingCategory) {
         await adminService.updateCategory(editingCategory.id, formData);
-        Alert.alert('Success', 'Category updated');
+        Toast.show({ type: 'success', text1: 'Success', text2: 'Category updated' });
       } else {
         await adminService.createCategory(formData);
-        Alert.alert('Success', 'Category created');
+        Toast.show({ type: 'success', text1: 'Success', text2: 'Category created' });
       }
       setModalVisible(false);
       setEditingCategory(null);
@@ -51,32 +53,39 @@ export const CategoriesScreen = () => {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
       refetch();
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to save');
+      Toast.show({ type: 'error', text1: 'Error', text2: error.response?.data?.error || 'Failed to save' });
     }
   };
 
   const handleDelete = async (id: string, name: string) => {
-    Alert.alert(
-      'Delete Category',
-      `Are you sure you want to delete "${name}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await adminService.deleteCategory(id);
-              Alert.alert('Success', 'Category deleted');
-              queryClient.invalidateQueries({ queryKey: ['categories'] });
-              refetch();
-            } catch (error: any) {
-              Alert.alert('Error', error.response?.data?.error || 'Failed to delete');
-            }
-          },
-        },
-      ]
-    );
+    const action = async () => {
+      queryClient.setQueryData(['categories'], (old: any) => 
+        Array.isArray(old) ? old.filter((c: any) => c.id !== id) : old
+      );
+      try {
+        await adminService.deleteCategory(id);
+        Toast.show({ type: 'success', text1: 'Success', text2: 'Category deleted' });
+        queryClient.invalidateQueries({ queryKey: ['categories'] });
+        refetch();
+      } catch (error: any) {
+        Toast.show({ type: 'error', text1: 'Error', text2: error.response?.data?.error || 'Failed to delete' });
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Are you sure you want to delete "${name}"?`)) {
+        action();
+      }
+    } else {
+      Alert.alert(
+        'Delete Category',
+        `Are you sure you want to delete "${name}"?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Delete', style: 'destructive', onPress: action },
+        ]
+      );
+    }
   };
 
   const openEditModal = (category: Category) => {
@@ -107,6 +116,8 @@ export const CategoriesScreen = () => {
       </View>
 
       <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
         refreshControl={
           <RefreshControl refreshing={isLoading} onRefresh={refetch} />
         }

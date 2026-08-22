@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -120,24 +121,24 @@ export default function CourseReviewScreen({ route, navigation }: any) {
 
   const handleSubmitReview = async () => {
     if (rating === 0) {
-      Alert.alert('Rating Required', 'Please select a star rating between 1 and 5.');
+      Toast.show({ type: 'error', text1: 'Rating Required', text2: 'Please select a star rating between 1 and 5.' });
       return;
     }
     try {
       setSubmitting(true);
       if (isEditing && myReview) {
         await updateCourseReview(myReview.id, { rating, comment, review: comment } as any);
-        Alert.alert('Success', 'Your review has been updated!');
+        Toast.show({ type: 'success', text1: 'Success', text2: 'Your review has been updated!' });
       } else {
         await createCourseReview({ courseId, rating, comment, review: comment } as any);
-        Alert.alert('Success', 'Your review has been submitted!');
+        Toast.show({ type: 'success', text1: 'Success', text2: 'Your review has been submitted!' });
       }
       setIsEditing(false);
       setComment('');
       loadReviews();
     } catch (err: any) {
       const errMsg = err?.response?.data?.error || err?.error || err?.message || 'Failed to submit review.';
-      Alert.alert('Notice', errMsg);
+      Toast.show({ type: 'error', text1: 'Notice', text2: errMsg });
     } finally {
       setSubmitting(false);
     }
@@ -164,7 +165,7 @@ export default function CourseReviewScreen({ route, navigation }: any) {
             setMyReview(null);
             loadReviews();
           } catch (err: any) {
-            Alert.alert('Error', err?.error || err?.message || 'Failed to delete review.');
+            Toast.show({ type: 'error', text1: 'Error', text2: err?.error || err?.message || 'Failed to delete review.' });
           }
         }
       }
@@ -381,7 +382,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 17, fontWeight: '700', color: '#fff' },
   headerSub: { fontSize: 12, color: '#C7D2FE', marginTop: 2 },
-  content: { padding: 16, gap: 16, paddingBottom: 40 },
+  content: { flexGrow: 1, padding: 16, gap: 16, paddingBottom: 40 },
 
   // Summary
   summaryCard: {

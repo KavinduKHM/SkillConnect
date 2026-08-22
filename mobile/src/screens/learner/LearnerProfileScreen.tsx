@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Image,
   Alert,
+  Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fetchMyLearning } from '../../api/learner.service';
@@ -42,17 +43,25 @@ export default function LearnerProfileScreen({ navigation }: any) {
   }, []);
 
   const handleLogout = async () => {
-    Alert.alert('Sign Out', 'Are you sure you want to sign out of SkillConnect?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign Out',
-        style: 'destructive',
-        onPress: async () => {
-          await AsyncStorage.multiRemove(['@token', '@user']);
-          navigation?.reset({ index: 0, routes: [{ name: 'Auth' }] });
+    const doLogout = async () => {
+      await AsyncStorage.multiRemove(['@token', '@user']);
+      navigation?.reset({ index: 0, routes: [{ name: 'Auth' }] });
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm('Are you sure you want to sign out of SkillConnect?')) {
+        doLogout();
+      }
+    } else {
+      Alert.alert('Sign Out', 'Are you sure you want to sign out of SkillConnect?', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: doLogout,
         },
-      },
-    ]);
+      ]);
+    }
   };
 
   const user = userInfo || {
@@ -93,7 +102,7 @@ export default function LearnerProfileScreen({ navigation }: any) {
           <Text style={styles.loadingText}>Loading profile...</Text>
         </View>
       ) : (
-        <ScrollView style={styles.scrollContent} contentContainerStyle={{ paddingBottom: 40 }}>
+        <ScrollView style={styles.scrollContent} contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}>
           <View style={styles.contentPadding}>
             {/* Learner Card */}
             <View style={styles.profileCard}>
@@ -187,7 +196,7 @@ const styles = StyleSheet.create({
   logoutHeaderBtnText: { color: '#EF4444', fontSize: 12, fontWeight: '700' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: { marginTop: 10, color: '#64748B' },
-  scrollContent: { flex: 1 },
+  scrollContent: { flex: 1, flexGrow: 1 },
   contentPadding: { paddingHorizontal: 20, paddingTop: 12 },
   profileCard: {
     backgroundColor: '#FFFFFF',

@@ -248,6 +248,7 @@ export default function CourseListScreen({ navigation }: any) {
         </View>
       ) : (
         <FlatList
+          style={{ flex: 1 }}
           data={filteredCourses}
           keyExtractor={(item) => item.id}
           numColumns={2}

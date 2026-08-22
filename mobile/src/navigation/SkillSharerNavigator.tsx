@@ -13,6 +13,7 @@ import { CompletionRequestsScreen } from '../screens/skill-sharer/CompletionRequ
 import { RecommendationScreen } from '../screens/skill-sharer/RecommendationScreen';
 import CourseReviewScreen from '../screens/learner/CourseReviewScreen';
 import CourseDetailScreen from '../screens/learner/CourseDetailScreen';
+import SkillSharerProfileScreen from '../screens/learner/SkillSharerProfileScreen';
 
 const Stack = createStackNavigator();
 
@@ -21,7 +22,7 @@ export const SkillSharerNavigator: React.FC = () => {
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
-        cardStyle: { backgroundColor: '#F9FAFB' },
+        cardStyle: { flex: 1, backgroundColor: '#F9FAFB' },
       }}
     >
       <Stack.Screen name="Dashboard" component={DashboardScreen} />
@@ -35,6 +36,7 @@ export const SkillSharerNavigator: React.FC = () => {
       <Stack.Screen name="Recommendations" component={RecommendationScreen} />
       <Stack.Screen name="CourseReview" component={CourseReviewScreen} />
       <Stack.Screen name="CourseDetail" component={CourseDetailScreen} />
+      <Stack.Screen name="SkillSharerProfile" component={SkillSharerProfileScreen} />
     </Stack.Navigator>
   );
 };

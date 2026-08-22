@@ -54,8 +54,8 @@ export const DashboardScreen = ({ navigation }: any) => {
         setCourses(response.data);
       } else if (Array.isArray(response)) {
         setCourses(response);
-      } else if (response && Array.isArray(response.data?.data)) {
-        setCourses(response.data.data);
+      } else if (response && Array.isArray((response as any).data?.data)) {
+        setCourses((response as any).data.data);
       } else {
         setCourses([]);
       }
@@ -114,6 +114,7 @@ export const DashboardScreen = ({ navigation }: any) => {
   return (
     <ScrollView
       style={styles.container}
+      contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }

@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { authService } from '../../api/auth.service';
 
 export const RegisterScreen = ({ navigation }: any) => {
@@ -31,9 +32,8 @@ export const RegisterScreen = ({ navigation }: any) => {
     setLoading(true);
     try {
       await authService.register({ name, email, password, role });
-      Alert.alert('Success', 'Account created successfully! Please sign in.', [
-        { text: 'OK', onPress: () => navigation.navigate('Login') },
-      ]);
+      Toast.show({ type: 'success', text1: 'Success', text2: 'Account created successfully! Please sign in.' });
+      setTimeout(() => navigation.navigate('Login'), 1500);
     } catch (error: any) {
       setErrorMsg(error.error || 'Could not register');
     } finally {

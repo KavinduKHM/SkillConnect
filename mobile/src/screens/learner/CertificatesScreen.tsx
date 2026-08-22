@@ -13,6 +13,7 @@ import {
   Linking,
   Alert,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { fetchMyCertificates, fetchMyCompletionRequests, requestCourseCompletion } from '../../api/learner.service';
@@ -59,7 +60,7 @@ export default function CertificatesScreen({ navigation }: any) {
       }
     } catch (error) {
       console.log('Error opening PDF download:', error);
-      Alert.alert('Download Error', 'Could not download the certificate PDF.');
+      Toast.show({ type: 'error', text1: 'Download Error', text2: 'Could not download the certificate PDF.' });
     }
   };
 
@@ -67,10 +68,10 @@ export default function CertificatesScreen({ navigation }: any) {
     try {
       setRequestingCourseId(courseId);
       await requestCourseCompletion(courseId);
-      Alert.alert('Success', 'Completion request resubmitted to your instructor.');
+      Toast.show({ type: 'success', text1: 'Success', text2: 'Completion request resubmitted to your instructor.' });
       loadData();
     } catch (err: any) {
-      Alert.alert('Notice', err.response?.data?.error || err.message || 'Failed to resubmit request');
+      Toast.show({ type: 'error', text1: 'Notice', text2: err.response?.data?.error || err.message || 'Failed to resubmit request' });
     } finally {
       setRequestingCourseId(null);
     }
@@ -260,7 +261,7 @@ const styles = StyleSheet.create({
   headerSubtitle: { fontSize: 13, color: '#64748B', marginTop: 2 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: { marginTop: 10, color: '#64748B' },
-  scrollContent: { paddingHorizontal: 20, paddingBottom: 40, gap: 16 },
+  scrollContent: { flexGrow: 1, paddingHorizontal: 20, paddingBottom: 40, gap: 16 },
   summaryBanner: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { fetchLessonContent, completeLesson } from '../../api/learner.service';
 
 export default function LessonPlayerScreen({ route, navigation }: any) {
@@ -54,14 +55,11 @@ export default function LessonPlayerScreen({ route, navigation }: any) {
       const res = await completeLesson(courseId, lessonId);
       setCompleted(true);
       const pct = res.progress?.progressPercentage ?? res.progressPercentage ?? 80;
-      Alert.alert(
-        'Lesson Completed! 🎉',
-        `Course completion progress is now ${pct}%.`,
-        [{ text: 'Back to Course Details', onPress: () => navigation?.goBack() }, { text: 'OK' }]
-      );
+      Toast.show({ type: 'success', text1: 'Lesson Completed! 🎉', text2: `Course completion progress is now ${pct}%.` });
+      setTimeout(() => navigation?.goBack(), 1500);
     } catch (err: any) {
       const msg = err.response?.data?.error || err.message || 'Could not mark lesson complete';
-      Alert.alert('Notice', msg);
+      Toast.show({ type: 'error', text1: 'Notice', text2: msg });
     } finally {
       setCompleting(false);
     }
@@ -102,7 +100,7 @@ export default function LessonPlayerScreen({ route, navigation }: any) {
           <Text style={styles.loadingText}>Loading lesson content...</Text>
         </View>
       ) : (
-        <ScrollView style={styles.scrollContent} contentContainerStyle={{ paddingBottom: 100 }}>
+        <ScrollView style={styles.scrollContent} contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}>
           {/* Main Video Player Screen Container */}
           <View style={styles.videoPlayerBox}>
             <View style={styles.playCircle}>
@@ -191,7 +189,7 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 16, fontWeight: '800', color: '#0F172A', flex: 1, textAlign: 'center', marginHorizontal: 8 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: { marginTop: 10, color: '#64748B' },
-  scrollContent: { flex: 1 },
+  scrollContent: { flex: 1, flexGrow: 1 },
   videoPlayerBox: {
     height: 220,
     backgroundColor: '#0F172A',

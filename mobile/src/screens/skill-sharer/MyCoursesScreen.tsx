@@ -6,7 +6,9 @@ import {
   ScrollView,
   RefreshControl,
   Alert,
+  Platform,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { useFocusEffect } from '@react-navigation/native';
 import { Header } from '../../components/common/Header';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
@@ -29,8 +31,8 @@ export const MyCoursesScreen: React.FC = ({ navigation }: any) => {
         setCourses(response.data);
       } else if (Array.isArray(response)) {
         setCourses(response);
-      } else if (response && Array.isArray(response.data?.data)) {
-        setCourses(response.data.data);
+      } else if (response && Array.isArray((response as any).data?.data)) {
+        setCourses((response as any).data.data);
       } else {
         setCourses([]);
       }
@@ -50,83 +52,99 @@ export const MyCoursesScreen: React.FC = ({ navigation }: any) => {
   );
 
   const handleCoursePress = (course: Course) => {
-    // Navigate to course detail (coming in Sprint 2)
-    Alert.alert('Course Details', `Viewing: ${course.title}`);
+    // Navigate to course detail
+    navigation.navigate('CourseDetail', { courseId: course.id });
   };
 
   const handleEdit = (course: Course) => {
     // Navigate to course editor (coming in Sprint 2)
-    Alert.alert('Edit Course', `Editing: ${course.title}`);
+    Toast.show({ type: 'info', text1: 'Edit Course', text2: `Editing: ${course.title}` });
   };
 
   const handleDelete = async (course: Course) => {
     if (course.status !== 'DRAFT') {
-      Alert.alert('Cannot Delete', 'Only draft courses can be deleted.');
+      Toast.show({ type: 'error', text1: 'Cannot Delete', text2: 'Only draft courses can be deleted.' });
       return;
     }
 
-    Alert.alert(
-      'Delete Course',
-      `Are you sure you want to delete "${course.title}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const response = await courseApi.deleteCourse(course.id);
-              if (response.success) {
-                setCourses(courses.filter((c) => c.id !== course.id));
-                Alert.alert('Success', 'Course deleted successfully');
-              } else {
-                Alert.alert('Error', response.error || 'Failed to delete course');
-              }
-            } catch (error) {
-              console.error('Error deleting course:', error);
-              Alert.alert('Error', 'Failed to delete course');
-            }
+    const doDelete = async () => {
+      try {
+        const response = await courseApi.deleteCourse(course.id);
+        if (response.success) {
+          setCourses(prev => prev.filter((c) => c.id !== course.id));
+          Toast.show({ type: 'success', text1: 'Success', text2: 'Course deleted successfully' });
+        } else {
+          Toast.show({ type: 'error', text1: 'Error', text2: response.error || 'Failed to delete course' });
+        }
+      } catch (error) {
+        console.error('Error deleting course:', error);
+        Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to delete course' });
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Are you sure you want to delete "${course.title}"?`)) {
+        doDelete();
+      }
+    } else {
+      Alert.alert(
+        'Delete Course',
+        `Are you sure you want to delete "${course.title}"?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: doDelete,
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
 
   const handleSubmit = async (course: Course) => {
     if (course.status !== 'DRAFT') {
-      Alert.alert('Already Submitted', 'This course has already been submitted.');
+      Toast.show({ type: 'info', text1: 'Already Submitted', text2: 'This course has already been submitted.' });
       return;
     }
 
-    Alert.alert(
-      'Submit for Approval',
-      `Are you sure you want to submit "${course.title}" for admin review?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Submit',
-          onPress: async () => {
-            try {
-              const response = await courseApi.submitCourse(course.id);
-              if (response.success) {
-                // Update the course in the list
-                setCourses(
-                  courses.map((c) =>
-                    c.id === course.id ? { ...c, status: 'SUBMITTED' } : c
-                  )
-                );
-                Alert.alert('Success', 'Course submitted for approval!');
-              } else {
-                Alert.alert('Error', response.error || 'Failed to submit course');
-              }
-            } catch (error) {
-              console.error('Error submitting course:', error);
-              Alert.alert('Error', 'Failed to submit course');
-            }
+    const doSubmit = async () => {
+      try {
+        const response = await courseApi.submitCourse(course.id);
+        if (response.success) {
+          // Update the course in the list
+          setCourses(prev =>
+            prev.map((c) =>
+              c.id === course.id ? { ...c, status: 'SUBMITTED' } : c
+            )
+          );
+          Toast.show({ type: 'success', text1: 'Success', text2: 'Course submitted for approval!' });
+        } else {
+          Toast.show({ type: 'error', text1: 'Error', text2: response.error || 'Failed to submit course' });
+        }
+      } catch (error) {
+        console.error('Error submitting course:', error);
+        Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to submit course' });
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Are you sure you want to submit "${course.title}" for admin review?`)) {
+        doSubmit();
+      }
+    } else {
+      Alert.alert(
+        'Submit for Approval',
+        `Are you sure you want to submit "${course.title}" for admin review?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Submit',
+            onPress: doSubmit,
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
 
   const onRefresh = async () => {
@@ -193,6 +211,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
   },
   scrollContent: {
+    flexGrow: 1,
     paddingTop: 16,
     paddingBottom: 40,
   },

@@ -13,6 +13,7 @@ import {
   Switch,
   Platform,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { Ionicons } from '@expo/vector-icons';
 import { courseApi, assignmentApi } from '../../api/skill-sharer.service';
 import { Assignment } from '../../types';
@@ -87,14 +88,14 @@ export const AssignmentsScreen = ({ navigation }: any) => {
         );
         setCourses(enrichedCourses);
         if (enrichedCourses.length > 0 && !selectedCourseId) {
-          setSelectedCourseId(enrichedCourses[0].id);
+          setSelectedCourseId(enrichedCourses[0]?.id || '');
         }
       } else {
         setCourses([]);
       }
     } catch (error) {
       console.error('Error fetching courses and assignments:', error);
-      Alert.alert('Error', 'Failed to load courses.');
+      Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to load courses.' });
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -104,7 +105,7 @@ export const AssignmentsScreen = ({ navigation }: any) => {
   const handleOpenCreateModal = (targetCourseId?: string) => {
     setIsEditing(false);
     setCurrentAssignmentId(null);
-    const chosenCourseId = targetCourseId || (courses.length > 0 ? courses[0].id : '');
+    const chosenCourseId = targetCourseId || (courses.length > 0 ? courses[0]?.id || '' : '');
     setSelectedCourseId(chosenCourseId);
     
     const matchedCourse = courses.find((c) => c.id === chosenCourseId);
@@ -143,22 +144,28 @@ export const AssignmentsScreen = ({ navigation }: any) => {
     setModalVisible(true);
   };
 
-  const showNotification = (title: string, message: string) => {
-    if (Platform.OS === 'web') {
-      window.alert(`${title}: ${message}`);
-    } else {
-      Alert.alert(title, message);
-    }
+  const showNotification = (title: string, message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    Toast.show({
+      type,
+      text1: title,
+      text2: message,
+    });
   };
 
   const handleDeleteAssignment = (assignment: Assignment) => {
     const doDelete = async () => {
+      // Optimistic update
+      setCourses(prev => prev.map(c => ({
+        ...c,
+        assignments: c.assignments.filter(a => a.id !== assignment.id)
+      })));
+
       try {
         await assignmentApi.deleteAssignment(assignment.id);
-        showNotification('Deleted', 'Assignment removed successfully.');
-        fetchCoursesAndAssignments();
+        showNotification('Deleted', 'Assignment removed successfully.', 'success');
       } catch (error: any) {
-        showNotification('Error', error?.error || error?.response?.data?.error || 'Failed to delete assignment.');
+        showNotification('Error', error?.error || error?.response?.data?.error || 'Failed to delete assignment.', 'error');
+        fetchCoursesAndAssignments(); // Revert on failure
       }
     };
 
@@ -180,11 +187,11 @@ export const AssignmentsScreen = ({ navigation }: any) => {
 
   const handleSave = async () => {
     if (!selectedCourseId) {
-      showNotification('Validation Error', 'Please select a course for this assignment.');
+      showNotification('Validation Error', 'Please select a course for this assignment.', 'error');
       return;
     }
     if (!title.trim()) {
-      showNotification('Validation Error', 'Assignment title is required.');
+      showNotification('Validation Error', 'Assignment title is required.', 'error');
       return;
     }
 
@@ -206,10 +213,10 @@ export const AssignmentsScreen = ({ navigation }: any) => {
 
       if (isEditing && currentAssignmentId) {
         await assignmentApi.updateAssignment(currentAssignmentId, payload);
-        showNotification('Success', 'Assignment updated successfully!');
+        showNotification('Success', 'Assignment updated successfully!', 'success');
       } else {
         await assignmentApi.createAssignment(payload);
-        showNotification('Success', 'New assignment created successfully!');
+        showNotification('Success', 'New assignment created successfully!', 'success');
       }
 
       setModalVisible(false);
@@ -217,7 +224,7 @@ export const AssignmentsScreen = ({ navigation }: any) => {
     } catch (error: any) {
       console.error('Error saving assignment:', error);
       const errorMsg = error?.error || error?.response?.data?.error || error?.message || 'Failed to save assignment';
-      showNotification('Error', errorMsg);
+      showNotification('Error', errorMsg, 'error');
     } finally {
       setIsSaving(false);
     }

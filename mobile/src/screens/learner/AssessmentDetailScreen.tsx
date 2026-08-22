@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
   },
   circleBtnText: { fontSize: 16, color: '#0F172A' },
   headerTitle: { fontSize: 18, fontWeight: '800', color: '#0F172A' },
-  content: { paddingHorizontal: 20, paddingTop: 12 },
+  content: { flexGrow: 1, paddingHorizontal: 20, paddingTop: 12 },
   topCard: {
     backgroundColor: '#FFFFFF',
     padding: 20,

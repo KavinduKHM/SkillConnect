@@ -85,7 +85,7 @@ export default function SkillSharerProfileScreen({ route, navigation }: any) {
           <Text style={styles.loadingText}>Loading instructor profile...</Text>
         </View>
       ) : (
-        <ScrollView style={styles.scrollContent} contentContainerStyle={{ paddingBottom: 40 }}>
+        <ScrollView style={styles.scrollContent} contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}>
           <View style={styles.contentPadding}>
             {/* Hero Card */}
             <View style={styles.heroCard}>
@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 17, fontWeight: '800', color: '#0F172A' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: { marginTop: 10, color: '#64748B' },
-  scrollContent: { flex: 1 },
+  scrollContent: { flex: 1, flexGrow: 1 },
   contentPadding: { paddingHorizontal: 20, paddingTop: 12 },
   heroCard: {
     backgroundColor: '#FFFFFF',

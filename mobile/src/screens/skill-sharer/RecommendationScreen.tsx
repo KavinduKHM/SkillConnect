@@ -4,6 +4,7 @@ import {
   StatusBar, TouchableOpacity, TextInput, ActivityIndicator,
   Alert, FlatList,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { certificateApi, recommendationApi } from '../../api/skill-sharer.service';
@@ -78,15 +79,15 @@ export function RecommendationScreen({ navigation }: any) {
 
   const handleSubmit = async () => {
     if (!selectedLearner) {
-      Alert.alert('Select a Learner', 'Please select a learner to recommend.');
+      Toast.show({ type: 'error', text1: 'Select a Learner', text2: 'Please select a learner to recommend.' });
       return;
     }
     if (!title.trim()) {
-      Alert.alert('Title Required', 'Please provide a short title for the recommendation.');
+      Toast.show({ type: 'error', text1: 'Title Required', text2: 'Please provide a short title for the recommendation.' });
       return;
     }
     if (!content.trim() || content.trim().length < 5) {
-      Alert.alert('Content Required', 'Please write at least 5 characters for the recommendation.');
+      Toast.show({ type: 'error', text1: 'Content Required', text2: 'Please write at least 5 characters for the recommendation.' });
       return;
     }
     try {
@@ -102,18 +103,18 @@ export function RecommendationScreen({ navigation }: any) {
         isPublic,
       };
       if (editingRec) {
-        await recommendationApi.update(editingRec.id, { title: data.title, content: data.content, message: data.message, isPublic });
-        Alert.alert('Updated!', 'Recommendation updated successfully.');
+        await recommendationApi.update(editingRec.id, { title: data.title, content: data.content, message: data.message, isPublic } as any);
+        Toast.show({ type: 'success', text1: 'Updated!', text2: 'Recommendation updated successfully.' });
       } else {
         await recommendationApi.create(data);
-        Alert.alert('Sent!', `Your recommendation for ${selectedLearner.learner?.name || 'the learner'} has been submitted.`);
+        Toast.show({ type: 'success', text1: 'Sent!', text2: `Your recommendation for ${selectedLearner.learner?.name || 'the learner'} has been submitted.` });
       }
       setTitle('');
       setContent('');
       setSelectedLearner(null);
       setEditingRec(null);
     } catch (err: any) {
-      Alert.alert('Error', err?.error || err?.message || 'Failed to submit recommendation.');
+      Toast.show({ type: 'error', text1: 'Error', text2: err?.error || err?.message || 'Failed to submit recommendation.' });
     } finally {
       setSubmitting(false);
     }
@@ -128,8 +129,9 @@ export function RecommendationScreen({ navigation }: any) {
           try {
             await recommendationApi.delete(id);
             setHistory(prev => prev.filter(r => r.id !== id));
+            Toast.show({ type: 'success', text1: 'Deleted', text2: 'Recommendation deleted.' });
           } catch (err: any) {
-            Alert.alert('Error', err?.error || 'Failed to delete.');
+            Toast.show({ type: 'error', text1: 'Error', text2: err?.error || 'Failed to delete.' });
           }
         }
       }
@@ -151,7 +153,7 @@ export function RecommendationScreen({ navigation }: any) {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { flexGrow: 1 }]}>
         {/* Info Banner */}
         <View style={styles.infoBanner}>
           <Ionicons name="information-circle" size={20} color="#3B82F6" />

@@ -9,9 +9,10 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
-  Platform,
   Linking,
+  Platform,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { Ionicons } from '@expo/vector-icons';
 import { assignmentApi } from '../../api/skill-sharer.service';
 import { AssignmentSubmission } from '../../types';
@@ -35,11 +36,7 @@ export const AssignmentSubmissionsScreen = ({ route, navigation }: any) => {
   }, [assignmentId]);
 
   const showNotification = (title: string, message: string) => {
-    if (Platform.OS === 'web') {
-      window.alert(`${title}: ${message}`);
-    } else {
-      Alert.alert(title, message);
-    }
+    Toast.show({ type: title.toLowerCase().includes('success') ? 'success' : 'error', text1: title, text2: message });
   };
 
   const fetchSubmissions = async () => {

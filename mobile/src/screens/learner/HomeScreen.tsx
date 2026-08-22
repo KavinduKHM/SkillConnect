@@ -86,7 +86,7 @@ export default function HomeScreen({ navigation }: any) {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FAF9F6" />
 
-      <ScrollView style={styles.scrollContent} contentContainerStyle={{ paddingBottom: 40 }}>
+      <ScrollView style={styles.scrollContent} contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}>
         <View style={styles.contentPadding}>
           {/* Header Row */}
           <View style={styles.headerRow}>

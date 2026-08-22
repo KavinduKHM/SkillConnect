@@ -23,6 +23,8 @@ function LearnerBottomTabs() {
   return (
     <Tab.Navigator
       initialRouteName="HomeTab"
+      // @ts-ignore
+      sceneContainerStyle={{ flex: 1 }}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: '#064E3B',
@@ -86,7 +88,7 @@ function LearnerBottomTabs() {
 
 export default function LearnerNavigator() {
   return (
-    <Stack.Navigator initialRouteName="MainTabs" screenOptions={{ headerShown: false }}>
+    <Stack.Navigator initialRouteName="MainTabs" screenOptions={{ headerShown: false, cardStyle: { flex: 1 } }}>
       <Stack.Screen name="MainTabs" component={LearnerBottomTabs} />
       <Stack.Screen name="HomeScreen" component={HomeScreen} />
       <Stack.Screen name="CourseList" component={CourseListScreen} />

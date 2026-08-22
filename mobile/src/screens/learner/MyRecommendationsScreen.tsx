@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 18, fontWeight: '700', color: '#374151' },
   emptyText: { fontSize: 14, color: '#9CA3AF', textAlign: 'center', lineHeight: 22 },
 
-  content: { padding: 16, gap: 16, paddingBottom: 40 },
+  content: { flexGrow: 1, padding: 16, gap: 16, paddingBottom: 40 },
 
   banner: {
     backgroundColor: '#FFFBEB', borderRadius: 14, padding: 16,

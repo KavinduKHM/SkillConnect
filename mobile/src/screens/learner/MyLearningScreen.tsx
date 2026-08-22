@@ -14,6 +14,7 @@ import {
   Platform,
   Linking,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { fetchMyLearning, fetchMyQuizzes } from '../../api/learner.service';
@@ -126,16 +127,10 @@ export default function MyLearningScreen({ navigation }: any) {
       setLoading(true);
       const { requestCourseCompletion } = require('../../api/learner.service');
       await requestCourseCompletion(courseId);
-      Alert.alert(
-        'Request Submitted! 🏆',
-        'Your completion request has been submitted. You can track approval status and download your PDF under the Certificates tab in the bottom bar.',
-        [
-          { text: 'View Certificates', onPress: () => navigation?.navigate('MainTabs', { screen: 'CertificatesTab' }) },
-          { text: 'OK', onPress: () => loadMyLearning() },
-        ]
-      );
+      Toast.show({ type: 'success', text1: 'Request Submitted! 🏆', text2: 'Your completion request has been submitted.' });
+      loadMyLearning();
     } catch (err: any) {
-      Alert.alert('Notice', err.response?.data?.error || err.message || 'Failed to request completion');
+      Toast.show({ type: 'error', text1: 'Notice', text2: err.response?.data?.error || err.message || 'Failed to request completion' });
     } finally {
       setLoading(false);
     }
@@ -244,6 +239,7 @@ export default function MyLearningScreen({ navigation }: any) {
         </View>
       ) : activeTab === 'ASSESSMENTS' ? (
         <FlatList
+          style={{ flex: 1 }}
           data={assessments}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContainer}
@@ -298,6 +294,7 @@ export default function MyLearningScreen({ navigation }: any) {
         />
       ) : activeTab === 'ASSIGNMENTS' ? (
         <FlatList
+          style={{ flex: 1 }}
           data={assignments}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContainer}
@@ -361,6 +358,7 @@ export default function MyLearningScreen({ navigation }: any) {
         </View>
       ) : (
         <FlatList
+          style={{ flex: 1 }}
           data={activeTab === 'IN_PROGRESS' ? inProgressCourses : completedCourses}
           keyExtractor={(item) => item.id || item.courseId}
           contentContainerStyle={styles.listContainer}

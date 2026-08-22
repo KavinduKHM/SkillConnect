@@ -10,6 +10,7 @@ import {
   TextInput,
   Alert,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { useNavigation } from '@react-navigation/native';
 import { courseApi, certificateApi } from '../../api/skill-sharer.service';
 
@@ -40,8 +41,8 @@ export const CompletionRequestsScreen: React.FC = () => {
       const res = await courseApi.getMyCourses();
       if (res.success && res.data) {
         setCourses(res.data);
-        if (res.data.length > 0) {
-          setSelectedCourse(res.data[0].id);
+        if (res.data && res.data.length > 0) {
+          setSelectedCourse(res.data[0]?.id || '');
         }
       }
     } catch (err) {
@@ -67,29 +68,29 @@ export const CompletionRequestsScreen: React.FC = () => {
     try {
       const res: any = await certificateApi.approveCompletionRequest(requestId);
       if (res.success) {
-        Alert.alert('Success', 'Completion request approved and certificate issued.');
+        Toast.show({ type: 'success', text1: 'Success', text2: 'Completion request approved and certificate issued.' });
         if (selectedCourse) loadRequests(selectedCourse);
       }
     } catch (err: any) {
-      Alert.alert('Error', err.response?.data?.error || err.message || 'Failed to approve');
+      Toast.show({ type: 'error', text1: 'Error', text2: err.response?.data?.error || err.message || 'Failed to approve' });
     }
   };
 
   const handleReject = async (requestId: string) => {
     if (!rejectReason.trim()) {
-      Alert.alert('Validation Error', 'Please enter a reason for rejection.');
+      Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Please enter a reason for rejection.' });
       return;
     }
     try {
       const res: any = await certificateApi.rejectCompletionRequest(requestId, rejectReason);
       if (res.success) {
-        Alert.alert('Rejected', 'Completion request rejected successfully.');
+        Toast.show({ type: 'success', text1: 'Rejected', text2: 'Completion request rejected successfully.' });
         setRejectingId(null);
         setRejectReason('');
         if (selectedCourse) loadRequests(selectedCourse);
       }
     } catch (err: any) {
-      Alert.alert('Error', err.response?.data?.error || err.message || 'Failed to reject');
+      Toast.show({ type: 'error', text1: 'Error', text2: err.response?.data?.error || err.message || 'Failed to reject' });
     }
   };
 
