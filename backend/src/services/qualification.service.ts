@@ -11,10 +11,22 @@ export class QualificationService {
     profileId: string,
     data: CreateQualificationInput
   ): Promise<Qualification> {
+    const profile = await prisma.profile.findFirst({
+      where: {
+        id: profileId,
+        userId,
+      },
+      select: { id: true },
+    });
+
+    if (!profile) {
+      throw new Error('Profile not found for authenticated user');
+    }
+
     return prisma.qualification.create({
       data: {
-        userId,
-        profileId,
+        user: { connect: { id: userId } },
+        profile: { connect: { id: profile.id } },
         title: data.title,
         institution: data.institution,
         year: data.year,

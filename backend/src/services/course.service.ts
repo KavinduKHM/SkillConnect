@@ -11,7 +11,7 @@ export class CourseService {
       data: {
         title: data.title,
         description: data.description,
-        categoryId: data.categoryId,
+        categoryId: data.categoryId ,
         difficulty: data.difficulty,
         duration: data.duration ?? null,
         estimatedHours: data.estimatedHours ?? null,

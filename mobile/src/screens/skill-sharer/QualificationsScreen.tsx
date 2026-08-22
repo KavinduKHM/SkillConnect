@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -21,7 +21,7 @@ interface Qualification {
   institution: string;
   year: number;
   description?: string;
-  status: 'PENDING' | 'VERIFIED' | 'REJECTED';
+  status: 'PENDING_VERIFICATION' | 'VERIFIED' | 'REJECTED';
 }
 
 export default function QualificationsScreen() {
@@ -29,6 +29,8 @@ export default function QualificationsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [profileId, setProfileId] = useState('');
   const [formData, setFormData] = useState({
     title: '',
@@ -39,12 +41,16 @@ export default function QualificationsScreen() {
 
   const loadQualifications = async () => {
     try {
-      // Get profile first
       const profileResponse = await profileService.getMyProfile();
-      setProfileId(profileResponse.data.id);
+      const profile = profileResponse?.data?.data ?? profileResponse?.data;
+      if (!profile?.id) {
+        throw new Error('Profile not found');
+      }
+      setProfileId(profile.id);
 
       const response = await qualificationService.getQualifications();
-      setQualifications(response.data || []);
+      const qualificationData = response?.data?.data ?? response?.data;
+      setQualifications(Array.isArray(qualificationData) ? qualificationData : []);
     } catch (error) {
       Alert.alert('Error', 'Failed to load qualifications');
     } finally {
@@ -64,7 +70,28 @@ export default function QualificationsScreen() {
     loadQualifications();
   };
 
-  const handleAddQualification = async () => {
+  const resetForm = () => {
+    setFormData({ title: '', institution: '', year: '', description: '' });
+    setEditingId(null);
+  };
+
+  const openAddModal = () => {
+    resetForm();
+    setModalVisible(true);
+  };
+
+  const openEditModal = (qualification: Qualification) => {
+    setEditingId(qualification.id);
+    setFormData({
+      title: qualification.title,
+      institution: qualification.institution,
+      year: String(qualification.year),
+      description: qualification.description || '',
+    });
+    setModalVisible(true);
+  };
+
+  const handleSaveQualification = async () => {
     if (!formData.title.trim()) {
       Alert.alert('Error', 'Please enter a title');
       return;
@@ -73,25 +100,43 @@ export default function QualificationsScreen() {
       Alert.alert('Error', 'Please enter an institution');
       return;
     }
-    if (!formData.year.trim() || parseInt(formData.year) < 1900) {
+    const year = Number(formData.year);
+    if (!formData.year.trim() || !Number.isInteger(year) || year < 1900 || year > new Date().getFullYear()) {
       Alert.alert('Error', 'Please enter a valid year');
       return;
     }
 
+    setSaving(true);
     try {
-      await qualificationService.createQualification({
-        profileId,
-        title: formData.title.trim(),
-        institution: formData.institution.trim(),
-        year: parseInt(formData.year),
-        description: formData.description.trim() || undefined,
-      });
-      Alert.alert('Success', 'Qualification added successfully');
+      if (editingId) {
+        await qualificationService.updateQualification(editingId, {
+          title: formData.title.trim(),
+          institution: formData.institution.trim(),
+          year,
+          description: formData.description.trim() || undefined,
+        });
+        Alert.alert('Success', 'Qualification updated successfully');
+      } else {
+        if (!profileId) {
+          Alert.alert('Error', 'Your profile could not be found');
+          return;
+        }
+        await qualificationService.createQualification({
+          profileId,
+          title: formData.title.trim(),
+          institution: formData.institution.trim(),
+          year,
+          description: formData.description.trim() || undefined,
+        });
+        Alert.alert('Success', 'Qualification added successfully');
+      }
       setModalVisible(false);
-      setFormData({ title: '', institution: '', year: '', description: '' });
-      loadQualifications();
+      resetForm();
+      await loadQualifications();
     } catch (error: any) {
-      Alert.alert('Error', error.error || 'Failed to add qualification');
+      Alert.alert('Error', error?.errors?.[0]?.msg || error?.error || 'Failed to save qualification');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -107,10 +152,10 @@ export default function QualificationsScreen() {
           onPress: async () => {
             try {
               await qualificationService.deleteQualification(id);
-              setQualifications(qualifications.filter((q) => q.id !== id));
+              setQualifications((current) => current.filter((q) => q.id !== id));
               Alert.alert('Success', 'Qualification deleted');
             } catch (error: any) {
-              Alert.alert('Error', error.error || 'Failed to delete qualification');
+              Alert.alert('Error', error?.error || 'Failed to delete qualification');
             }
           },
         },
@@ -151,7 +196,14 @@ export default function QualificationsScreen() {
       <Text style={styles.cardInstitution}>{item.institution}</Text>
       <Text style={styles.cardYear}>{item.year}</Text>
       {item.description && <Text style={styles.cardDescription}>{item.description}</Text>}
-      {item.status === 'PENDING' && (
+      <View style={styles.cardActions}>
+        <TouchableOpacity
+          style={styles.editButton}
+          onPress={() => openEditModal(item)}
+        >
+          <Ionicons name="create-outline" size={16} color="#4F46E5" />
+          <Text style={styles.editButtonText}>Edit</Text>
+        </TouchableOpacity>
         <TouchableOpacity
           style={styles.deleteButton}
           onPress={() => handleDeleteQualification(item.id, item.title)}
@@ -159,7 +211,7 @@ export default function QualificationsScreen() {
           <Ionicons name="trash-outline" size={16} color="#EF4444" />
           <Text style={styles.deleteButtonText}>Delete</Text>
         </TouchableOpacity>
-      )}
+      </View>
     </View>
   );
 
@@ -177,7 +229,7 @@ export default function QualificationsScreen() {
         <Text style={styles.headerTitle}>Qualifications</Text>
         <TouchableOpacity
           style={styles.addButton}
-          onPress={() => setModalVisible(true)}
+          onPress={openAddModal}
         >
           <Ionicons name="add" size={20} color="#FFFFFF" />
           <Text style={styles.addButtonText}>Add</Text>
@@ -211,7 +263,7 @@ export default function QualificationsScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Add Qualification</Text>
+            <Text style={styles.modalTitle}>{editingId ? 'Edit Qualification' : 'Add Qualification'}</Text>
 
             <View style={styles.modalField}>
               <Text style={styles.modalLabel}>Title *</Text>
@@ -266,16 +318,21 @@ export default function QualificationsScreen() {
                 style={[styles.modalButton, styles.modalCancelButton]}
                 onPress={() => {
                   setModalVisible(false);
-                  setFormData({ title: '', institution: '', year: '', description: '' });
+                  resetForm();
                 }}
               >
                 <Text style={styles.modalCancelText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalSaveButton]}
-                onPress={handleAddQualification}
+                onPress={handleSaveQualification}
+                disabled={saving}
               >
-                <Text style={styles.modalSaveText}>Add</Text>
+                {saving ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.modalSaveText}>{editingId ? 'Save' : 'Add'}</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -372,10 +429,24 @@ const styles = StyleSheet.create({
     color: '#374151',
     marginTop: 6,
   },
+  cardActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    marginTop: 8,
+  },
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  editButtonText: {
+    fontSize: 12,
+    color: '#4F46E5',
+    marginLeft: 4,
+  },
   deleteButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
     alignSelf: 'flex-start',
   },
   deleteButtonText: {

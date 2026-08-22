@@ -332,6 +332,13 @@ export default function SkillSharerDashboardScreen({ navigation }: any) {
             <Text style={styles.profileButtonText}>Profile</Text>
           </TouchableOpacity>
           <TouchableOpacity
+            style={styles.profileButton}
+            onPress={() => navigation.navigate('Qualifications')}
+          >
+            <Ionicons name="school-outline" size={20} color="#4F46E5" />
+            <Text style={styles.profileButtonText}>Qualifications</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
             style={styles.addButton}
             onPress={() => navigation.navigate('CourseForm')}
           >
