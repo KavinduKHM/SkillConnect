@@ -35,7 +35,8 @@ export default function CourseAnalyticsScreen() {
   const loadData = async () => {
     try {
       const response = await progressService.getCourseAnalytics(courseId);
-      setAnalytics(response.data);
+      const responseData = response?.data?.data ?? response?.data;
+      setAnalytics(responseData || null);
     } catch (error: any) {
       Alert.alert('Error', error.error || 'Failed to load analytics');
     } finally {
