@@ -52,13 +52,13 @@ export const MyCoursesScreen: React.FC = ({ navigation }: any) => {
   );
 
   const handleCoursePress = (course: Course) => {
-    // Navigate to course detail
-    navigation.navigate('CourseDetail', { courseId: course.id });
+    // Navigate to course content editor
+    navigation.navigate('CourseContent', { courseId: course.id });
   };
 
   const handleEdit = (course: Course) => {
-    // Navigate to course editor (coming in Sprint 2)
-    Toast.show({ type: 'info', text1: 'Edit Course', text2: `Editing: ${course.title}` });
+    // Navigate to course editor form
+    navigation.navigate('CourseForm', { courseId: course.id });
   };
 
   const handleDelete = async (course: Course) => {

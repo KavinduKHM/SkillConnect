@@ -38,12 +38,21 @@ export const CompletionRequestsScreen: React.FC = () => {
 
   const loadCourses = async () => {
     try {
-      const res = await courseApi.getMyCourses();
-      if (res.success && res.data) {
-        setCourses(res.data);
-        if (res.data && res.data.length > 0) {
-          setSelectedCourse(res.data[0]?.id || '');
-        }
+      const res: any = await courseApi.getMyCourses();
+      let myCourses = [];
+      if (res && res.success && Array.isArray(res.data)) {
+        myCourses = res.data;
+      } else if (res && res.data && res.data.success && Array.isArray(res.data.data)) {
+        myCourses = res.data.data;
+      } else if (Array.isArray(res)) {
+        myCourses = res;
+      } else if (res && Array.isArray(res.data)) {
+        myCourses = res.data;
+      }
+
+      setCourses(myCourses);
+      if (myCourses && myCourses.length > 0) {
+        setSelectedCourse(myCourses[0]?.id || '');
       }
     } catch (err) {
       console.log('Error loading courses:', err);
@@ -54,8 +63,11 @@ export const CompletionRequestsScreen: React.FC = () => {
     setLoading(true);
     try {
       const res: any = await certificateApi.getCourseCompletionRequests(courseId);
-      if (res.success) {
-        setRequests(res.requests || []);
+      const data = res?.data || res;
+      if (data && (data.success || data.requests)) {
+        setRequests(data.requests || []);
+      } else if (Array.isArray(data)) {
+        setRequests(data);
       }
     } catch (err) {
       console.log('Error loading requests:', err);
@@ -67,7 +79,8 @@ export const CompletionRequestsScreen: React.FC = () => {
   const handleApprove = async (requestId: string) => {
     try {
       const res: any = await certificateApi.approveCompletionRequest(requestId);
-      if (res.success) {
+      const data = res?.data || res;
+      if (data && data.success) {
         Toast.show({ type: 'success', text1: 'Success', text2: 'Completion request approved and certificate issued.' });
         if (selectedCourse) loadRequests(selectedCourse);
       }
@@ -83,7 +96,8 @@ export const CompletionRequestsScreen: React.FC = () => {
     }
     try {
       const res: any = await certificateApi.rejectCompletionRequest(requestId, rejectReason);
-      if (res.success) {
+      const data = res?.data || res;
+      if (data && data.success) {
         Toast.show({ type: 'success', text1: 'Rejected', text2: 'Completion request rejected successfully.' });
         setRejectingId(null);
         setRejectReason('');

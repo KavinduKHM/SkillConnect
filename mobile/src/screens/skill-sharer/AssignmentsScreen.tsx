@@ -55,7 +55,16 @@ export const AssignmentsScreen = ({ navigation }: any) => {
     try {
       setLoading(true);
       const res: any = await courseApi.getMyCourses();
-      const myCourses = res?.data || (Array.isArray(res) ? res : []);
+      let myCourses = [];
+      if (res && res.success && Array.isArray(res.data)) {
+        myCourses = res.data;
+      } else if (res && res.data && res.data.success && Array.isArray(res.data.data)) {
+        myCourses = res.data.data;
+      } else if (Array.isArray(res)) {
+        myCourses = res;
+      } else if (res && Array.isArray(res.data)) {
+        myCourses = res.data;
+      }
 
       if (Array.isArray(myCourses)) {
         const enrichedCourses: CourseWithAssignments[] = await Promise.all(

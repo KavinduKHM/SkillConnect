@@ -17,6 +17,7 @@ if (isCloudinaryConfigured() && cloudName && apiKey && apiSecret) {
     api_key: apiKey,
     api_secret: apiSecret,
     secure: true,
+    timeout: 120000, // 120 seconds timeout
   });
 }
 

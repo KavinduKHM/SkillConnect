@@ -1,0 +1,14 @@
+User: learner@test.com ID: d9d5e3cc-7189-43cd-ba8b-e748092b7ff7 Role: LEARNER
+User: admin@skillconnect.com ID: 82e0f032-7601-4c8d-b225-bd487cbd4d8b Role: ADMIN
+User: isuri@gmail.com ID: e9de134f-c494-4279-91c5-0d1371ad2c0e Role: SKILL_SHARER
+User: test@gmail.com ID: 553ae6e6-4bd1-4591-868a-0deb9abc848c Role: SKILL_SHARER
+User: sharer@skillconnect.com ID: 40c6705f-69e9-47b5-9bf1-cbd3fc57bf32 Role: SKILL_SHARER
+User: asheni@skillconnect.com ID: 9d5b7bec-7bc7-4fb0-a3c7-6e8760166852 Role: LEARNER
+User: sharer@test.com ID: 8d7702a6-6bde-427a-947b-65507823c3b2 Role: SKILL_SHARER
+User: sarah.jenkins@skillconnect.com ID: 8220cb7e-ec50-4136-894e-b69f05717eae Role: SKILL_SHARER
+User: kavindu@gmail.com ID:  Role: ADMIN
+User: admin2@skillconnect.com ID: 5ac16b59-7544-4031-8a3b-42a6db5644bf Role: LEARNER
+User: validuser299@example.com ID: 26bc44a4-228e-4fd2-be75-e08d571f1394 Role: LEARNER
+User: asheni2@gmail.com ID: b15dbb15-c71e-4f3a-bf67-23d10b91eb26 Role: LEARNER
+User: learner@skillconnect.com ID: b8c85d72-6799-417e-a1a3-f5a9594a03a9 Role: LEARNER
+User: asheni@gmail.com ID: 65963bf8-3df3-4269-a534-f4b31198eccc Role: LEARNER

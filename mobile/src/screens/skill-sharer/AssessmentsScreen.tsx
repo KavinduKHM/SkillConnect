@@ -65,7 +65,16 @@ export const AssessmentsScreen = ({ navigation }: any) => {
     try {
       setLoading(true);
       const res: any = await courseApi.getMyCourses();
-      const myCourses = res?.data || (Array.isArray(res) ? res : []);
+      let myCourses = [];
+      if (res && res.success && Array.isArray(res.data)) {
+        myCourses = res.data;
+      } else if (res && res.data && res.data.success && Array.isArray(res.data.data)) {
+        myCourses = res.data.data;
+      } else if (Array.isArray(res)) {
+        myCourses = res;
+      } else if (res && Array.isArray(res.data)) {
+        myCourses = res.data;
+      }
 
       if (Array.isArray(myCourses)) {
         const enrichedCourses: CourseWithQuizzes[] = await Promise.all(
@@ -93,7 +102,7 @@ export const AssessmentsScreen = ({ navigation }: any) => {
         );
         setCourses(enrichedCourses);
         if (enrichedCourses.length > 0 && !selectedCourseId) {
-          setSelectedCourseId(enrichedCourses[0].id);
+          setSelectedCourseId(enrichedCourses[0]?.id || '');
         }
       } else {
         setCourses([]);
@@ -110,7 +119,7 @@ export const AssessmentsScreen = ({ navigation }: any) => {
   const handleOpenCreateModal = (targetCourseId?: string) => {
     setIsEditing(false);
     setCurrentQuizId(null);
-    const chosenCourseId = targetCourseId || (courses.length > 0 ? courses[0].id : '');
+    const chosenCourseId = targetCourseId || (courses.length > 0 ? courses[0]?.id || '' : '');
     setSelectedCourseId(chosenCourseId);
     
     const matchedCourse = courses.find((c) => c.id === chosenCourseId);

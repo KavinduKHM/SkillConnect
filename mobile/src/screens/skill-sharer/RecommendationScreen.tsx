@@ -33,8 +33,17 @@ export function RecommendationScreen({ navigation }: any) {
     try {
       setLoadingCourses(true);
       const res: any = await courseApi.getMyCourses();
-      const courses = res?.data || res?.courses || (Array.isArray(res) ? res : []);
-      const published = courses.filter((c: any) => c.status === 'PUBLISHED' || c.status === 'APPROVED');
+      let myCourses = [];
+      if (res && res.success && Array.isArray(res.data)) {
+        myCourses = res.data;
+      } else if (res && res.data && res.data.success && Array.isArray(res.data.data)) {
+        myCourses = res.data.data;
+      } else if (Array.isArray(res)) {
+        myCourses = res;
+      } else if (res && Array.isArray(res.data)) {
+        myCourses = res.data;
+      }
+      const published = myCourses.filter((c: any) => c.status === 'PUBLISHED' || c.status === 'APPROVED');
       setMyCourses(published);
     } catch (err) {
       console.log('Failed to load courses', err);
@@ -48,20 +57,24 @@ export function RecommendationScreen({ navigation }: any) {
       setLoadingLearners(true);
       setCompletedLearners([]);
       const res: any = await recommendationApi.getMyCourseLearners(courseId);
-      const learners = res?.data || res?.learners || (Array.isArray(res) ? res : []);
+      const data = res?.data || res;
+      const learners = data?.learners || data?.data || (Array.isArray(data) ? data : []);
+      
       if (Array.isArray(learners) && learners.length > 0) {
         setCompletedLearners(learners);
       } else {
         // Fallback to completion requests
         const reqRes: any = await certificateApi.getCourseCompletionRequests(courseId);
-        const requests = reqRes?.data || reqRes?.requests || [];
+        const reqData = reqRes?.data || reqRes;
+        const requests = reqData?.requests || reqData?.data || (Array.isArray(reqData) ? reqData : []);
         setCompletedLearners(requests);
       }
     } catch (err) {
       console.log('Failed to load learners', err);
       try {
         const reqRes: any = await certificateApi.getCourseCompletionRequests(courseId);
-        const requests = reqRes?.data || reqRes?.requests || [];
+        const reqData = reqRes?.data || reqRes;
+        const requests = reqData?.requests || reqData?.data || (Array.isArray(reqData) ? reqData : []);
         setCompletedLearners(requests);
       } catch (e) {
         console.log('Fallback failed too', e);

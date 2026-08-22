@@ -239,10 +239,20 @@ const handleAddModule = async () => {
         fileType = 'SLIDE';
       }
 
+      // Dynamically calculate order based on length of existing materials in the lesson
+      let order = 1;
+      for (const m of modules) {
+        const foundLesson = m.lessons.find((l) => l.id === lessonId);
+        if (foundLesson) {
+          order = (foundLesson.materials?.length || 0) + 1;
+          break;
+        }
+      }
+
       formData.append('lessonId', lessonId);
       formData.append('title', file.name || 'Uploaded Material');
       formData.append('type', fileType);
-      formData.append('order', '1');
+      formData.append('order', String(order));
 
       if (Platform.OS === 'web') {
         const webFile = (file as any).file as File | undefined;

@@ -9,6 +9,7 @@ import {
   StatusBar,
   ActivityIndicator,
   Alert,
+  Linking,
 } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { fetchLessonContent, completeLesson } from '../../api/learner.service';
@@ -23,6 +24,45 @@ export default function LessonPlayerScreen({ route, navigation }: any) {
   const [completing, setCompleting] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [completedMaterials, setCompletedMaterials] = useState<string[]>([]);
+
+  const getMaterialIcon = (type: string) => {
+    switch (type) {
+      case 'VIDEO': return '🎥';
+      case 'PDF': return '📄';
+      case 'SLIDE': return '📊';
+      case 'EXTERNAL': return '🔗';
+      case 'IMAGE': return '🖼️';
+      default: return '📄';
+    }
+  };
+
+  const getMaterialSub = (item: any) => {
+    if (item.sub) return item.sub;
+    const parts = [];
+    if (item.type) parts.push(item.type);
+    if (item.fileSize) {
+      const mb = (item.fileSize / (1024 * 1024)).toFixed(1);
+      parts.push(`${mb}MB`);
+    } else if (item.duration) {
+      parts.push(`${item.duration}m`);
+    }
+    return parts.join(' • ') || 'Resource';
+  };
+
+  const handleOpenMaterial = (item: any) => {
+    const url = item.fileUrl || item.externalUrl;
+    if (!url) {
+      Alert.alert('Notice', 'No URL available for this material.');
+      return;
+    }
+    let targetUrl = url;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      targetUrl = `http://localhost:5000${url.startsWith('/') ? '' : '/'}${url}`;
+    }
+    Linking.openURL(targetUrl).catch((err) => {
+      Alert.alert('Error', 'Could not open url');
+    });
+  };
 
   const loadLesson = async () => {
     if (!lessonId) return;
@@ -77,6 +117,10 @@ export default function LessonPlayerScreen({ route, navigation }: any) {
     ],
   };
 
+  const materials = currentLesson.materials || currentLesson.resources || [];
+  const videoMaterials = materials.filter((m: any) => m.type === 'VIDEO' || m.icon === '🎥');
+  const videoMaterial = videoMaterials[0];
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FAF9F6" />
@@ -102,11 +146,25 @@ export default function LessonPlayerScreen({ route, navigation }: any) {
       ) : (
         <ScrollView style={styles.scrollContent} contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}>
           {/* Main Video Player Screen Container */}
-          <View style={styles.videoPlayerBox}>
+          <TouchableOpacity
+            style={styles.videoPlayerBox}
+            onPress={() => {
+              if (videoMaterial) {
+                handleOpenMaterial(videoMaterial);
+              } else {
+                Alert.alert('Notice', 'No video lesson available for this lesson.');
+              }
+            }}
+          >
             <View style={styles.playCircle}>
               <Text style={styles.playIcon}>▶</Text>
             </View>
-          </View>
+            {videoMaterial && (
+              <Text style={{ color: '#F1F5F9', marginTop: 10, fontSize: 13, paddingHorizontal: 12 }} numberOfLines={1}>
+                Play: {videoMaterial.title}
+              </Text>
+            )}
+          </TouchableOpacity>
 
           {/* Lesson Headings & Description */}
           <View style={styles.bodyContent}>
@@ -119,23 +177,28 @@ export default function LessonPlayerScreen({ route, navigation }: any) {
 
             {/* Resources Section */}
             <Text style={styles.sectionHeading}>Resources</Text>
-            {(currentLesson.resources || []).map((res: any, idx: number) => {
+            {materials.map((res: any, idx: number) => {
               const resId = res.id || `r_${idx}`;
               const isChecked = completedMaterials.includes(resId);
+              const icon = res.icon || getMaterialIcon(res.type);
+              const subText = getMaterialSub(res);
+
               return (
                 <TouchableOpacity
                   key={resId}
                   style={[styles.resourceCard, isChecked && styles.resourceCardChecked]}
-                  onPress={() => toggleMaterialCheck(resId)}
+                  onPress={() => handleOpenMaterial(res)}
                 >
-                  <Text style={styles.resourceIcon}>{res.icon || '📄'}</Text>
+                  <Text style={styles.resourceIcon}>{icon}</Text>
                   <View style={{ flex: 1, marginLeft: 12 }}>
                     <Text style={[styles.resourceTitle, isChecked && styles.resourceTitleChecked]}>
                       {res.title}
                     </Text>
-                    <Text style={styles.resourceSub}>{res.sub || 'Document'}</Text>
+                    <Text style={styles.resourceSub}>{subText}</Text>
                   </View>
-                  <Text style={styles.downloadIcon}>{isChecked ? '☑️' : '📥'}</Text>
+                  <TouchableOpacity onPress={() => toggleMaterialCheck(resId)} style={{ padding: 4 }}>
+                    <Text style={styles.downloadIcon}>{isChecked ? '☑️' : '📥'}</Text>
+                  </TouchableOpacity>
                 </TouchableOpacity>
               );
             })}

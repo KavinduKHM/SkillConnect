@@ -13,7 +13,7 @@ import { courseApi } from '../../api/skill-sharer.service';
 import { fetchCategories } from '../../api/learner.service';
 import { Category } from '../../types';
 
-export const CourseCreatorScreen: React.FC = ({ navigation }: any) => {
+export const CourseCreatorScreen = ({ navigation }: any) => {
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);

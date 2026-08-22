@@ -1,8 +1,21 @@
-<<<<<<< HEAD
 import api from './client';
+const apiClient = api;
+
+import {
+  Profile,
+  CreateProfileInput,
+  UpdateProfileInput,
+  Qualification,
+  CreateQualificationInput,
+  UpdateQualificationInput,
+  Course,
+  CreateCourseInput,
+  UpdateCourseInput,
+  ApiResponse,
+} from '../types';
 
 // ============================================================
-// PROFILE APIs
+// PROFILE APIs (Service version)
 // ============================================================
 
 export const profileService = {
@@ -40,7 +53,7 @@ export const profileService = {
 };
 
 // ============================================================
-// QUALIFICATION APIs
+// QUALIFICATION APIs (Service version)
 // ============================================================
 
 export const qualificationService = {
@@ -67,7 +80,7 @@ export const qualificationService = {
 };
 
 // ============================================================
-// COURSE APIs
+// COURSE APIs (Service version)
 // ============================================================
 
 export const courseService = {
@@ -112,34 +125,30 @@ export const courseService = {
 };
 
 // ============================================================
-// MODULE APIs
+// MODULE APIs (Service version)
 // ============================================================
 
 export const moduleService = {
   createModule: (data: {
-  courseId: string;
-  title: string;
-  description?: string;
-  order: number;
-}) => {
-  // ✅ Log the data being sent
-  console.log('📤 createModule called with:', JSON.stringify(data, null, 2));
-  
-  // ✅ Ensure order is a number and not undefined/null
-  if (
-    data.order === undefined ||
-    data.order === null ||
-    typeof data.order !== 'number' ||
-    !Number.isFinite(data.order) ||
-    !Number.isInteger(data.order) ||
-    data.order < 1
-  ) {
-    console.error('❌ Order is invalid:', data.order);
-    return Promise.reject(new Error('Order must be a valid number'));
-  }
-  
-  return api.post('/modules', data);
-},
+    courseId: string;
+    title: string;
+    description?: string;
+    order: number;
+  }) => {
+    console.log('📤 createModule called with:', JSON.stringify(data, null, 2));
+    if (
+      data.order === undefined ||
+      data.order === null ||
+      typeof data.order !== 'number' ||
+      !Number.isFinite(data.order) ||
+      !Number.isInteger(data.order) ||
+      data.order < 1
+    ) {
+      console.error('❌ Order is invalid:', data.order);
+      return Promise.reject(new Error('Order must be a valid number'));
+    }
+    return api.post('/modules', data);
+  },
   getModules: (courseId: string) => {
     console.log(`📤 getModules called for course: ${courseId}`);
     return api.get(`/modules/course/${courseId}`);
@@ -171,7 +180,7 @@ export const moduleService = {
 };
 
 // ============================================================
-// LESSON APIs
+// LESSON APIs (Service version)
 // ============================================================
 
 export const lessonService = {
@@ -205,7 +214,7 @@ export const lessonService = {
 };
 
 // ============================================================
-// MATERIAL APIs
+// MATERIAL APIs (Service version)
 // ============================================================
 
 export const materialService = {
@@ -226,7 +235,7 @@ export const materialService = {
 };
 
 // ============================================================
-// PROGRESS APIs (Skill Sharer View)
+// PROGRESS APIs (Service version)
 // ============================================================
 
 export const progressService = {
@@ -241,7 +250,7 @@ export const progressService = {
 };
 
 // ============================================================
-// RECOMMENDATION APIs
+// RECOMMENDATION APIs (Service version)
 // ============================================================
 
 export const recommendationService = {
@@ -273,63 +282,33 @@ export const recommendationService = {
   deleteRecommendation: (id: string) => api.delete(`/recommendations/${id}`),
 };
 
-export default {
-  profileService,
-  qualificationService,
-  courseService,
-  moduleService,
-  lessonService,
-  materialService,
-  progressService,
-  recommendationService,
-};
-=======
-import apiClient from './client';
-import {
-  Profile,
-  CreateProfileInput,
-  UpdateProfileInput,
-  Qualification,
-  CreateQualificationInput,
-  UpdateQualificationInput,
-  Course,
-  CreateCourseInput,
-  UpdateCourseInput,
-  ApiResponse,
-} from '../types';
-
 // ============================================================
-// Profile APIs
+// Profile APIs (Api version)
 // ============================================================
 
 export const profileApi = {
-  // Create a profile
   createProfile: (data: CreateProfileInput): Promise<ApiResponse<Profile>> => {
     return apiClient.post('/profiles', data);
   },
 
-  // Get my profile
   getMyProfile: (): Promise<ApiResponse<Profile>> => {
     return apiClient.get('/profiles/me');
   },
 
-  // Update profile
   updateProfile: (data: UpdateProfileInput): Promise<ApiResponse<Profile>> => {
     return apiClient.put('/profiles/me', data);
   },
 
-  // Get public profile
   getPublicProfile: (userId: string): Promise<ApiResponse<Profile>> => {
     return apiClient.get(`/profiles/public/${userId}`);
   },
 };
 
 // ============================================================
-// Qualification APIs
+// Qualification APIs (Api version)
 // ============================================================
 
 export const qualificationApi = {
-  // Create qualification
   createQualification: (
     profileId: string,
     data: CreateQualificationInput
@@ -337,17 +316,14 @@ export const qualificationApi = {
     return apiClient.post('/qualifications', { ...data, profileId });
   },
 
-  // Get all qualifications
   getQualifications: (): Promise<ApiResponse<Qualification[]>> => {
     return apiClient.get('/qualifications');
   },
 
-  // Get single qualification
   getQualification: (id: string): Promise<ApiResponse<Qualification>> => {
     return apiClient.get(`/qualifications/${id}`);
   },
 
-  // Update qualification
   updateQualification: (
     id: string,
     data: UpdateQualificationInput
@@ -355,33 +331,28 @@ export const qualificationApi = {
     return apiClient.put(`/qualifications/${id}`, data);
   },
 
-  // Delete qualification
   deleteQualification: (id: string): Promise<ApiResponse<null>> => {
     return apiClient.delete(`/qualifications/${id}`);
   },
 };
 
 // ============================================================
-// Course APIs
+// Course APIs (Api version)
 // ============================================================
 
 export const courseApi = {
-  // Create course draft
   createCourse: (data: CreateCourseInput): Promise<ApiResponse<Course>> => {
     return apiClient.post('/courses', data);
   },
 
-  // Get all my courses
   getMyCourses: (): Promise<ApiResponse<Course[]>> => {
     return apiClient.get('/courses');
   },
 
-  // Get single course
   getCourse: (id: string): Promise<ApiResponse<Course>> => {
     return apiClient.get(`/courses/${id}`);
   },
 
-  // Update course
   updateCourse: (
     id: string,
     data: UpdateCourseInput
@@ -389,19 +360,17 @@ export const courseApi = {
     return apiClient.put(`/courses/${id}`, data);
   },
 
-  // Submit course for approval
   submitCourse: (id: string): Promise<ApiResponse<Course>> => {
     return apiClient.post(`/courses/${id}/submit`);
   },
 
-  // Delete course (draft only)
   deleteCourse: (id: string): Promise<ApiResponse<null>> => {
     return apiClient.delete(`/courses/${id}`);
   },
 };
 
 // ============================================================
-// Quiz / Assessment APIs
+// Quiz / Assessment APIs (Api version)
 // ============================================================
 
 export const quizApi = {
@@ -423,7 +392,7 @@ export const quizApi = {
 };
 
 // ============================================================
-// Assignment APIs
+// Assignment APIs (Api version)
 // ============================================================
 
 export const assignmentApi = {
@@ -453,7 +422,7 @@ export const assignmentApi = {
 };
 
 // ============================================================
-// Certificate / Completion APIs
+// Certificate / Completion APIs (Api version)
 // ============================================================
 
 export const certificateApi = {
@@ -469,28 +438,35 @@ export const certificateApi = {
 };
 
 // ============================================================
-// Recommendation APIs (Skill Sharer -> Learner)
+// Recommendation APIs (Skill Sharer -> Learner) (Api version)
 // ============================================================
 
 export const recommendationApi = {
-  // Create a recommendation for a learner
   create: (data: { learnerId: string; courseId: string; title: string; content: string; isPublic?: boolean }): Promise<ApiResponse<any>> => {
     return apiClient.post('/recommendations', data);
   },
 
-  // Get all learners who completed my courses (to recommend)
   getMyCourseLearners: (courseId: string): Promise<ApiResponse<any>> => {
     return apiClient.get(`/recommendations/course/${courseId}/learners`);
   },
 
-  // Update a recommendation
   update: (id: string, data: { title?: string; content?: string; isPublic?: boolean }): Promise<ApiResponse<any>> => {
     return apiClient.put(`/recommendations/${id}`, data);
   },
 
-  // Delete a recommendation
   delete: (id: string): Promise<ApiResponse<null>> => {
     return apiClient.delete(`/recommendations/${id}`);
   },
 };
->>>>>>> origin/main
+
+// Default export combining services
+export default {
+  profileService,
+  qualificationService,
+  courseService,
+  moduleService,
+  lessonService,
+  materialService,
+  progressService,
+  recommendationService,
+};
