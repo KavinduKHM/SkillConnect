@@ -22,7 +22,7 @@ export class ModuleService {
 
     return prisma.courseModule.create({
       data: {
-        courseId,
+        courseId: courseId,
         title: data.title,
         description: data.description ?? null,
         order: data.order,
@@ -77,11 +77,10 @@ export class ModuleService {
 
   // Update module
   async updateModule(id: string, userId: string, data: UpdateModuleInput): Promise<CourseModule> {
-    const updateData = {
-      ...(data.title !== undefined ? { title: data.title } : {}),
-      ...(data.description !== undefined ? { description: data.description } : {}),
-      ...(data.order !== undefined ? { order: data.order } : {}),
-    };
+    const updateData: any = {};
+    if (data.title !== undefined) updateData.title = data.title;
+    if (data.description !== undefined) updateData.description = data.description;
+    if (data.order !== undefined) updateData.order = data.order;
 
     return prisma.courseModule.update({
       where: {

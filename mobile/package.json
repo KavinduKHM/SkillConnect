@@ -9,6 +9,18 @@
     "web": "expo start --web"
   },
   "dependencies": {
+<<<<<<< HEAD
+    "@hookform/resolvers": "^5.9.1",
+    "@react-navigation/bottom-tabs": "^7.18.17",
+    "@react-navigation/native": "^7.3.17",
+    "@react-navigation/stack": "^7.10.23",
+    "@tanstack/react-query": "^5.101.4",
+    "axios": "^1.19.0",
+    "expo": "~57.0.11",
+    "expo-document-picker": "^57.0.1",
+    "expo-file-system": "^57.0.5",
+    "expo-image-picker": "^57.0.12",
+=======
     "@expo/vector-icons": "^15.1.1",
     "@react-navigation/bottom-tabs": "^7.18.17",
     "@react-navigation/native": "^7.3.16",
@@ -16,15 +28,29 @@
     "expo": "~57.0.11",
     "expo-print": "^57.0.1",
     "expo-sharing": "^57.0.14",
+>>>>>>> origin/main
     "expo-status-bar": "^57.0.1",
     "react": "19.2.8",
     "react-dom": "^19.2.8",
+    "react-hook-form": "^7.85.0",
     "react-native": "0.86.2",
+    "react-native-chart-kit": "^7.0.2",
+    "react-native-elements": "^3.4.3",
     "react-native-gesture-handler": "~2.32.0",
-    "react-native-safe-area-context": "^5.9.0",
+    "react-native-paper": "^5.15.3",
+    "react-native-safe-area-context": "^5.9.1",
     "react-native-screens": "^4.27.0",
+<<<<<<< HEAD
+    "react-native-svg": "^15.15.5",
+    "react-native-vector-icons": "^10.3.0",
+    "react-native-video": "^6.19.2",
+    "react-native-web": "^0.21.2",
+    "yup": "^1.7.1",
+    "zustand": "^5.0.15"
+=======
     "react-native-toast-message": "^2.4.0",
     "react-native-web": "^0.21.2"
+>>>>>>> origin/main
   },
   "private": true
 }

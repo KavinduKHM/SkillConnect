@@ -8,13 +8,19 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 30000, // ✅ Add timeout
+  timeout: 30000,
 });
 
-// ✅ Request interceptor - Add token to requests
+// Request interceptor - Add token
 api.interceptors.request.use(
   async (config) => {
     try {
+      if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+        // Let browser/native networking set the multipart boundary automatically.
+        delete (config.headers as any)?.['Content-Type'];
+        delete (config.headers as any)?.['content-type'];
+      }
+
       const token = await AsyncStorage.getItem('token');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
@@ -24,50 +30,69 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// ✅ Response interceptor - Handle errors
+// Response interceptor - Handle errors
 api.interceptors.response.use(
   (response) => {
-    const data = response.data;
-    if (data && typeof data === 'object' && !('data' in data)) {
-      // Backward compatibility hack: 
-      // Only set data.data if the response object doesn't already have its own .data property
-      data.data = data;
+    console.log(`✅ API ${response.config.method?.toUpperCase()} ${response.config.url} - ${response.status}`);
+    
+    // ✅ Log the actual response data for debugging
+    console.log('📥 Response data:', JSON.stringify(response.data, null, 2));
+    
+    // ✅ If response data has success: false, treat as error
+    if (response.data && response.data.success === false) {
+      console.error('❌ API returned success: false', response.data);
+      return Promise.reject({
+        success: false,
+        error: response.data.error || response.data.message || 'Request failed',
+        message: response.data.error || response.data.message || 'Request failed',
+        data: response.data,
+      });
     }
-    return data;
+    
+    // ✅ Wrap the data in a 'data' property to match LoginScreen expectations
+    // LoginScreen expects: const { token, user } = response.data;
+    // So we need response.data to be { user, token }
+    // But axios already has response.data = { user, token }
+    // The issue is that LoginScreen does: response.data.data?
+    // Let's check: in LoginScreen: const { token, user } = response.data;
+    // So response.data should be { user, token }
+    // Which it already is! The problem might be elsewhere.
+    
+    // Actually, looking at the logs, response.data is { user, token }
+    // So this should work. But let's keep it as is.
+    return response;
   },
   async (error) => {
-    // ✅ Handle network errors
     if (!error.response) {
-      console.error('Network Error - No response from server');
       return Promise.reject({
         success: false,
         error: 'Network error - please check your connection',
+        message: 'Network error - please check your connection',
       });
     }
 
-    // ✅ Handle 401 Unauthorized
+    console.error(`❌ API Error ${error.response.status}:`, error.response.data);
+
     if (error.response?.status === 401) {
       try {
         await AsyncStorage.removeItem('token');
-        // ✅ Emit event for auth context to handle
-        // You can use EventEmitter or a global state
-        console.log('Token expired - redirecting to login');
       } catch (err) {
         console.error('Error clearing token:', err);
       }
     }
 
-    // ✅ Return consistent error format
+    const errorData = error.response.data;
+    
     return Promise.reject({
       success: false,
-      status: error.response?.status,
-      error: error.response?.data?.error || error.response?.data?.errors?.[0]?.msg || error.message || 'An error occurred',
-      data: error.response?.data,
+      status: error.response.status,
+      error: errorData?.error || errorData?.message || 'An error occurred',
+      message: errorData?.error || errorData?.message || 'An error occurred',
+      errors: errorData?.errors || null,
+      data: errorData,
     });
   }
 );
