@@ -18,6 +18,15 @@ export class CourseController {
       }
 
       const creatorId = (req as any).user.id;
+      const creator = (req as any).user;
+
+      if (creator.role === 'SKILL_SHARER' && !creator.verifiedBadge) {
+        return res.status(403).json({
+          success: false,
+          error: 'Course creation is restricted. You must set up your skills and receive admin verification first.',
+        } as ApiResponse<null>);
+      }
+
       const data = req.body;
 
       const course = await courseService.createCourse(creatorId, data);
