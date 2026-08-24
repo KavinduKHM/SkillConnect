@@ -21,6 +21,17 @@ export const requestCompletion = async (req: any, res: Response): Promise<void> 
   }
 };
 
+export const checkEligibility = async (req: any, res: Response): Promise<void> => {
+  try {
+    const learnerId = req.user.id;
+    const { courseId } = req.params;
+    const result = await completionService.checkCourseRequirements(learnerId, courseId);
+    res.status(200).json({ success: true, ...result });
+  } catch (error: any) {
+    res.status(400).json({ success: false, eligible: false, reason: error.message });
+  }
+};
+
 export const getLearnerRequests = async (req: any, res: Response): Promise<void> => {
   try {
     const learnerId = req.user.id;

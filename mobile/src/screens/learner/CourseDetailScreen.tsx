@@ -13,7 +13,16 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
-import { fetchCourseDetails, enrollCourse, cancelEnrollment, completeLesson, fetchCourseAssignments } from '../../api/learner.service';
+import {
+  fetchCourseDetails,
+  enrollCourse,
+  cancelEnrollment,
+  completeLesson,
+  fetchCourseAssignments,
+  fetchLearnerSubmissions,
+  checkCertificateEligibility,
+  requestCourseCompletion,
+} from '../../api/learner.service';
 import { quizApi } from '../../api/skill-sharer.service';
 import { Header } from '../../components/common/Header';
 
@@ -26,18 +35,21 @@ export default function CourseDetailScreen({ route, navigation }: any) {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [completedLessonIds, setCompletedLessonIds] = useState<string[]>([]);
   const [assignments, setAssignments] = useState<any[]>([]);
+  const [submittedAssignmentIds, setSubmittedAssignmentIds] = useState<string[]>([]);
   const [quizzes, setQuizzes] = useState<any[]>([]);
+  const [certEligibility, setCertEligibility] = useState<{ eligible: boolean; reason?: string }>({ eligible: false });
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
 
   const loadDetails = async () => {
     try {
       setLoading(true);
-      const [resResult, userStrResult, assignResult, quizResult] = await Promise.allSettled([
+      const [resResult, userStrResult, assignResult, quizResult, certResult] = await Promise.allSettled([
         fetchCourseDetails(courseId),
         AsyncStorage.getItem('user'),
         fetchCourseAssignments(courseId),
         quizApi.getCourseQuizzes(courseId),
+        checkCertificateEligibility(courseId),
       ]);
 
       if (userStrResult.status === 'fulfilled' && userStrResult.value) {
@@ -58,6 +70,11 @@ export default function CourseDetailScreen({ route, navigation }: any) {
         }
       }
 
+      if (certResult.status === 'fulfilled' && certResult.value) {
+        const certRes: any = certResult.value;
+        setCertEligibility({ eligible: !!certRes?.eligible, reason: certRes?.reason || '' });
+      }
+
       if (assignResult.status === 'fulfilled' && assignResult.value) {
         const assignRes: any = assignResult.value;
         const list =
@@ -66,6 +83,23 @@ export default function CourseDetailScreen({ route, navigation }: any) {
           assignRes?.assignments ||
           (Array.isArray(assignRes?.data) ? assignRes.data : []);
         setAssignments(Array.isArray(list) ? list : []);
+
+        // Load learner submissions for each assignment
+        try {
+          const submittedIds: string[] = [];
+          for (const asgn of list) {
+            if (asgn?.id) {
+              const subRes: any = await fetchLearnerSubmissions(asgn.id).catch(() => null);
+              const subs = subRes?.submissions || subRes?.data || [];
+              if (Array.isArray(subs) && subs.length > 0) {
+                submittedIds.push(asgn.id);
+              }
+            }
+          }
+          setSubmittedAssignmentIds(submittedIds);
+        } catch (subErr) {
+          console.log('Error checking learner submissions:', subErr);
+        }
       }
 
       if (quizResult.status === 'fulfilled' && quizResult.value) {
@@ -387,36 +421,46 @@ export default function CourseDetailScreen({ route, navigation }: any) {
               <View style={{ marginBottom: 24 }}>
                 <Text style={styles.sectionHeading}>Assignments & Assessments 📝</Text>
 
-                {assignments.map((asgn: any, aIdx: number) => (
-                  <TouchableOpacity
-                    key={asgn.id || aIdx}
-                    style={styles.assignmentCardRow}
-                    onPress={() => {
-                      if (isEnrolled) {
-                        navigation?.navigate('AssignmentDetail', { assignmentId: asgn.id });
-                      } else {
-                        Alert.alert('Enrollment Required', 'Please enroll in the course to view and submit assignments.');
-                      }
-                    }}
-                  >
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 15, fontWeight: '700', color: '#1E293B', marginBottom: 4 }}>
-                        📄 {asgn.title}
-                      </Text>
-                      {asgn.instructions ? (
-                        <Text style={{ fontSize: 13, color: '#64748B' }} numberOfLines={2}>
-                          {asgn.instructions}
+                {assignments.map((asgn: any, aIdx: number) => {
+                  const isSubmitted = submittedAssignmentIds.includes(asgn.id);
+                  return (
+                    <TouchableOpacity
+                      key={asgn.id || aIdx}
+                      style={styles.assignmentCardRow}
+                      onPress={() => {
+                        if (isEnrolled) {
+                          navigation?.navigate('AssignmentDetail', { assignmentId: asgn.id });
+                        } else {
+                          Alert.alert('Enrollment Required', 'Please enroll in the course to view and submit assignments.');
+                        }
+                      }}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Text style={{ fontSize: 15, fontWeight: '700', color: '#1E293B', marginBottom: 4 }}>
+                            📄 {asgn.title}
+                          </Text>
+                          {isSubmitted && (
+                            <View style={{ backgroundColor: '#DCFCE7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginBottom: 4 }}>
+                              <Text style={{ fontSize: 11, fontWeight: '700', color: '#166534' }}>Submitted ✅</Text>
+                            </View>
+                          )}
+                        </View>
+                        {asgn.instructions ? (
+                          <Text style={{ fontSize: 13, color: '#64748B' }} numberOfLines={2}>
+                            {asgn.instructions}
+                          </Text>
+                        ) : null}
+                        <Text style={{ fontSize: 12, color: '#94A3B8', marginTop: 4 }}>
+                          Deadline: {asgn.deadline ? new Date(asgn.deadline).toLocaleDateString() : 'No deadline'} | Max Marks: {asgn.maxMarks || 100}
                         </Text>
-                      ) : null}
-                      <Text style={{ fontSize: 12, color: '#94A3B8', marginTop: 4 }}>
-                        Deadline: {asgn.deadline ? new Date(asgn.deadline).toLocaleDateString() : 'No deadline'} | Max Marks: {asgn.maxMarks || 100}
+                      </View>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: isSubmitted ? '#166534' : '#4F46E5', marginLeft: 8 }}>
+                        {isSubmitted ? 'View Work 👁️' : isEnrolled ? 'Open →' : 'Enroll to View'}
                       </Text>
-                    </View>
-                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#4F46E5', marginLeft: 8 }}>
-                      {isEnrolled ? 'Open →' : 'Enroll to View'}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                    </TouchableOpacity>
+                  );
+                })}
 
                 {quizzes.map((qz: any, qIdx: number) => (
                   <TouchableOpacity
@@ -543,12 +587,26 @@ export default function CourseDetailScreen({ route, navigation }: any) {
         ) : isEnrolled ? (
           <View style={styles.enrolledActionRow}>
             {progressPct >= 100 ? (
-              <TouchableOpacity
-                style={styles.continueBtn}
-                onPress={() => navigation?.navigate('MainTabs', { screen: 'CertificatesTab' })}
-              >
-                <Text style={styles.actionBtnText}>Go to Certificates 🎓</Text>
-              </TouchableOpacity>
+              certEligibility.eligible ? (
+                <TouchableOpacity
+                  style={styles.continueBtn}
+                  onPress={() => navigation?.navigate('MainTabs', { screen: 'CertificatesTab' })}
+                >
+                  <Text style={styles.actionBtnText}>Go to Certificates 🎓</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.continueBtn, { backgroundColor: '#64748B' }]}
+                  onPress={() =>
+                    Alert.alert(
+                      'Certificate Locked 🔒',
+                      certEligibility.reason || 'Please complete all lessons, assignments, and assessments to unlock your certificate.'
+                    )
+                  }
+                >
+                  <Text style={styles.actionBtnText}>Certificate Locked 🔒</Text>
+                </TouchableOpacity>
+              )
             ) : (
               <TouchableOpacity
                 style={styles.continueBtn}

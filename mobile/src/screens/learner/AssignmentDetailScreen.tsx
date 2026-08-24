@@ -95,6 +95,28 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
     return `http://localhost:5000${url.startsWith('/') ? '' : '/'}${url}`;
   };
 
+  const handleDownloadFile = (url: string, filename?: string) => {
+    if (!url) return;
+    const fullUrl = getFileUrl(url);
+    if (Platform.OS === 'web') {
+      try {
+        const link = document.createElement('a');
+        link.href = fullUrl;
+        link.download = filename || 'attachment.pdf';
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (err) {
+        window.open(fullUrl, '_blank');
+      }
+    } else {
+      Linking.openURL(fullUrl).catch(() => {
+        Alert.alert('Error', 'Could not open or download document');
+      });
+    }
+  };
+
   const handlePickDocument = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
@@ -330,7 +352,7 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
                       <TouchableOpacity
                         key={idx}
                         style={styles.attachedFileItem}
-                        onPress={() => Linking.openURL(fullUrl)}
+                        onPress={() => handleDownloadFile(url, fileName)}
                       >
                         <Ionicons name="document-attach-outline" size={18} color="#4F46E5" />
                         <Text style={styles.attachedFileText} numberOfLines={1}>
