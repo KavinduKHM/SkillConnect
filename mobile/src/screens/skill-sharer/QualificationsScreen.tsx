@@ -14,6 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { qualificationService, profileService } from '../../api/skill-sharer.service';
+import { Header } from '../../components/common/Header';
 
 interface Qualification {
   id: string;
@@ -172,17 +173,20 @@ export default function QualificationsScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Qualifications</Text>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => setModalVisible(true)}
-        >
-          <Ionicons name="add" size={20} color="#FFFFFF" />
-          <Text style={styles.addButtonText}>Add</Text>
-        </TouchableOpacity>
-      </View>
+    <View style={{ flex: 1 }}>
+      <Header
+        title="Qualifications"
+        rightComponent={
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => setModalVisible(true)}
+          >
+            <Ionicons name="add" size={20} color="#FFFFFF" />
+            <Text style={styles.addButtonText}>Add</Text>
+          </TouchableOpacity>
+        }
+      />
+      <View style={styles.container}>
 
       <FlatList
         data={qualifications}
@@ -281,6 +285,7 @@ export default function QualificationsScreen() {
           </View>
         </View>
       </Modal>
+    </View>
     </View>
   );
 }

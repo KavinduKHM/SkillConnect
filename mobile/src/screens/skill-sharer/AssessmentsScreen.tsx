@@ -16,6 +16,7 @@ import {
 import Toast from 'react-native-toast-message';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { courseApi, quizApi } from '../../api/skill-sharer.service';
+import { Header } from '../../components/common/Header';
 
 interface Quiz {
   id: string;
@@ -322,21 +323,21 @@ export const AssessmentsScreen = ({ navigation }: any) => {
   );
 
   return (
-    <View style={styles.container}>
-      {/* Top Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#111827" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Course Assessments</Text>
-        <TouchableOpacity
-          style={styles.headerCreateBtn}
-          onPress={() => handleOpenCreateModal()}
-        >
-          <Ionicons name="add" size={20} color="#FFF" />
-          <Text style={styles.headerCreateBtnText}>Create</Text>
-        </TouchableOpacity>
-      </View>
+    <View style={{ flex: 1 }}>
+      <Header
+        title="Course Assessments"
+        showBack={true}
+        rightComponent={
+          <TouchableOpacity
+            style={styles.headerCreateBtn}
+            onPress={() => handleOpenCreateModal()}
+          >
+            <Ionicons name="add" size={20} color="#FFF" />
+            <Text style={styles.headerCreateBtnText}>Create</Text>
+          </TouchableOpacity>
+        }
+      />
+      <View style={styles.container}>
 
       {/* Main List */}
       {loading && !refreshing ? (
@@ -512,6 +513,7 @@ export const AssessmentsScreen = ({ navigation }: any) => {
           </View>
         </View>
       </Modal>
+    </View>
     </View>
   );
 };

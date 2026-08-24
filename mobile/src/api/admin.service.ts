@@ -38,8 +38,19 @@ export interface Qualification {
   title: string;
   institution: string;
   year: number;
+  description?: string;
   status: string;
   user: { id: string; email: string; name: string };
+  profile?: {
+    id: string;
+    bio: string | null;
+    skills: string[];
+    experience: string | null;
+    portfolio: string[];
+    location: string | null;
+    website: string | null;
+    socialLinks: any;
+  } | null;
   documents: { id: string; fileUrl: string; fileName: string }[];
 }
 

@@ -122,6 +122,10 @@ export const courseService = {
     console.log(`🗑️ Deleting course: ${id}`);
     return api.delete(`/courses/${id}`);
   },
+  uploadThumbnail: (formData: FormData) => {
+    console.log('📤 Uploading course thumbnail...');
+    return api.post('/courses/upload', formData);
+  },
 };
 
 // ============================================================
@@ -366,6 +370,10 @@ export const courseApi = {
 
   deleteCourse: (id: string): Promise<ApiResponse<null>> => {
     return apiClient.delete(`/courses/${id}`);
+  },
+
+  uploadThumbnail: (formData: FormData): Promise<ApiResponse<{ url: string }>> => {
+    return apiClient.post('/courses/upload', formData);
   },
 };
 

@@ -10,6 +10,7 @@ import {
 import { useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { progressService } from '../../api/skill-sharer.service';
+import { Header } from '../../components/common/Header';
 
 interface Analytics {
   totalEnrollments: number;
@@ -45,20 +46,11 @@ export default function CourseAnalyticsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#4F46E5" />
-      </View>
-    );
-  }
-
-  if (!analytics) {
-    return (
-      <View style={styles.centered}>
-        <Ionicons name="bar-chart-outline" size={64} color="#D1D5DB" />
-        <Text style={styles.emptyTitle}>No Data Available</Text>
-        <Text style={styles.emptySubtitle}>
-          Analytics will appear once learners enroll
-        </Text>
+      <View style={{ flex: 1 }}>
+        <Header title="Course Analytics" showBack={true} />
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color="#4F46E5" />
+        </View>
       </View>
     );
   }
@@ -75,84 +67,107 @@ export default function CourseAnalyticsScreen() {
     </View>
   );
 
-  return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.grid}>
-        <StatCard
-          icon="people-outline"
-          label="Total Enrollments"
-          value={analytics.totalEnrollments}
-          color="#4F46E5"
-        />
-        <StatCard
-          icon="play-circle-outline"
-          label="Active Learners"
-          value={analytics.activeEnrollments}
-          color="#10B981"
-        />
-        <StatCard
-          icon="checkmark-circle-outline"
-          label="Completed"
-          value={analytics.completedEnrollments}
-          color="#8B5CF6"
-        />
-        <StatCard
-          icon="star-outline"
-          label="Average Rating"
-          value={analytics.averageRating?.toFixed(1) || 'N/A'}
-          color="#F59E0B"
-        />
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Progress Metrics</Text>
-        <View style={styles.metricItem}>
-          <Text style={styles.metricLabel}>Completion Rate</Text>
-          <View style={styles.metricBarContainer}>
-            <View
-              style={[
-                styles.metricBar,
-                { width: `${Math.min(analytics.completionRate, 100)}%` },
-              ]}
-            />
-            <Text style={styles.metricValue}>
-              {analytics.completionRate.toFixed(1)}%
-            </Text>
-          </View>
-        </View>
-        <View style={styles.metricItem}>
-          <Text style={styles.metricLabel}>Average Progress</Text>
-          <View style={styles.metricBarContainer}>
-            <View
-              style={[
-                styles.metricBar,
-                { width: `${Math.min(analytics.averageProgress, 100)}%` },
-              ]}
-            />
-            <Text style={styles.metricValue}>
-              {analytics.averageProgress.toFixed(1)}%
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Reviews</Text>
-        <View style={styles.reviewStats}>
-          <Text style={styles.reviewCount}>
-            {analytics.totalReviews} Review{analytics.totalReviews > 1 ? 's' : ''}
+  const renderContent = () => {
+    if (!analytics) {
+      return (
+        <View style={styles.centered}>
+          <Ionicons name="bar-chart-outline" size={64} color="#D1D5DB" />
+          <Text style={styles.emptyTitle}>No Data Available</Text>
+          <Text style={styles.emptySubtitle}>
+            Analytics will appear once learners enroll
           </Text>
-          {analytics.averageRating > 0 && (
-            <View style={styles.ratingContainer}>
-              <Ionicons name="star" size={20} color="#F59E0B" />
-              <Text style={styles.ratingText}>
-                {analytics.averageRating.toFixed(1)} / 5.0
+        </View>
+      );
+    }
+
+    return (
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <View style={styles.grid}>
+          <StatCard
+            icon="people-outline"
+            label="Total Enrollments"
+            value={analytics.totalEnrollments}
+            color="#4F46E5"
+          />
+          <StatCard
+            icon="play-circle-outline"
+            label="Active Learners"
+            value={analytics.activeEnrollments}
+            color="#10B981"
+          />
+          <StatCard
+            icon="checkmark-circle-outline"
+            label="Completed"
+            value={analytics.completedEnrollments}
+            color="#8B5CF6"
+          />
+          <StatCard
+            icon="star-outline"
+            label="Average Rating"
+            value={analytics.averageRating?.toFixed(1) || 'N/A'}
+            color="#F59E0B"
+          />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Progress Metrics</Text>
+          <View style={styles.metricItem}>
+            <Text style={styles.metricLabel}>Transition / Completion Rate</Text>
+            <View style={styles.metricBarContainer}>
+              <View
+                style={[
+                  styles.metricBar,
+                  { width: `${Math.min(analytics.completionRate, 100)}%` },
+                ]}
+              />
+              <Text style={styles.metricValue}>
+                {analytics.completionRate.toFixed(1)}%
               </Text>
             </View>
-          )}
+          </View>
+          <View style={styles.metricItem}>
+            <Text style={styles.metricLabel}>Average Progress</Text>
+            <View style={styles.metricBarContainer}>
+              <View
+                style={[
+                  styles.metricBar,
+                  { width: `${Math.min(analytics.averageProgress, 100)}%` },
+                ]}
+              />
+              <Text style={styles.metricValue}>
+                {analytics.averageProgress.toFixed(1)}%
+              </Text>
+            </View>
+          </View>
         </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Reviews</Text>
+          <View style={styles.reviewStats}>
+            <Text style={styles.reviewCount}>
+              {analytics.totalReviews} Review{analytics.totalReviews > 1 ? 's' : ''}
+            </Text>
+            {analytics.averageRating > 0 && (
+              <View style={styles.ratingContainer}>
+                <Ionicons name="star" size={20} color="#F59E0B" />
+                <Text style={styles.ratingText}>
+                  {analytics.averageRating.toFixed(1)} / 5.0
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </ScrollView>
+    );
+  };
+
+  return (
+    <View style={{ flex: 1 }}>
+      <Header title="Course Analytics" showBack={true} />
+      <View style={{ flex: 1 }}>
+        {renderContent()}
       </View>
-    </ScrollView>
+    </View>
   );
 }
 

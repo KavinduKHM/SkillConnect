@@ -1,0 +1,15 @@
+--- Trying to delete draft course with module (id=65adb48f-581a-4413-a501-aee3eeb620b6) ---
+Successfully deleted course! {"id":"65adb48f-581a-4413-a501-aee3eeb620b6","title":".NET developing","description":"This courses focus on .NET Developing","categoryId":"4e7ef7e7-054a-49eb-85e6-8b452d83c114","difficulty":"INTERMEDIATE","duration":"2 Weeks","estimatedHours":32,"language":"English","deliveryMethod":"SELF_PACED","prerequisites":"","learningOutcomes":["Get mastered in .NET"],"thumbnail":"https://res.cloudinary.com/u88lt7li/image/upload/v1787575155/skillconnect/course-thumbnails/Coding_Clarity_for_Behavioral_Health__Cut_Rework__Speed_Payments_1787575151995-50347e80.jpg","status":"DRAFT","creatorId":"543ab6ca-2eaa-4e26-8e53-445521ad934c","enrolledCount":0,"rating":0,"reviewCount":0,"submissionCount":0,"createdAt":"2026-08-24T12:40:24.657Z","updatedAt":"2026-08-24T12:40:24.657Z"}
+
+--- Trying to delete category with courses (id=b40142cb-4ff4-4634-9d00-3736331345cb) ---
+Failed to delete category:
+PrismaClientKnownRequestError: 
+Invalid `prisma.category.delete()` invocation:
+
+
+Foreign key constraint violated: `courses_categoryId_fkey (index)`
+    at $n.handleRequestError (C:\Users\User\Documents\GitHub\SkillConnect\backend\node_modules\@prisma\client\runtime\library.js:121:7315)
+    at $n.handleAndLogRequestError (C:\Users\User\Documents\GitHub\SkillConnect\backend\node_modules\@prisma\client\runtime\library.js:121:6623)
+    at $n.request (C:\Users\User\Documents\GitHub\SkillConnect\backend\node_modules\@prisma\client\runtime\library.js:121:6307)
+    at async l (C:\Users\User\Documents\GitHub\SkillConnect\backend\node_modules\@prisma\client\runtime\library.js:130:9633)
+    at async main (file:///C:/Users/User/Documents/GitHub/SkillConnect/backend/test_delete.js:24:17)

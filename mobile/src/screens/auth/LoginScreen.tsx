@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authService } from '../../api/auth.service';
+import { profileService } from '../../api/skill-sharer.service';
 
 export const LoginScreen = ({ navigation }: any) => {
   const [email, setEmail] = useState('');
@@ -38,6 +39,39 @@ export const LoginScreen = ({ navigation }: any) => {
       if (user.role === 'ADMIN') {
         navigation.replace('Admin');
       } else if (user.role === 'SKILL_SHARER') {
+        try {
+          const profileRes = await profileService.getMyProfile();
+          const profile = profileRes?.data?.data ?? profileRes?.data;
+
+          if (!profile || !profile.skills || profile.skills.length === 0) {
+            if (Platform.OS === 'web') {
+              window.alert('Welcome! Please specify your skills first so that the admin can verify your account.');
+              navigation.replace('SkillSharer');
+              setTimeout(() => {
+                navigation.navigate('Profile');
+              }, 100);
+            } else {
+              Alert.alert(
+                'Add Your Skills',
+                'Welcome! Please specify your skills first so that the admin can verify your account.',
+                [
+                  {
+                    text: 'Define Skills',
+                    onPress: () => {
+                      navigation.replace('SkillSharer');
+                      setTimeout(() => {
+                        navigation.navigate('Profile');
+                      }, 100);
+                    },
+                  },
+                ]
+              );
+            }
+            return;
+          }
+        } catch (e) {
+          console.error('Error checking profile skills on login:', e);
+        }
         navigation.replace('SkillSharer');
       } else {
         navigation.replace('Learner');

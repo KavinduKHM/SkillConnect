@@ -7,6 +7,7 @@ import {
 import Toast from 'react-native-toast-message';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { Header } from '../../components/common/Header';
 import { certificateApi, recommendationApi } from '../../api/skill-sharer.service';
 import { courseApi } from '../../api/skill-sharer.service';
 
@@ -152,19 +153,8 @@ export function RecommendationScreen({ navigation }: any) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#4F46E5" />
-
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={22} color="#fff" />
-        </TouchableOpacity>
-        <View style={{ flex: 1, marginLeft: 12 }}>
-          <Text style={styles.headerTitle}>Learner Recommendations</Text>
-          <Text style={styles.headerSub}>Recognize outstanding learners</Text>
-        </View>
-      </View>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
+      <Header title="Learner Recommendations" showBack={true} />
 
       <ScrollView contentContainerStyle={[styles.content, { flexGrow: 1 }]}>
         {/* Info Banner */}

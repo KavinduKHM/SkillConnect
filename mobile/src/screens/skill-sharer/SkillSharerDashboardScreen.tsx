@@ -12,6 +12,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { courseService } from '../../api/skill-sharer.service';
+import { Header } from '../../components/common/Header';
 
 interface Course {
   id: string;
@@ -320,26 +321,29 @@ export default function SkillSharerDashboardScreen({ navigation }: any) {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>My Courses</Text>
-        <View style={styles.headerActions}>
-          <TouchableOpacity
-            style={styles.profileButton}
-            onPress={() => navigation.navigate('Profile')}
-          >
-            <Ionicons name="person-circle-outline" size={20} color="#4F46E5" />
-            <Text style={styles.profileButtonText}>Profile</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => navigation.navigate('CourseForm')}
-          >
-            <Ionicons name="add" size={24} color="#FFFFFF" />
-            <Text style={styles.addButtonText}>New Course</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+    <View style={{ flex: 1 }}>
+      <Header
+        title="My Courses"
+        rightComponent={
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              style={styles.profileButton}
+              onPress={() => navigation.navigate('Profile')}
+            >
+              <Ionicons name="person-circle-outline" size={20} color="#4F46E5" />
+              <Text style={styles.profileButtonText}>Profile</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => navigation.navigate('CourseForm')}
+            >
+              <Ionicons name="add" size={24} color="#FFFFFF" />
+              <Text style={styles.addButtonText}>New Course</Text>
+            </TouchableOpacity>
+          </View>
+        }
+      />
+      <View style={styles.container}>
 
       {courses.length === 0 ? (
         <View style={styles.emptyState}>
@@ -366,6 +370,7 @@ export default function SkillSharerDashboardScreen({ navigation }: any) {
           }
         />
       )}
+    </View>
     </View>
   );
 }

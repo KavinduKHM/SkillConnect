@@ -14,6 +14,7 @@ import {
 import Toast from 'react-native-toast-message';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminService, Skill, Category } from '../../api/admin.service';
+import { Header } from '../../components/common/Header';
 
 export const SkillsScreen = () => {
   const queryClient = useQueryClient();
@@ -125,13 +126,16 @@ export const SkillsScreen = () => {
   const categories: Category[] = categoriesData || [];
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Skills</Text>
-        <TouchableOpacity style={styles.addButton} onPress={openCreateModal}>
-          <Text style={styles.addButtonText}>+ Add</Text>
-        </TouchableOpacity>
-      </View>
+    <View style={{ flex: 1 }}>
+      <Header
+        title="Skills"
+        rightComponent={
+          <TouchableOpacity style={styles.addButton} onPress={openCreateModal}>
+            <Text style={styles.addButtonText}>+ Add</Text>
+          </TouchableOpacity>
+        }
+      />
+      <View style={styles.container}>
 
       <ScrollView
         style={{ flex: 1 }}
@@ -273,6 +277,7 @@ export const SkillsScreen = () => {
           </View>
         </View>
       </Modal>
+    </View>
     </View>
   );
 };

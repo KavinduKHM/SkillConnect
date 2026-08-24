@@ -20,6 +20,7 @@ import {
   uploadAssessmentFiles,
   deleteAssignmentSubmission,
 } from '../../api/learner.service';
+import { Header } from '../../components/common/Header';
 
 interface LocalFile {
   name: string;
@@ -254,15 +255,11 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation?.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#111827" />
-        </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle} numberOfLines={1}>{assignment.title}</Text>
-          <Text style={styles.headerSubtitle}>Assignment Details</Text>
-        </View>
-      </View>
+      <Header
+        title={assignment.title}
+        showBack={true}
+        onBackPress={() => navigation?.goBack()}
+      />
 
       <ScrollView style={styles.content} contentContainerStyle={{ padding: 20 }}>
         {/* Instructions */}

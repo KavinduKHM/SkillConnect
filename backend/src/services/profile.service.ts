@@ -1,4 +1,4 @@
-import { Prisma, PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient, QualificationStatus } from '@prisma/client';
 import type { Profile } from '@prisma/client';
 import type { CreateProfileInput, UpdateProfileInput } from '../types/index.js';
 
@@ -73,7 +73,7 @@ export class ProfileService {
 
   // Update profile
   async updateProfile(userId: string, data: UpdateProfileInput): Promise<Profile> {
-    return prisma.profile.update({
+    const profile = await prisma.profile.update({
       where: { userId },
       data: {
         bio: data.bio ?? null,
@@ -90,6 +90,42 @@ export class ProfileService {
           : {}),
       },
     });
+
+    // Automatically create a Qualification request if skills are updated and no active qualification/verification is already in progress/verified
+    if (data.skills && data.skills.length > 0) {
+      // Find if there is any pending or verified qualification for this profile/user
+      const existingQual = await prisma.qualification.findFirst({
+        where: {
+          userId,
+          title: 'Profile Skills Verification',
+        },
+      });
+
+      if (!existingQual) {
+        await prisma.qualification.create({
+          data: {
+            userId,
+            profileId: profile.id,
+            title: 'Profile Skills Verification',
+            institution: 'SkillConnect Platform',
+            year: new Date().getFullYear(),
+            description: `Auto-submitted for skills verification. Skills: ${profile.skills.join(', ')}`,
+            status: QualificationStatus.PENDING_VERIFICATION,
+          },
+        });
+      } else if (existingQual.status === 'REJECTED' || existingQual.status === 'NOT_SUBMITTED') {
+        // If it was rejected or not submitted, reset it to pending
+        await prisma.qualification.update({
+          where: { id: existingQual.id },
+          data: {
+            status: QualificationStatus.PENDING_VERIFICATION,
+            description: `Auto-submitted for skills verification. Skills: ${profile.skills.join(', ')}`,
+          },
+        });
+      }
+    }
+
+    return profile;
   }
 
   // Check if profile exists

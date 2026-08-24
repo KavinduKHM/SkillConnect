@@ -17,6 +17,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { courseService, moduleService, lessonService, materialService } from '../../api/skill-sharer.service';
+import { Header } from '../../components/common/Header';
 
 interface Module {
   id: string;
@@ -424,25 +425,33 @@ const handleAddModule = async () => {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#4F46E5" />
+      <View style={{ flex: 1 }}>
+        <Header title={course?.title || "Course Content"} showBack={true} />
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color="#4F46E5" />
+        </View>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.courseTitle}>{course?.title}</Text>
-        <Text style={styles.courseStatus}>Status: {course?.status}</Text>
-        <TouchableOpacity
-          style={styles.addModuleButton}
-          onPress={() => openModal('module')}
-        >
-          <Ionicons name="add" size={20} color="#FFFFFF" />
-          <Text style={styles.addModuleText}>Add Module</Text>
-        </TouchableOpacity>
-      </View>
+    <View style={{ flex: 1 }}>
+      <Header
+        title={course?.title || "Course Content"}
+        showBack={true}
+        rightComponent={
+          <TouchableOpacity
+            style={{ marginRight: 8 }}
+            onPress={() => openModal('module')}
+          >
+            <Ionicons name="add" size={26} color="#4F46E5" />
+          </TouchableOpacity>
+        }
+      />
+      <View style={styles.container}>
+        <View style={styles.statusBanner}>
+          <Text style={styles.statusBannerText}>Status: {course?.status}</Text>
+        </View>
 
       <FlatList
         data={modules}
@@ -530,6 +539,7 @@ const handleAddModule = async () => {
         </View>
       </Modal>
     </View>
+    </View>
   );
 }
 
@@ -543,12 +553,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  header: {
-    backgroundColor: '#FFFFFF',
+  statusBanner: {
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 8,
+    backgroundColor: '#EFF6FF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: '#DBEAFE',
+  },
+  statusBannerText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#1E40AF',
   },
   courseTitle: {
     fontSize: 18,

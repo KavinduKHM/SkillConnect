@@ -11,10 +11,15 @@ import {
   Keyboard,
   Modal,
   FlatList,
+  Image,
+  Platform,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
+import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { courseService } from '../../api/skill-sharer.service';
+import { Header } from '../../components/common/Header';
 
 interface FormData {
   title: string;
@@ -76,6 +81,66 @@ export default function CourseFormScreen() {
   const [newOutcome, setNewOutcome] = useState('');
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  const handlePickThumbnail = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['image/*'],
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled) return;
+
+      const file = result.assets?.[0];
+      if (!file) {
+        Alert.alert('Error', 'No file selected');
+        return;
+      }
+
+      const formDataToSend = new FormData();
+      if (Platform.OS === 'web') {
+        const webFile = (file as any).file as File | undefined;
+        if (webFile) {
+          formDataToSend.append('file', webFile);
+        } else if (file.uri) {
+          const fileBlob = await fetch(file.uri).then((res) => res.blob());
+          formDataToSend.append('file', fileBlob, file.name || 'file');
+        }
+      } else if (file.uri) {
+        formDataToSend.append('file', {
+          uri: file.uri,
+          type: file.mimeType || 'image/jpeg',
+          name: file.name || 'file.jpg',
+        } as any);
+      }
+
+      if (!formDataToSend.get('file')) {
+        Alert.alert('Error', 'Could not attach the selected image. Please try again.');
+        return;
+      }
+
+      setUploadingImage(true);
+      const res = await courseService.uploadThumbnail(formDataToSend);
+      const resData = (res as any).data ?? res;
+      if (resData && (resData.url || resData.data?.url)) {
+        const url = resData.url || resData.data?.url;
+        if (url) {
+          setFormData((prev) => ({ ...prev, thumbnail: url }));
+          Alert.alert('Success', 'Course cover photo uploaded successfully');
+        } else {
+          Alert.alert('Error', 'Failed to retrieve uploaded image URL');
+        }
+      } else {
+        Alert.alert('Error', 'Failed to upload image');
+      }
+    } catch (error: any) {
+      console.error('Image upload error:', error);
+      Alert.alert('Error', error.error || 'Failed to upload course image');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   useEffect(() => {
     if (courseId) {
@@ -176,15 +241,20 @@ export default function CourseFormScreen() {
       let response;
       if (courseId) {
         response = await courseService.updateCourse(courseId, data);
-        Alert.alert('Success', 'Course updated successfully', [
-          { text: 'OK', onPress: () => navigation.goBack() },
-        ]);
+        Toast.show({
+          type: 'success',
+          text1: 'Success',
+          text2: 'Course updated successfully!',
+        });
       } else {
         response = await courseService.createCourse(data);
-        Alert.alert('Success', 'Course created successfully', [
-          { text: 'OK', onPress: () => navigation.goBack() },
-        ]);
+        Toast.show({
+          type: 'success',
+          text1: 'Success',
+          text2: 'Course created successfully!',
+        });
       }
+      (navigation as any).navigate('MyCourses');
     } catch (error: any) {
       console.error('Save error:', error);
       Alert.alert('Error', error.error || 'Failed to save course');
@@ -212,14 +282,19 @@ export default function CourseFormScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#4F46E5" />
+      <View style={{ flex: 1 }}>
+        <Header title={courseId ? "Edit Course" : "Create Course"} showBack={true} />
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color="#4F46E5" />
+        </View>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={{ flex: 1 }}>
+      <Header title={courseId ? "Edit Course" : "Create Course"} showBack={true} />
+      <View style={styles.container}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -230,6 +305,37 @@ export default function CourseFormScreen() {
         {/* Basic Information Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Basic Information</Text>
+
+          {/* Cover Image Upload */}
+          <View style={styles.field}>
+            <Text style={styles.label}>Course Cover Photo</Text>
+            <View style={styles.imagePickerWrapper}>
+              {formData.thumbnail ? (
+                <Image
+                  source={{ uri: formData.thumbnail.startsWith('http') ? formData.thumbnail : `http://localhost:5000${formData.thumbnail}` }}
+                  style={styles.imagePreview}
+                />
+              ) : (
+                <View style={styles.imagePlaceholder}>
+                  <Text style={{ fontSize: 24, marginBottom: 4 }}>🖼️</Text>
+                  <Text style={{ fontSize: 13, color: '#6B7280' }}>No Cover Photo Selected</Text>
+                </View>
+              )}
+              <TouchableOpacity
+                style={styles.uploadButton}
+                onPress={handlePickThumbnail}
+                disabled={uploadingImage}
+              >
+                {uploadingImage ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.uploadButtonText}>
+                    {formData.thumbnail ? 'Change Cover Photo' : 'Select Cover Photo'}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
 
           <View style={styles.field}>
             <Text style={styles.label}>Course Title *</Text>
@@ -482,6 +588,7 @@ export default function CourseFormScreen() {
         </View>
       </Modal>
     </View>
+    </View>
   );
 }
 
@@ -708,5 +815,46 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'center',
     paddingVertical: 20,
+  },
+  imagePickerWrapper: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    padding: 12,
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 4,
+  },
+  imagePlaceholder: {
+    width: '100%',
+    height: 150,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderStyle: 'dashed',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+  },
+  imagePreview: {
+    width: '100%',
+    height: 150,
+    borderRadius: 6,
+    resizeMode: 'cover',
+  },
+  uploadButton: {
+    backgroundColor: '#2563EB',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    width: '100%',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  uploadButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 14,
   },
 });

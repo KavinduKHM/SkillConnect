@@ -12,6 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { moduleService } from '../../api/skill-sharer.service';
+import { Header } from '../../components/common/Header';
 
 export default function ModuleEditorScreen() {
   const route = useRoute();
@@ -90,14 +91,19 @@ export default function ModuleEditorScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#4F46E5" />
+      <View style={{ flex: 1 }}>
+        <Header title="Edit Module" showBack={true} />
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color="#4F46E5" />
+        </View>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <View style={{ flex: 1 }}>
+      <Header title="Edit Module" showBack={true} />
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Module Information</Text>
 
@@ -162,7 +168,8 @@ export default function ModuleEditorScreen() {
           )}
         </TouchableOpacity>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 

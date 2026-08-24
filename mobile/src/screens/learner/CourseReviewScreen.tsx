@@ -22,6 +22,7 @@ import {
   deleteCourseReview,
   fetchCourseDetails,
 } from '../../api/learner.service';
+import { Header } from '../../components/common/Header';
 
 const STAR_COUNT = 5;
 
@@ -180,28 +181,20 @@ export default function CourseReviewScreen({ route, navigation }: any) {
   const canReview = hasCompleted || !!myReview;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#4F46E5" />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => {
-            if (navigation?.canGoBack && navigation.canGoBack()) {
-              navigation.goBack();
-            } else {
-              navigation?.navigate('CourseList');
-            }
-          }}
-          style={styles.backBtn}
-        >
-          <Ionicons name="arrow-back" size={22} color="#fff" />
-        </TouchableOpacity>
-        <View style={{ flex: 1, marginLeft: 12 }}>
-          <Text style={styles.headerTitle}>Ratings & Reviews</Text>
-          <Text style={styles.headerSub} numberOfLines={1}>{courseTitle || 'Course Reviews'}</Text>
-        </View>
-      </View>
+      <Header
+        title="Ratings & Reviews"
+        showBack={true}
+        onBackPress={() => {
+          if (navigation?.canGoBack && navigation.canGoBack()) {
+            navigation.goBack();
+          } else {
+            navigation?.navigate('CourseList');
+          }
+        }}
+      />
 
       <ScrollView contentContainerStyle={styles.content}>
 
@@ -365,7 +358,7 @@ export default function CourseReviewScreen({ route, navigation }: any) {
           })
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

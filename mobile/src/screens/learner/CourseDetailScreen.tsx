@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fetchCourseDetails, enrollCourse, cancelEnrollment, completeLesson } from '../../api/learner.service';
+import { Header } from '../../components/common/Header';
 
 export default function CourseDetailScreen({ route, navigation }: any) {
   const courseId = route.params?.courseId || 'c1';
@@ -167,17 +168,23 @@ export default function CourseDetailScreen({ route, navigation }: any) {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FAF9F6" />
 
-      {/* Navigation Header */}
-      <View style={styles.topHeader}>
-        <TouchableOpacity style={styles.circleBtn} onPress={handleBack}>
-          <Text style={styles.circleBtnText}>←</Text>
-        </TouchableOpacity>
-        <View style={styles.rightIcons}>
+      <Header
+        title="Course Details"
+        showBack={true}
+        onBackPress={handleBack}
+        rightComponent={
           <TouchableOpacity
-            style={styles.reviewQuickBtn}
+            style={{
+              backgroundColor: '#DCFCE7',
+              paddingHorizontal: 10,
+              paddingVertical: 6,
+              borderRadius: 8,
+              borderWidth: 1,
+              borderColor: '#86EFAC',
+            }}
             onPress={() => {
               const isDone = userEnrollment?.status === 'COMPLETED' || (userEnrollment?.progressPercentage != null && userEnrollment.progressPercentage >= 100);
               navigation?.navigate('CourseReview', {
@@ -187,10 +194,10 @@ export default function CourseDetailScreen({ route, navigation }: any) {
               });
             }}
           >
-            <Text style={{ fontSize: 13, fontWeight: '700', color: '#15803D' }}>⭐ Reviews</Text>
+            <Text style={{ fontSize: 12, fontWeight: '700', color: '#15803D' }}>⭐ Reviews</Text>
           </TouchableOpacity>
-        </View>
-      </View>
+        }
+      />
 
       {loading ? (
         <View style={styles.loadingContainer}>
@@ -478,7 +485,7 @@ export default function CourseDetailScreen({ route, navigation }: any) {
           </TouchableOpacity>
         )}
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 

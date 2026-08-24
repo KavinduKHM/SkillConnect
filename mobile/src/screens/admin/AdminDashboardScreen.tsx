@@ -11,6 +11,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery } from '@tanstack/react-query';
 import { adminService } from '../../api/admin.service';
+import { Header } from '../../components/common/Header';
 
 const StatCard = ({ label, value, icon, color }: any) => (
   <View style={[styles.statCard, { borderLeftColor: color }]}>
@@ -27,17 +28,23 @@ export const AdminDashboardScreen = ({ navigation }: any) => {
 
   const { data: pendingCoursesData } = useQuery({
     queryKey: ['pending-courses'],
-    queryFn: () => adminService.getPendingCourses(),
+    queryFn: async () => {
+      const response = await adminService.getPendingCourses();
+      return response.data;
+    },
   });
 
   const { data: pendingQualificationsData } = useQuery({
     queryKey: ['pending-qualifications'],
-    queryFn: () => adminService.getPendingQualifications(),
+    queryFn: async () => {
+      const response = await adminService.getPendingQualifications();
+      return response.data;
+    },
   });
 
   const totalUsers = usersData?.data?.pagination?.total || 0;
-  const pendingCourses = pendingCoursesData?.data?.length || 0;
-  const pendingQualifications = pendingQualificationsData?.data?.length || 0;
+  const pendingCourses = pendingCoursesData?.length || 0;
+  const pendingQualifications = pendingQualificationsData?.length || 0;
 
   const handleLogout = async () => {
     const doLogout = async () => {
@@ -79,11 +86,9 @@ export const AdminDashboardScreen = ({ navigation }: any) => {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Dashboard</Text>
-        <Text style={styles.subtitle}>Platform overview</Text>
-      </View>
+    <View style={{ flex: 1 }}>
+      <Header title="Admin Dashboard" />
+      <ScrollView style={styles.container} contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
 
       <View style={styles.statsGrid}>
         <StatCard
@@ -198,7 +203,7 @@ export const AdminDashboardScreen = ({ navigation }: any) => {
         </TouchableOpacity>
       </View>
     </ScrollView>
-    
+    </View>
   );
 };
 

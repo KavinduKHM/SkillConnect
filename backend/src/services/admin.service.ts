@@ -501,6 +501,31 @@ export const updateCategory = async (id: string, data: {
 };
 
 export const deleteCategory = async (id: string, adminId: string) => {
+  // Graceful pre-checks to return clean, helpful error messages:
+  // 1. Check if category is used by courses
+  const courseCount = await prisma.course.count({
+    where: { categoryId: id },
+  });
+  if (courseCount > 0) {
+    throw new Error(`Cannot delete category because it has ${courseCount} associated courses. Please reassign those courses first.`);
+  }
+
+  // 2. Check if category is a parent to other categories (subcategories)
+  const childCount = await prisma.category.count({
+    where: { parentId: id },
+  });
+  if (childCount > 0) {
+    throw new Error(`Cannot delete category because it has ${childCount} subcategories. Please reassign or delete them first.`);
+  }
+
+  // 3. Check if category is used by skills
+  const skillCount = await prisma.skill.count({
+    where: { categoryId: id },
+  });
+  if (skillCount > 0) {
+    throw new Error(`Cannot delete category because it is linked to ${skillCount} skills. Please reassign those skills first.`);
+  }
+
   const category = await prisma.category.delete({
     where: { id },
   });

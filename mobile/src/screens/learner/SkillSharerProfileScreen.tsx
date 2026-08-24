@@ -11,6 +11,7 @@ import {
   Image,
 } from 'react-native';
 import { fetchSharerProfile } from '../../api/learner.service';
+import { Header } from '../../components/common/Header';
 
 export default function SkillSharerProfileScreen({ route, navigation }: any) {
   const sharerId = route.params?.sharerId;
@@ -65,19 +66,14 @@ export default function SkillSharerProfileScreen({ route, navigation }: any) {
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FAF9F6" />
 
-      {/* Header */}
-      <View style={styles.topHeader}>
-        <TouchableOpacity style={styles.circleBtn} onPress={() => navigation?.goBack()}>
-          <Text style={styles.circleBtnText}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Skill Sharer Profile</Text>
-        <TouchableOpacity style={styles.circleBtn}>
-          <Text style={styles.circleBtnText}>⋮</Text>
-        </TouchableOpacity>
-      </View>
+      <Header
+        title="Skill Sharer Profile"
+        showBack={true}
+        onBackPress={() => navigation?.goBack()}
+      />
 
       {loading ? (
         <View style={styles.loadingContainer}>
@@ -174,7 +170,7 @@ export default function SkillSharerProfileScreen({ route, navigation }: any) {
           </View>
         </ScrollView>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 

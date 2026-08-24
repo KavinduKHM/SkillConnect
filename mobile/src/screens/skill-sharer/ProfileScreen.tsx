@@ -8,11 +8,13 @@ import {
   Alert,
   ActivityIndicator,
   ScrollView,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { profileService } from '../../api/skill-sharer.service';
 import { authService } from '../../api/auth.service';
+import { Header } from '../../components/common/Header';
 
 interface ProfileData {
   bio: string;
@@ -28,7 +30,7 @@ interface ProfileData {
   };
 }
 
-export default function ProfileScreen() {
+export default function ProfileScreen({ navigation }: any) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [userName, setUserName] = useState('');
@@ -103,7 +105,21 @@ export default function ProfileScreen() {
         ...payload,
         socialLinks: hasSocialLinks ? payload.socialLinks : undefined,
       });
-      Alert.alert('Success', 'Profile updated successfully');
+
+      const onConfirm = () => {
+        navigation.navigate('Dashboard');
+      };
+
+      if (Platform.OS === 'web') {
+        window.alert('Profile updated successfully');
+        onConfirm();
+      } else {
+        Alert.alert(
+          'Success',
+          'Profile updated successfully',
+          [{ text: 'OK', onPress: onConfirm }]
+        );
+      }
     } catch (error: any) {
       const firstValidationError = error?.errors?.[0]?.msg;
       Alert.alert('Error', firstValidationError || error.message || error.error || 'Failed to update profile');
@@ -138,7 +154,9 @@ export default function ProfileScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <View style={{ flex: 1 }}>
+      <Header title="My Profile" />
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Personal Information</Text>
 
@@ -295,6 +313,7 @@ export default function ProfileScreen() {
         )}
       </TouchableOpacity>
     </ScrollView>
+    </View>
   );
 }
 

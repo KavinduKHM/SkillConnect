@@ -16,6 +16,7 @@ import {
 import Toast from 'react-native-toast-message';
 import { Ionicons } from '@expo/vector-icons';
 import { courseApi, assignmentApi } from '../../api/skill-sharer.service';
+import { Header } from '../../components/common/Header';
 import { Assignment } from '../../types';
 
 interface CourseWithAssignments {
@@ -310,16 +311,9 @@ export const AssignmentsScreen = ({ navigation }: any) => {
   );
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation?.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#111827" />
-        </TouchableOpacity>
-        <View>
-          <Text style={styles.headerTitle}>Assignments</Text>
-          <Text style={styles.headerSubtitle}>Manage course practical work</Text>
-        </View>
-      </View>
+    <View style={{ flex: 1 }}>
+      <Header title="Assignments" showBack={true} />
+      <View style={styles.container}>
 
       <View style={styles.content}>
         {loading && !refreshing ? (
@@ -496,6 +490,7 @@ export const AssignmentsScreen = ({ navigation }: any) => {
           </View>
         </View>
       </Modal>
+    </View>
     </View>
   );
 };

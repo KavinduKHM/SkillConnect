@@ -190,10 +190,10 @@ export class CourseController {
         } as ApiResponse<null>);
       }
 
-      if (course.status !== 'DRAFT') {
+      if (course.status !== 'DRAFT' && course.status !== 'REJECTED') {
         return res.status(400).json({
           success: false,
-          error: `Only draft courses can be deleted. Current status: ${course.status}`,
+          error: `Only draft or rejected courses can be deleted. Current status: ${course.status}`,
         } as ApiResponse<null>);
       }
 

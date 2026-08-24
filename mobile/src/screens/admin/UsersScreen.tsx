@@ -14,6 +14,7 @@ import Toast from 'react-native-toast-message';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminService, User } from '../../api/admin.service';
 import { StatusBadge } from '../../components/admin/StatusBadge';
+import { Header } from '../../components/common/Header';
 
 export const UsersScreen = ({ navigation }: any) => {
   const queryClient = useQueryClient();
@@ -97,17 +98,15 @@ export const UsersScreen = ({ navigation }: any) => {
   const users = data?.data?.users || [];
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
-      refreshControl={
-        <RefreshControl refreshing={isLoading} onRefresh={refetch} />
-      }
-    >
-      <View style={styles.header}>
-        <Text style={styles.title}>Users</Text>
-        <Text style={styles.subtitle}>Total: {data?.data?.pagination?.total || 0} users</Text>
-      </View>
+    <View style={{ flex: 1 }}>
+      <Header title="Users" />
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
+        refreshControl={
+          <RefreshControl refreshing={isLoading} onRefresh={refetch} />
+        }
+      >
 
       {/* Search & Filters */}
       <View style={styles.filtersContainer}>
@@ -237,6 +236,7 @@ export const UsersScreen = ({ navigation }: any) => {
         </View>
       )}
     </ScrollView>
+    </View>
   );
 };
 

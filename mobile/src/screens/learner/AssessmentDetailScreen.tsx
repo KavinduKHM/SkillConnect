@@ -13,6 +13,7 @@ import {
   Platform,
 } from 'react-native';
 import { completeQuiz } from '../../api/learner.service';
+import { Header } from '../../components/common/Header';
 
 export const AssessmentDetailScreen = ({ route, navigation }: any) => {
   const { assessment } = route.params || {};
@@ -104,17 +105,14 @@ export const AssessmentDetailScreen = ({ route, navigation }: any) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FAF9F6" />
 
-      {/* Header */}
-      <View style={styles.topHeader}>
-        <TouchableOpacity style={styles.circleBtn} onPress={() => navigation?.goBack()}>
-          <Text style={styles.circleBtnText}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Course Assessment 📝</Text>
-        <View style={{ width: 38 }} />
-      </View>
+      <Header
+        title="Course Assessment"
+        showBack={true}
+        onBackPress={() => navigation?.goBack()}
+      />
 
       <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 40 }}>
         {/* Title & Status */}
@@ -193,7 +191,7 @@ export const AssessmentDetailScreen = ({ route, navigation }: any) => {
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 

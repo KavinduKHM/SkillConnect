@@ -11,6 +11,7 @@ import {
 import { useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { progressService } from '../../api/skill-sharer.service';
+import { Header } from '../../components/common/Header';
 
 interface Learner {
   learner: {
@@ -77,26 +78,29 @@ export default function LearnerProgressScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#4F46E5" />
+      <View style={{ flex: 1 }}>
+        <Header title="Learner Progress" showBack={true} />
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color="#4F46E5" />
+        </View>
       </View>
     );
   }
 
-  if (learners.length === 0) {
+  const renderContent = () => {
+    if (learners.length === 0) {
+      return (
+        <View style={styles.centered}>
+          <Ionicons name="people-outline" size={64} color="#D1D5DB" />
+          <Text style={styles.emptyTitle}>No Enrolled Learners</Text>
+          <Text style={styles.emptySubtitle}>
+            Learners who enroll in your course will appear here
+          </Text>
+        </View>
+      );
+    }
+
     return (
-      <View style={styles.centered}>
-        <Ionicons name="people-outline" size={64} color="#D1D5DB" />
-        <Text style={styles.emptyTitle}>No Enrolled Learners</Text>
-        <Text style={styles.emptySubtitle}>
-          Learners who enroll in your course will appear here
-        </Text>
-      </View>
-    );
-  }
-
-  return (
-    <View style={styles.container}>
       <FlatList
         data={learners}
         renderItem={renderItem}
@@ -110,51 +114,60 @@ export default function LearnerProgressScreen() {
           </View>
         }
       />
+    );
+  };
 
-      {selectedLearner && (
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{selectedLearner.learner.name}</Text>
-              <TouchableOpacity onPress={() => setSelectedLearner(null)}>
-                <Ionicons name="close" size={24} color="#6B7280" />
+  return (
+    <View style={{ flex: 1 }}>
+      <Header title="Learner Progress" showBack={true} />
+      <View style={styles.container}>
+        {renderContent()}
+
+        {selectedLearner && (
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>{selectedLearner.learner.name}</Text>
+                <TouchableOpacity onPress={() => setSelectedLearner(null)}>
+                  <Ionicons name="close" size={24} color="#6B7280" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.modalBody}>
+                <Text style={styles.modalEmail}>{selectedLearner.learner.email}</Text>
+                <View style={styles.modalStats}>
+                  <View style={styles.modalStat}>
+                    <Text style={styles.modalStatValue}>
+                      {selectedLearner.completedLessons}
+                    </Text>
+                    <Text style={styles.modalStatLabel}>Completed Lessons</Text>
+                  </View>
+                  <View style={styles.modalStat}>
+                    <Text style={styles.modalStatValue}>
+                      {selectedLearner.totalLessons}
+                    </Text>
+                    <Text style={styles.modalStatLabel}>Total Lessons</Text>
+                  </View>
+                  <View style={styles.modalStat}>
+                    <Text style={styles.modalStatValue}>
+                      {Math.round(selectedLearner.progress.progressPercentage)}%
+                    </Text>
+                    <Text style={styles.modalStatLabel}>Progress</Text>
+                  </View>
+                </View>
+                {renderProgressBar(selectedLearner.progress.progressPercentage)}
+              </View>
+
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={() => setSelectedLearner(null)}
+              >
+                <Text style={styles.modalButtonText}>Close</Text>
               </TouchableOpacity>
             </View>
-
-            <View style={styles.modalBody}>
-              <Text style={styles.modalEmail}>{selectedLearner.learner.email}</Text>
-              <View style={styles.modalStats}>
-                <View style={styles.modalStat}>
-                  <Text style={styles.modalStatValue}>
-                    {selectedLearner.completedLessons}
-                  </Text>
-                  <Text style={styles.modalStatLabel}>Completed Lessons</Text>
-                </View>
-                <View style={styles.modalStat}>
-                  <Text style={styles.modalStatValue}>
-                    {selectedLearner.totalLessons}
-                  </Text>
-                  <Text style={styles.modalStatLabel}>Total Lessons</Text>
-                </View>
-                <View style={styles.modalStat}>
-                  <Text style={styles.modalStatValue}>
-                    {Math.round(selectedLearner.progress.progressPercentage)}%
-                  </Text>
-                  <Text style={styles.modalStatLabel}>Progress</Text>
-                </View>
-              </View>
-              {renderProgressBar(selectedLearner.progress.progressPercentage)}
-            </View>
-
-            <TouchableOpacity
-              style={styles.modalButton}
-              onPress={() => setSelectedLearner(null)}
-            >
-              <Text style={styles.modalButtonText}>Close</Text>
-            </TouchableOpacity>
           </View>
-        </View>
-      )}
+        )}
+      </View>
     </View>
   );
 }

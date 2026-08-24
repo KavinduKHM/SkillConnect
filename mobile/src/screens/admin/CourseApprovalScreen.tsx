@@ -13,6 +13,7 @@ import Toast from 'react-native-toast-message';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminService, Course } from '../../api/admin.service';
 import { StatusBadge } from '../../components/admin/StatusBadge';
+import { Header } from '../../components/common/Header';
 
 export const CourseApprovalScreen = () => {
   const queryClient = useQueryClient();
@@ -96,19 +97,15 @@ export const CourseApprovalScreen = () => {
   const courses: Course[] = Array.isArray(data) ? data : [];
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
-      refreshControl={
-        <RefreshControl refreshing={isLoading} onRefresh={refetch} />
-      }
-    >
-      <View style={styles.header}>
-        <Text style={styles.title}>Course Approval</Text>
-        <Text style={styles.subtitle}>
-          {courses.length} courses awaiting approval
-        </Text>
-      </View>
+    <View style={{ flex: 1 }}>
+      <Header title="Course Approval" />
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
+        refreshControl={
+          <RefreshControl refreshing={isLoading} onRefresh={refetch} />
+        }
+      >
 
       {courses.length === 0 ? (
         <View style={styles.emptyState}>
@@ -168,6 +165,7 @@ export const CourseApprovalScreen = () => {
         ))
       )}
     </ScrollView>
+    </View>
   );
 };
 

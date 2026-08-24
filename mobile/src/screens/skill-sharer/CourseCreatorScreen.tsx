@@ -53,6 +53,7 @@ export const CourseCreatorScreen = ({ navigation }: any) => {
       }
 
       const response = await courseApi.createCourse(data);
+      const resData = response.data ?? response;
       
       if (response.success) {
         Toast.show({

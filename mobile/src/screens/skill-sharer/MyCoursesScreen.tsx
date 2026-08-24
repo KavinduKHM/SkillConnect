@@ -15,12 +15,34 @@ import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { CourseCard } from '../../components/skill-sharer/CourseCard';
 import { Button } from '../../components/common/Button';
 import { courseApi } from '../../api/skill-sharer.service';
+import { authService } from '../../api/auth.service';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Course } from '../../types';
 
 export const MyCoursesScreen: React.FC = ({ navigation }: any) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [courses, setCourses] = useState<Course[]>([]);
+  const [verifiedBadge, setVerifiedBadge] = useState(false);
+
+  const checkVerificationStatus = async () => {
+    try {
+      const userData = await AsyncStorage.getItem('user');
+      if (userData) {
+        const user = JSON.parse(userData);
+        setVerifiedBadge(user.verifiedBadge || false);
+      }
+      
+      const res = await authService.getMe();
+      const freshUser = res.data?.data ?? res.data;
+      if (freshUser) {
+        setVerifiedBadge(freshUser.verifiedBadge || false);
+        await AsyncStorage.setItem('user', JSON.stringify(freshUser));
+      }
+    } catch (e) {
+      console.error('Error checking verification inside MyCoursesScreen:', e);
+    }
+  };
 
   const loadCourses = async () => {
     try {
@@ -48,6 +70,7 @@ export const MyCoursesScreen: React.FC = ({ navigation }: any) => {
   useFocusEffect(
     useCallback(() => {
       loadCourses();
+      checkVerificationStatus();
     }, [])
   );
 
@@ -62,8 +85,8 @@ export const MyCoursesScreen: React.FC = ({ navigation }: any) => {
   };
 
   const handleDelete = async (course: Course) => {
-    if (course.status !== 'DRAFT') {
-      Toast.show({ type: 'error', text1: 'Cannot Delete', text2: 'Only draft courses can be deleted.' });
+    if (course.status !== 'DRAFT' && course.status !== 'REJECTED') {
+      Toast.show({ type: 'error', text1: 'Cannot Delete', text2: 'Only draft or rejected courses can be deleted.' });
       return;
     }
 
@@ -153,6 +176,29 @@ export const MyCoursesScreen: React.FC = ({ navigation }: any) => {
     setRefreshing(false);
   };
 
+  const handleCreatePress = () => {
+    if (!verifiedBadge) {
+      if (Platform.OS === 'web') {
+        window.alert('Your profile must be approved by an Admin before you can create courses. Please make sure you have added your qualifications and skills.');
+        navigation.navigate('Profile');
+      } else {
+        Alert.alert(
+          'Verification Required',
+          'Your profile must be approved by an Admin before you can create courses. Please make sure you have added your qualifications and skills.',
+          [
+            {
+              text: 'View Professional Profile',
+              onPress: () => navigation.navigate('Profile'),
+            },
+            { text: 'Cancel', style: 'cancel' },
+          ]
+        );
+      }
+      return;
+    }
+    navigation.navigate('CourseCreator');
+  };
+
   if (loading) {
     return <LoadingSpinner message="Loading your courses..." />;
   }
@@ -164,7 +210,7 @@ export const MyCoursesScreen: React.FC = ({ navigation }: any) => {
         rightComponent={
           <Button
             title="Create"
-            onPress={() => navigation.navigate('CourseCreator')}
+            onPress={handleCreatePress}
             size="small"
           />
         }

@@ -10,9 +10,11 @@ import {
   ActivityIndicator,
   Alert,
   Linking,
+  Platform,
 } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { fetchLessonContent, completeLesson } from '../../api/learner.service';
+import { Header } from '../../components/common/Header';
 
 export default function LessonPlayerScreen({ route, navigation }: any) {
   const courseId = route.params?.courseId;
@@ -24,6 +26,7 @@ export default function LessonPlayerScreen({ route, navigation }: any) {
   const [completing, setCompleting] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [completedMaterials, setCompletedMaterials] = useState<string[]>([]);
+  const [activeMaterial, setActiveMaterial] = useState<any>(null);
 
   const getMaterialIcon = (type: string) => {
     switch (type) {
@@ -50,18 +53,82 @@ export default function LessonPlayerScreen({ route, navigation }: any) {
   };
 
   const handleOpenMaterial = (item: any) => {
-    const url = item.fileUrl || item.externalUrl;
-    if (!url) {
-      Alert.alert('Notice', 'No URL available for this material.');
-      return;
+    setActiveMaterial(item);
+  };
+
+  const renderActiveMaterial = () => {
+    const selected = activeMaterial || videoMaterial;
+
+    if (!selected) {
+      return (
+        <View style={[styles.videoPlayerBox, { backgroundColor: '#1E293B' }]}>
+          <Text style={{ color: '#94A3B8', fontSize: 14, textAlign: 'center', paddingHorizontal: 20 }}>
+            Select a learning resource below to view it here.
+          </Text>
+        </View>
+      );
     }
+
+    const url = selected.fileUrl || selected.externalUrl;
+    if (!url) {
+      return (
+        <View style={[styles.videoPlayerBox, { backgroundColor: '#1E293B' }]}>
+          <Text style={{ color: '#EF4444', fontSize: 13 }}>No viewable URL for: {selected.title}</Text>
+        </View>
+      );
+    }
+
     let targetUrl = url;
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       targetUrl = `http://localhost:5000${url.startsWith('/') ? '' : '/'}${url}`;
     }
-    Linking.openURL(targetUrl).catch((err) => {
-      Alert.alert('Error', 'Could not open url');
-    });
+
+    const isVideo = selected.type === 'VIDEO' || selected.icon === '🎥' || targetUrl.endsWith('.mp4') || targetUrl.endsWith('.webm') || targetUrl.endsWith('.ogg');
+
+    if (Platform.OS === 'web') {
+      if (isVideo) {
+        return (
+          <View style={styles.webFrameContainer}>
+            <video
+              src={targetUrl}
+              controls
+              style={{ width: '100%', height: '100%', border: 'none', backgroundColor: '#000' }}
+            />
+          </View>
+        );
+      } else {
+        return (
+          <View style={styles.webFrameContainer}>
+            <iframe
+              src={targetUrl}
+              style={{ width: '100%', height: '100%', border: 'none', backgroundColor: '#FFFFFF' }}
+              title={selected.title}
+            />
+          </View>
+        );
+      }
+    }
+
+    return (
+      <TouchableOpacity
+        style={styles.videoPlayerBox}
+        onPress={() => {
+          Linking.openURL(targetUrl).catch(() => {
+            Alert.alert('Error', 'Could not open learning link');
+          });
+        }}
+      >
+        <Text style={{ color: '#F1F5F9', fontSize: 32, marginBottom: 8 }}>
+          {selected.icon || getMaterialIcon(selected.type)}
+        </Text>
+        <Text style={{ color: '#F1F5F9', fontSize: 14, fontWeight: '700', textAlign: 'center', paddingHorizontal: 16 }} numberOfLines={2}>
+          Open: {selected.title}
+        </Text>
+        <Text style={{ color: '#94A3B8', fontSize: 11, marginTop: 4 }}>
+          (Tapping opens document in external browser)
+        </Text>
+      </TouchableOpacity>
+    );
   };
 
   const loadLesson = async () => {
@@ -122,21 +189,14 @@ export default function LessonPlayerScreen({ route, navigation }: any) {
   const videoMaterial = videoMaterials[0];
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FAF9F6" />
 
-      {/* Navigation Top Header */}
-      <View style={styles.topHeader}>
-        <TouchableOpacity style={styles.circleBtn} onPress={() => navigation?.goBack()}>
-          <Text style={styles.circleBtnText}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>
-          {initialTitle}
-        </Text>
-        <TouchableOpacity style={styles.circleBtn}>
-          <Text style={styles.circleBtnText}>≡</Text>
-        </TouchableOpacity>
-      </View>
+      <Header
+        title={initialTitle}
+        showBack={true}
+        onBackPress={() => navigation?.goBack()}
+      />
 
       {loading ? (
         <View style={styles.loadingContainer}>
@@ -145,26 +205,8 @@ export default function LessonPlayerScreen({ route, navigation }: any) {
         </View>
       ) : (
         <ScrollView style={styles.scrollContent} contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}>
-          {/* Main Video Player Screen Container */}
-          <TouchableOpacity
-            style={styles.videoPlayerBox}
-            onPress={() => {
-              if (videoMaterial) {
-                handleOpenMaterial(videoMaterial);
-              } else {
-                Alert.alert('Notice', 'No video lesson available for this lesson.');
-              }
-            }}
-          >
-            <View style={styles.playCircle}>
-              <Text style={styles.playIcon}>▶</Text>
-            </View>
-            {videoMaterial && (
-              <Text style={{ color: '#F1F5F9', marginTop: 10, fontSize: 13, paddingHorizontal: 12 }} numberOfLines={1}>
-                Play: {videoMaterial.title}
-              </Text>
-            )}
-          </TouchableOpacity>
+          {/* Main Video Player Screen Container / Resource Frame */}
+          {renderActiveMaterial()}
 
           {/* Lesson Headings & Description */}
           <View style={styles.bodyContent}>
@@ -224,7 +266,7 @@ export default function LessonPlayerScreen({ route, navigation }: any) {
           </TouchableOpacity>
         )}
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -308,4 +350,14 @@ const styles = StyleSheet.create({
   completeBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
   completedTag: { backgroundColor: '#DCFCE7', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 14 },
   completedTagText: { color: '#15803D', fontSize: 14, fontWeight: '700' },
+  webFrameContainer: {
+    height: 480,
+    backgroundColor: '#0F172A',
+    borderRadius: 20,
+    marginHorizontal: 20,
+    marginTop: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
 });

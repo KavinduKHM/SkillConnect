@@ -15,6 +15,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { authService } from '../../api/auth.service';
 import { StatusBadge } from '../../components/admin/StatusBadge';
+import { Header } from '../../components/common/Header';
 
 interface UserProfile {
   id: string;
@@ -148,7 +149,9 @@ export const ProfileScreen = ({ navigation }: any) => {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}>
+    <View style={{ flex: 1 }}>
+      <Header title="My Profile" />
+      <ScrollView style={styles.container} contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}>
       {/* Profile Header */}
       <View style={styles.headerCard}>
         <View style={styles.avatarContainer}>
@@ -312,6 +315,7 @@ export const ProfileScreen = ({ navigation }: any) => {
         </View>
       </Modal>
     </ScrollView>
+    </View>
   );
 };
 

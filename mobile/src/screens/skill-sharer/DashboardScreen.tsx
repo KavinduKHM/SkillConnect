@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,10 +7,15 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
+  Alert,
+  Platform,
 } from 'react-native';
 // ✅ Use your existing API service instead
-import { courseApi, profileApi } from '../../api/skill-sharer.service';
+import { courseApi, profileService } from '../../api/skill-sharer.service';
+import { authService } from '../../api/auth.service';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
+import { Header } from '../../components/common/Header';
 
 interface Course {
   id: string;
@@ -28,19 +33,56 @@ export const DashboardScreen = ({ navigation }: any) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    loadUserData();
-    loadCourses();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadUserData();
+      loadCourses();
+    }, [])
+  );
 
   const loadUserData = async () => {
     try {
-      // ✅ Get user data from storage
+      // 1. Get cached user from storage
       const userData = await AsyncStorage.getItem('user');
       if (userData) {
         const user = JSON.parse(userData);
         setUserName(user.name || 'User');
         setVerifiedBadge(user.verifiedBadge || false);
+      }
+
+      // 2. Fetch profile from API to check if skills are setup
+      const profileRes = await profileService.getMyProfile();
+      const profile = profileRes?.data?.data ?? profileRes?.data;
+      if (profile) {
+        if (!profile.skills || profile.skills.length === 0) {
+          if (Platform.OS === 'web') {
+            window.alert('Please specify your skills so that the admin can verify your account.');
+            navigation.navigate('Profile');
+          } else {
+            Alert.alert(
+              'Add Your Skills',
+              'Please specify your skills so that the admin can verify your account.',
+              [
+                {
+                  text: 'Go to Profile',
+                  onPress: () => {
+                    navigation.navigate('Profile');
+                  },
+                },
+              ]
+            );
+          }
+          return;
+        }
+      }
+
+      // 3. Fetch fresh user data from API to sync verifiedBadge status
+      const res = await authService.getMe();
+      const freshUser = res.data?.data ?? res.data;
+      if (freshUser) {
+        setUserName(freshUser.name || 'User');
+        setVerifiedBadge(freshUser.verifiedBadge || false);
+        await AsyncStorage.setItem('user', JSON.stringify(freshUser));
       }
     } catch (error) {
       console.error('Error loading user data:', error);
@@ -71,6 +113,29 @@ export const DashboardScreen = ({ navigation }: any) => {
   const onRefresh = () => {
     setRefreshing(true);
     loadCourses();
+  };
+
+  const handleCreateCoursePress = () => {
+    if (!verifiedBadge) {
+      if (Platform.OS === 'web') {
+        window.alert('Your profile must be approved by an Admin before you can create courses. Please make sure you have added your qualifications and skills.');
+        navigation.navigate('Profile');
+      } else {
+        Alert.alert(
+          'Verification Required',
+          'Your profile must be approved by an Admin before you can create courses. Please make sure you have added your qualifications and skills.',
+          [
+            {
+              text: 'View Professional Profile',
+              onPress: () => navigation.navigate('Profile'),
+            },
+            { text: 'Cancel', style: 'cancel' },
+          ]
+        );
+      }
+      return;
+    }
+    navigation.navigate('CourseCreator');
   };
 
   const getStatusColor = (status: string) => {
@@ -112,13 +177,15 @@ export const DashboardScreen = ({ navigation }: any) => {
   }
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
-    >
+    <View style={{ flex: 1 }}>
+      <Header title="Skill Sharer Dashboard" />
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
       {/* User Info */}
       <View style={styles.header}>
         <View>
@@ -158,7 +225,7 @@ export const DashboardScreen = ({ navigation }: any) => {
         <View style={styles.actionGrid}>
           <TouchableOpacity
             style={styles.actionCard}
-            onPress={() => navigation.navigate('CourseCreator')}
+            onPress={handleCreateCoursePress}
           >
             <Text style={styles.actionIcon}>➕</Text>
             <Text style={styles.actionLabel}>Create Course</Text>
@@ -247,6 +314,7 @@ export const DashboardScreen = ({ navigation }: any) => {
         </View>
       )}
     </ScrollView>
+    </View>
   );
 };
 
