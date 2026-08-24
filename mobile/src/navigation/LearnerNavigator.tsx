@@ -27,7 +27,7 @@ function LearnerBottomTabs() {
       sceneContainerStyle={{ flex: 1 }}
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#064E3B',
+        tabBarActiveTintColor: '#164E37',
         tabBarInactiveTintColor: '#94A3B8',
         tabBarStyle: {
           backgroundColor: '#FFFFFF',
@@ -35,10 +35,15 @@ function LearnerBottomTabs() {
           height: 64,
           paddingBottom: 10,
           paddingTop: 8,
+          elevation: 8,
+          shadowColor: '#0F172A',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.04,
+          shadowRadius: 8,
         },
         tabBarLabelStyle: {
           fontSize: 11,
-          fontWeight: '600',
+          fontWeight: '700',
         },
       }}
     >

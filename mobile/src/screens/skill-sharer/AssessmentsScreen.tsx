@@ -18,6 +18,8 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { courseApi, quizApi } from '../../api/skill-sharer.service';
 import { Header } from '../../components/common/Header';
 
+import { ConfirmModal } from '../../components/common/ConfirmModal';
+
 interface Quiz {
   id: string;
   courseId: string;
@@ -42,6 +44,18 @@ export const AssessmentsScreen = ({ navigation }: any) => {
   const [courses, setCourses] = useState<CourseWithQuizzes[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  const [confirmConfig, setConfirmConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   // Modal State
   const [modalVisible, setModalVisible] = useState(false);
@@ -149,40 +163,26 @@ export const AssessmentsScreen = ({ navigation }: any) => {
   };
 
   const handleDeleteQuiz = (quiz: Quiz) => {
-    const doDelete = async () => {
-      // Optimistic Update
-      setCourses(prev => prev.map(c => ({
-        ...c,
-        assessments: c.assessments.filter(q => q.id !== quiz.id)
-      })));
+    setConfirmConfig({
+      visible: true,
+      title: 'Delete Assessment',
+      message: `Are you sure you want to delete "${quiz.title}"? This cannot be undone.`,
+      onConfirm: async () => {
+        setConfirmConfig((prev) => ({ ...prev, visible: false }));
+        setCourses(prev => prev.map(c => ({
+          ...c,
+          assessments: c.assessments.filter(q => q.id !== quiz.id)
+        })));
 
-      try {
-        await quizApi.deleteQuizLink(quiz.id);
-        Toast.show({ type: 'success', text1: 'Deleted', text2: 'Assessment removed successfully.' });
-      } catch (error: any) {
-        Toast.show({ type: 'error', text1: 'Error', text2: error?.response?.data?.error || 'Failed to delete assessment.' });
-        fetchCoursesAndAssessments(); // Revert on failure
-      }
-    };
-
-    if (Platform.OS === 'web') {
-      if (window.confirm(`Are you sure you want to delete "${quiz.title}"? This cannot be undone.`)) {
-        doDelete();
-      }
-    } else {
-      Alert.alert(
-        'Delete Assessment',
-        `Are you sure you want to delete "${quiz.title}"? This cannot be undone.`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Delete',
-            style: 'destructive',
-            onPress: doDelete,
-          },
-        ]
-      );
-    }
+        try {
+          await quizApi.deleteQuizLink(quiz.id);
+          Toast.show({ type: 'success', text1: 'Deleted', text2: 'Assessment removed successfully.' });
+        } catch (error: any) {
+          Toast.show({ type: 'error', text1: 'Error', text2: error?.response?.data?.error || 'Failed to delete assessment.' });
+          fetchCoursesAndAssessments(); // Revert on failure
+        }
+      },
+    });
   };
 
   const handleSave = async () => {
@@ -513,6 +513,16 @@ export const AssessmentsScreen = ({ navigation }: any) => {
           </View>
         </View>
       </Modal>
+
+      <ConfirmModal
+        visible={confirmConfig.visible}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        confirmText="Delete"
+        confirmType="danger"
+        onConfirm={confirmConfig.onConfirm}
+        onCancel={() => setConfirmConfig((prev) => ({ ...prev, visible: false }))}
+      />
     </View>
     </View>
   );

@@ -16,6 +16,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { qualificationService, profileService } from '../../api/skill-sharer.service';
 import { Header } from '../../components/common/Header';
 
+import Toast from 'react-native-toast-message';
+import { ConfirmModal } from '../../components/common/ConfirmModal';
+
 interface Qualification {
   id: string;
   title: string;
@@ -38,6 +41,18 @@ export default function QualificationsScreen() {
     description: '',
   });
 
+  const [confirmConfig, setConfirmConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
+
   const loadQualifications = async () => {
     try {
       // Get profile first
@@ -47,7 +62,7 @@ export default function QualificationsScreen() {
       const response = await qualificationService.getQualifications();
       setQualifications(response.data || []);
     } catch (error) {
-      Alert.alert('Error', 'Failed to load qualifications');
+      Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to load qualifications' });
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -67,15 +82,15 @@ export default function QualificationsScreen() {
 
   const handleAddQualification = async () => {
     if (!formData.title.trim()) {
-      Alert.alert('Error', 'Please enter a title');
+      Toast.show({ type: 'error', text1: 'Error', text2: 'Please enter a title' });
       return;
     }
     if (!formData.institution.trim()) {
-      Alert.alert('Error', 'Please enter an institution');
+      Toast.show({ type: 'error', text1: 'Error', text2: 'Please enter an institution' });
       return;
     }
     if (!formData.year.trim() || parseInt(formData.year) < 1900) {
-      Alert.alert('Error', 'Please enter a valid year');
+      Toast.show({ type: 'error', text1: 'Error', text2: 'Please enter a valid year' });
       return;
     }
 
@@ -87,36 +102,31 @@ export default function QualificationsScreen() {
         year: parseInt(formData.year),
         description: formData.description.trim() || undefined,
       });
-      Alert.alert('Success', 'Qualification added successfully');
+      Toast.show({ type: 'success', text1: 'Success', text2: 'Qualification added successfully' });
       setModalVisible(false);
       setFormData({ title: '', institution: '', year: '', description: '' });
       loadQualifications();
     } catch (error: any) {
-      Alert.alert('Error', error.error || 'Failed to add qualification');
+      Toast.show({ type: 'error', text1: 'Error', text2: error.error || 'Failed to add qualification' });
     }
   };
 
   const handleDeleteQualification = (id: string, title: string) => {
-    Alert.alert(
-      'Delete Qualification',
-      `Are you sure you want to delete "${title}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await qualificationService.deleteQualification(id);
-              setQualifications(qualifications.filter((q) => q.id !== id));
-              Alert.alert('Success', 'Qualification deleted');
-            } catch (error: any) {
-              Alert.alert('Error', error.error || 'Failed to delete qualification');
-            }
-          },
-        },
-      ]
-    );
+    setConfirmConfig({
+      visible: true,
+      title: 'Delete Qualification',
+      message: `Are you sure you want to delete "${title}"?`,
+      onConfirm: async () => {
+        setConfirmConfig((prev) => ({ ...prev, visible: false }));
+        try {
+          await qualificationService.deleteQualification(id);
+          setQualifications(qualifications.filter((q) => q.id !== id));
+          Toast.show({ type: 'success', text1: 'Deleted', text2: 'Qualification deleted' });
+        } catch (error: any) {
+          Toast.show({ type: 'error', text1: 'Error', text2: error.error || 'Failed to delete qualification' });
+        }
+      },
+    });
   };
 
   const getStatusColor = (status: string) => {
@@ -285,6 +295,16 @@ export default function QualificationsScreen() {
           </View>
         </View>
       </Modal>
+
+      <ConfirmModal
+        visible={confirmConfig.visible}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        confirmText="Delete"
+        confirmType="danger"
+        onConfirm={confirmConfig.onConfirm}
+        onCancel={() => setConfirmConfig((prev) => ({ ...prev, visible: false }))}
+      />
     </View>
     </View>
   );

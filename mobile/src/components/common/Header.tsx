@@ -12,6 +12,8 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { ConfirmModal } from './ConfirmModal';
+
 interface HeaderProps {
   title: string;
   showBack?: boolean;
@@ -26,6 +28,7 @@ export const Header: React.FC<HeaderProps> = ({
   onBackPress,
 }) => {
   const navigation = useNavigation();
+  const [showLogoutConfirm, setShowLogoutConfirm] = React.useState(false);
 
   const canGoBack = navigation.canGoBack();
   const displayBack = showBack || canGoBack;
@@ -39,6 +42,7 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   const performLogout = async () => {
+    setShowLogoutConfirm(false);
     try {
       await AsyncStorage.multiRemove(['@token', '@user', 'token', 'user']);
       if (Platform.OS === 'web') {
@@ -60,16 +64,7 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   const handleLogout = () => {
-    if (Platform.OS === 'web') {
-      if (window.confirm('Are you sure you want to sign out?')) {
-        performLogout();
-      }
-    } else {
-      Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Sign Out', style: 'destructive', onPress: performLogout },
-      ]);
-    }
+    setShowLogoutConfirm(true);
   };
 
   return (
@@ -90,42 +85,66 @@ export const Header: React.FC<HeaderProps> = ({
           </TouchableOpacity>
         </View>
       </View>
+
+      <ConfirmModal
+        visible={showLogoutConfirm}
+        title="Sign Out"
+        message="Are you sure you want to sign out of SkillConnect?"
+        confirmText="Sign Out"
+        confirmType="danger"
+        onConfirm={performLogout}
+        onCancel={() => setShowLogoutConfirm(false)}
+      />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   safeArea: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FAF9F5',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    borderBottomColor: '#F1F5F9',
+    backgroundColor: '#FAF9F5',
   },
   leftContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   backButton: {
-    paddingRight: 12,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1F2937',
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#0F172A',
+    letterSpacing: -0.3,
   },
   rightContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
   },
   logoutButton: {
-    padding: 4,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
   }
 });

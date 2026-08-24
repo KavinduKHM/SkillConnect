@@ -15,12 +15,27 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminService, User } from '../../api/admin.service';
 import { StatusBadge } from '../../components/admin/StatusBadge';
 import { Header } from '../../components/common/Header';
+import { ConfirmModal } from '../../components/common/ConfirmModal';
 
 export const UsersScreen = ({ navigation }: any) => {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+
+  const [confirmConfig, setConfirmConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    confirmText?: string;
+    confirmType?: 'danger' | 'primary' | 'warning';
+    onConfirm: () => void;
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['users', search, roleFilter, statusFilter],
@@ -32,67 +47,53 @@ export const UsersScreen = ({ navigation }: any) => {
       }),
   });
 
-  const handleSuspend = async (user: User) => {
-    const action = async () => {
-      queryClient.setQueryData(['users', search, roleFilter, statusFilter], (old: any) => {
-        if (!old?.data?.users) return old;
-        return { ...old, data: { ...old.data, users: old.data.users.map((u: any) => u.id === user.id ? { ...u, status: 'SUSPENDED' } : u) } };
-      });
-      const reason = 'Violation of platform guidelines';
-      try {
-        await adminService.suspendUser(user.id, reason);
-        Toast.show({ type: 'success', text1: 'Success', text2: 'User suspended' });
-        queryClient.invalidateQueries({ queryKey: ['users'] });
-      } catch (error: any) {
-        Toast.show({ type: 'error', text1: 'Error', text2: error.response?.data?.error || 'Failed to suspend user' });
-      }
-    };
-
-    if (Platform.OS === 'web') {
-      if (window.confirm(`Are you sure you want to suspend ${user.name}?`)) {
-        action();
-      }
-    } else {
-      Alert.alert(
-        'Suspend User',
-        `Are you sure you want to suspend ${user.name}?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Suspend', style: 'destructive', onPress: action },
-        ]
-      );
-    }
+  const handleSuspend = (user: User) => {
+    setConfirmConfig({
+      visible: true,
+      title: 'Suspend User',
+      message: `Are you sure you want to suspend ${user.name}?`,
+      confirmText: 'Suspend',
+      confirmType: 'danger',
+      onConfirm: async () => {
+        setConfirmConfig((prev) => ({ ...prev, visible: false }));
+        queryClient.setQueryData(['users', search, roleFilter, statusFilter], (old: any) => {
+          if (!old?.data?.users) return old;
+          return { ...old, data: { ...old.data, users: old.data.users.map((u: any) => u.id === user.id ? { ...u, status: 'SUSPENDED' } : u) } };
+        });
+        const reason = 'Violation of platform guidelines';
+        try {
+          await adminService.suspendUser(user.id, reason);
+          Toast.show({ type: 'success', text1: 'Success', text2: 'User suspended' });
+          queryClient.invalidateQueries({ queryKey: ['users'] });
+        } catch (error: any) {
+          Toast.show({ type: 'error', text1: 'Error', text2: error.response?.data?.error || 'Failed to suspend user' });
+        }
+      },
+    });
   };
 
-  const handleRestore = async (user: User) => {
-    const action = async () => {
-      queryClient.setQueryData(['users', search, roleFilter, statusFilter], (old: any) => {
-        if (!old?.data?.users) return old;
-        return { ...old, data: { ...old.data, users: old.data.users.map((u: any) => u.id === user.id ? { ...u, status: 'ACTIVE' } : u) } };
-      });
-      try {
-        await adminService.restoreUser(user.id);
-        Toast.show({ type: 'success', text1: 'Success', text2: 'User restored' });
-        queryClient.invalidateQueries({ queryKey: ['users'] });
-      } catch (error: any) {
-        Toast.show({ type: 'error', text1: 'Error', text2: error.response?.data?.error || 'Failed to restore user' });
-      }
-    };
-
-    if (Platform.OS === 'web') {
-      if (window.confirm(`Are you sure you want to restore ${user.name}?`)) {
-        action();
-      }
-    } else {
-      Alert.alert(
-        'Restore User',
-        `Are you sure you want to restore ${user.name}?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Restore', onPress: action },
-        ]
-      );
-    }
+  const handleRestore = (user: User) => {
+    setConfirmConfig({
+      visible: true,
+      title: 'Restore User',
+      message: `Are you sure you want to restore ${user.name}?`,
+      confirmText: 'Restore',
+      confirmType: 'primary',
+      onConfirm: async () => {
+        setConfirmConfig((prev) => ({ ...prev, visible: false }));
+        queryClient.setQueryData(['users', search, roleFilter, statusFilter], (old: any) => {
+          if (!old?.data?.users) return old;
+          return { ...old, data: { ...old.data, users: old.data.users.map((u: any) => u.id === user.id ? { ...u, status: 'ACTIVE' } : u) } };
+        });
+        try {
+          await adminService.restoreUser(user.id);
+          Toast.show({ type: 'success', text1: 'Success', text2: 'User restored' });
+          queryClient.invalidateQueries({ queryKey: ['users'] });
+        } catch (error: any) {
+          Toast.show({ type: 'error', text1: 'Error', text2: error.response?.data?.error || 'Failed to restore user' });
+        }
+      },
+    });
   };
 
   const users = data?.data?.users || [];
@@ -236,6 +237,16 @@ export const UsersScreen = ({ navigation }: any) => {
         </View>
       )}
     </ScrollView>
+
+    <ConfirmModal
+      visible={confirmConfig.visible}
+      title={confirmConfig.title}
+      message={confirmConfig.message}
+      confirmText={confirmConfig.confirmText}
+      confirmType={confirmConfig.confirmType}
+      onConfirm={confirmConfig.onConfirm}
+      onCancel={() => setConfirmConfig((prev) => ({ ...prev, visible: false }))}
+    />
     </View>
   );
 };

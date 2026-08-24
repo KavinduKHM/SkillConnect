@@ -537,7 +537,7 @@ export default function MyLearningScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAF9F6' },
+  container: { flex: 1, backgroundColor: '#FAF9F5' },
   header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 10 },
   headerTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   headerTitle: { fontSize: 26, fontWeight: '800', color: '#0F172A', letterSpacing: -0.5 },
@@ -565,7 +565,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
-  tabPillActive: { backgroundColor: '#064E3B', borderColor: '#064E3B' },
+  tabPillActive: { backgroundColor: '#164E37', borderColor: '#164E37' },
   tabPillText: { fontSize: 13, fontWeight: '600', color: '#475569' },
   tabPillTextActive: { color: '#FFFFFF' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
@@ -577,7 +577,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: '#F1F5F9',
-    shadowColor: '#000',
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
@@ -589,14 +589,14 @@ const styles = StyleSheet.create({
   creatorRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 2 },
   creatorName: { fontSize: 12, color: '#64748B' },
   verifiedBadge: { backgroundColor: '#DCFCE7', width: 16, height: 16, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
-  verifiedText: { fontSize: 10, fontWeight: '800', color: '#15803D' },
+  verifiedText: { fontSize: 10, fontWeight: '800', color: '#166534' },
   lastAccessedText: { fontSize: 11, color: '#94A3B8' },
   progressSection: { marginTop: 14, marginBottom: 14 },
   progressTrack: { height: 8, backgroundColor: '#F1F5F9', borderRadius: 4, overflow: 'hidden', marginBottom: 6 },
-  progressFill: { height: '100%', backgroundColor: '#064E3B', borderRadius: 4 },
+  progressFill: { height: '100%', backgroundColor: '#164E37', borderRadius: 4 },
   progressText: { fontSize: 12, color: '#64748B', fontWeight: '500' },
   continueBtn: {
-    backgroundColor: '#064E3B',
+    backgroundColor: '#164E37',
     paddingVertical: 12,
     borderRadius: 14,
     alignItems: 'center',
@@ -606,6 +606,6 @@ const styles = StyleSheet.create({
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 30 },
   emptyTitle: { fontSize: 16, fontWeight: 'bold', color: '#334155', marginBottom: 6 },
   emptySubtitle: { fontSize: 13, color: '#64748B', textAlign: 'center', marginBottom: 16 },
-  exploreBtn: { backgroundColor: '#064E3B', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12 },
+  exploreBtn: { backgroundColor: '#164E37', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12 },
   exploreBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
 });

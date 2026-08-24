@@ -20,6 +20,8 @@ import {
   uploadAssessmentFiles,
   deleteAssignmentSubmission,
 } from '../../api/learner.service';
+import Toast from 'react-native-toast-message';
+import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { Header } from '../../components/common/Header';
 
 interface LocalFile {
@@ -43,6 +45,18 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<string>('');
   const [isEditing, setIsEditing] = useState(false);
+
+  const [confirmConfig, setConfirmConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   useEffect(() => {
     if (assignmentId) {
@@ -74,12 +88,12 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
     }
   };
 
-  const showNotification = (title: string, message: string) => {
-    if (Platform.OS === 'web') {
-      window.alert(`${title}: ${message}`);
-    } else {
-      Alert.alert(title, message);
-    }
+  const showNotification = (title: string, message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    Toast.show({
+      type,
+      text1: title,
+      text2: message,
+    });
   };
 
   const formatFileSize = (bytes?: number) => {
@@ -219,16 +233,15 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
   };
 
   const handleDelete = () => {
-    if (Platform.OS === 'web') {
-      if (window.confirm('Are you sure you want to delete this submission?')) {
+    setConfirmConfig({
+      visible: true,
+      title: 'Delete Submission',
+      message: 'Are you sure you want to delete this submission?',
+      onConfirm: async () => {
+        setConfirmConfig((prev) => ({ ...prev, visible: false }));
         performDelete();
-      }
-    } else {
-      Alert.alert('Delete Submission', 'Are you sure you want to delete this submission?', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: performDelete },
-      ]);
-    }
+      },
+    });
   };
 
   const performDelete = async () => {
@@ -461,6 +474,16 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
           </View>
         )}
       </ScrollView>
+
+      <ConfirmModal
+        visible={confirmConfig.visible}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        confirmText="Delete"
+        confirmType="danger"
+        onConfirm={confirmConfig.onConfirm}
+        onCancel={() => setConfirmConfig((prev) => ({ ...prev, visible: false }))}
+      />
     </View>
   );
 }

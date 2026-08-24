@@ -31,7 +31,7 @@ export const SkillSharerNavigator = () => {
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
-        cardStyle: { flex: 1, backgroundColor: '#F9FAFB' },
+        cardStyle: { flex: 1, backgroundColor: '#FAF9F5' },
       }}
     >
       {/* Portals & Core Screens */}

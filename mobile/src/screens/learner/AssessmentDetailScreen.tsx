@@ -12,13 +12,27 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { completeQuiz } from '../../api/learner.service';
 import { Header } from '../../components/common/Header';
+import { ConfirmModal } from '../../components/common/ConfirmModal';
 
 export const AssessmentDetailScreen = ({ route, navigation }: any) => {
   const { assessment } = route.params || {};
   const [status, setStatus] = useState(route.params?.status || assessment?.status || 'PENDING');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [confirmConfig, setConfirmConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   if (!assessment) {
     return (
@@ -42,17 +56,17 @@ export const AssessmentDetailScreen = ({ route, navigation }: any) => {
   const handleOpenForm = async () => {
     try {
       if (!googleFormUrl) {
-        Alert.alert('Notice', 'No Google Form link provided for this assessment.');
+        Toast.show({ type: 'info', text1: 'Notice', text2: 'No Google Form link provided for this assessment.' });
         return;
       }
       const canOpen = await Linking.canOpenURL(googleFormUrl);
       if (canOpen) {
         await Linking.openURL(googleFormUrl);
       } else {
-        Alert.alert('Error', 'Cannot open the provided form URL.');
+        Toast.show({ type: 'error', text1: 'Error', text2: 'Cannot open the provided form URL.' });
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to open assessment form link.');
+      Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to open assessment form link.' });
     }
   };
 
@@ -62,46 +76,33 @@ export const AssessmentDetailScreen = ({ route, navigation }: any) => {
       await completeQuiz(assessment.id);
       setStatus('COMPLETED');
 
-      if (Platform.OS === 'web') {
-        window.alert('Assessment Completed! Your completion has been recorded successfully.');
-      } else {
-        Alert.alert('Assessment Completed!', 'Your completion has been recorded successfully.');
-      }
+      Toast.show({
+        type: 'success',
+        text1: 'Assessment Completed!',
+        text2: 'Your completion has been recorded successfully.',
+      });
 
       if (route.params?.loadMyLearning) {
         route.params.loadMyLearning();
       }
     } catch (error: any) {
       const errMsg = error?.response?.data?.error || error?.error || error?.message || 'Failed to update assessment status';
-      if (Platform.OS === 'web') {
-        window.alert('Notice: ' + errMsg);
-      } else {
-        Alert.alert('Notice', errMsg);
-      }
+      Toast.show({ type: 'error', text1: 'Error', text2: errMsg });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleMarkCompleted = () => {
-    if (Platform.OS === 'web') {
-      const confirmed = window.confirm('Have you completely finished and submitted the Google Form assessment?');
-      if (confirmed) {
+    setConfirmConfig({
+      visible: true,
+      title: 'Confirm Submission',
+      message: 'Have you completely finished and submitted the Google Form assessment?',
+      onConfirm: async () => {
+        setConfirmConfig((prev) => ({ ...prev, visible: false }));
         doSubmitCompletion();
-      }
-    } else {
-      Alert.alert(
-        'Confirm Submission',
-        'Have you completely finished and submitted the Google Form assessment?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Yes, Mark Completed',
-            onPress: doSubmitCompletion,
-          },
-        ]
-      );
-    }
+      },
+    });
   };
 
   return (
@@ -191,6 +192,16 @@ export const AssessmentDetailScreen = ({ route, navigation }: any) => {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <ConfirmModal
+        visible={confirmConfig.visible}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        confirmText="Yes, Mark Completed"
+        confirmType="primary"
+        onConfirm={confirmConfig.onConfirm}
+        onCancel={() => setConfirmConfig((prev) => ({ ...prev, visible: false }))}
+      />
     </View>
   );
 };

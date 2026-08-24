@@ -10,6 +10,7 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { profileService } from '../../api/skill-sharer.service';
@@ -71,7 +72,7 @@ export default function ProfileScreen({ navigation }: any) {
       const userData = userResponse?.data?.data ?? userResponse?.data ?? {};
       setUserName(userData.name || '');
     } catch (error) {
-      Alert.alert('Error', 'Failed to load profile');
+      Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to load profile' });
     } finally {
       setLoading(false);
     }
@@ -106,23 +107,15 @@ export default function ProfileScreen({ navigation }: any) {
         socialLinks: hasSocialLinks ? payload.socialLinks : undefined,
       });
 
-      const onConfirm = () => {
-        navigation.navigate('Dashboard');
-      };
-
-      if (Platform.OS === 'web') {
-        window.alert('Profile updated successfully');
-        onConfirm();
-      } else {
-        Alert.alert(
-          'Success',
-          'Profile updated successfully',
-          [{ text: 'OK', onPress: onConfirm }]
-        );
-      }
+      Toast.show({ type: 'success', text1: 'Success', text2: 'Profile updated successfully' });
+      navigation.navigate('Dashboard');
     } catch (error: any) {
       const firstValidationError = error?.errors?.[0]?.msg;
-      Alert.alert('Error', firstValidationError || error.message || error.error || 'Failed to update profile');
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: firstValidationError || error.message || error.error || 'Failed to update profile',
+      });
     } finally {
       setSaving(false);
     }

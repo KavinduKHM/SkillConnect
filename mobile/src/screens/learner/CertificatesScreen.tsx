@@ -255,7 +255,7 @@ export default function CertificatesScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAF9F6' },
+  container: { flex: 1, backgroundColor: '#FAF9F5' },
   header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 },
   headerTitle: { fontSize: 26, fontWeight: '800', color: '#0F172A', letterSpacing: -0.5 },
   headerSubtitle: { fontSize: 13, color: '#64748B', marginTop: 2 },
@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   summaryTitle: { fontSize: 15, fontWeight: '700', color: '#166534', marginBottom: 2 },
-  summarySub: { fontSize: 12, color: '#15803D', lineHeight: 17 },
+  summarySub: { fontSize: 12, color: '#166534', lineHeight: 17 },
   section: { gap: 12 },
   sectionHeading: { fontSize: 16, fontWeight: '800', color: '#0F172A' },
   certCard: {
@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
     padding: 18,
     borderWidth: 1,
     borderColor: '#F1F5F9',
-    shadowColor: '#000',
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
@@ -306,7 +306,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignSelf: 'flex-start',
   },
-  verifiedBadgeText: { fontSize: 11, fontWeight: '800', color: '#15803D' },
+  verifiedBadgeText: { fontSize: 11, fontWeight: '800', color: '#166534' },
   certMetaRow: {
     flexDirection: 'row',
     gap: 16,
@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#064E3B',
+    backgroundColor: '#164E37',
     paddingVertical: 12,
     borderRadius: 14,
   },
@@ -364,7 +364,7 @@ const styles = StyleSheet.create({
   rejectionTitle: { fontSize: 12, fontWeight: '700', color: '#991B1B', marginBottom: 2 },
   rejectionText: { fontSize: 12, color: '#B91C1C' },
   resubmitBtn: {
-    backgroundColor: '#064E3B',
+    backgroundColor: '#164E37',
     paddingVertical: 11,
     borderRadius: 12,
     alignItems: 'center',
@@ -375,6 +375,6 @@ const styles = StyleSheet.create({
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 30, paddingTop: 60 },
   emptyTitle: { fontSize: 18, fontWeight: '800', color: '#0F172A', marginBottom: 6 },
   emptySubtitle: { fontSize: 13, color: '#64748B', textAlign: 'center', marginBottom: 20, lineHeight: 20 },
-  exploreBtn: { backgroundColor: '#064E3B', paddingHorizontal: 22, paddingVertical: 12, borderRadius: 14 },
+  exploreBtn: { backgroundColor: '#164E37', paddingHorizontal: 22, paddingVertical: 12, borderRadius: 14 },
   exploreBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
 });

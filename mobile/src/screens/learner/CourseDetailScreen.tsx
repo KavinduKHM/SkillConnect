@@ -649,7 +649,7 @@ export default function CourseDetailScreen({ route, navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAF9F6' },
+  container: { flex: 1, backgroundColor: '#FAF9F5' },
   topHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -691,7 +691,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 8,
   },
-  enrolledBadgeText: { color: '#15803D', fontSize: 12, fontWeight: '700' },
+  enrolledBadgeText: { color: '#166534', fontSize: 12, fontWeight: '700' },
   courseTitle: { fontSize: 24, fontWeight: '800', color: '#0F172A', lineHeight: 30, marginBottom: 14 },
   instructorCard: {
     flexDirection: 'row',
@@ -707,7 +707,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#0F766E',
+    backgroundColor: '#164E37',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -715,8 +715,8 @@ const styles = StyleSheet.create({
   nameBadgeRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   instructorName: { fontSize: 15, fontWeight: '700', color: '#0F172A' },
   verifiedPill: { backgroundColor: '#DCFCE7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
-  verifiedPillText: { fontSize: 11, fontWeight: '700', color: '#15803D' },
-  viewProfileLink: { fontSize: 13, fontWeight: '700', color: '#15803D' },
+  verifiedPillText: { fontSize: 11, fontWeight: '700', color: '#166534' },
+  viewProfileLink: { fontSize: 13, fontWeight: '700', color: '#166534' },
   metricsGrid: {
     flexDirection: 'row',
     backgroundColor: '#FFFFFF',
@@ -743,7 +743,7 @@ const styles = StyleSheet.create({
   progressCardTitle: { fontSize: 13, fontWeight: '700', color: '#166534' },
   progressCardPct: { fontSize: 13, fontWeight: '700', color: '#166534' },
   progressBarTrack: { height: 8, backgroundColor: '#BBF7D0', borderRadius: 4, overflow: 'hidden' },
-  progressBarFill: { height: '100%', backgroundColor: '#15803D', borderRadius: 4 },
+  progressBarFill: { height: '100%', backgroundColor: '#164E37', borderRadius: 4 },
   sectionHeading: { fontSize: 18, fontWeight: '800', color: '#0F172A', marginTop: 12, marginBottom: 8 },
   descriptionText: { fontSize: 14, color: '#475569', lineHeight: 22, marginBottom: 12 },
   outcomeList: { gap: 8, marginBottom: 16 },
@@ -764,8 +764,8 @@ const styles = StyleSheet.create({
   checkboxIcon: { fontSize: 18 },
   lessonRow: { flex: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   lessonItem: { fontSize: 14, color: '#334155', flex: 1 },
-  lessonItemDone: { textDecorationLine: 'line-through', color: '#15803D', fontWeight: '600' },
-  playTag: { fontSize: 12, color: '#15803D', fontWeight: '700' },
+  lessonItemDone: { textDecorationLine: 'line-through', color: '#166534', fontWeight: '600' },
+  playTag: { fontSize: 12, color: '#166534', fontWeight: '700' },
   bottomBar: {
     position: 'absolute',
     bottom: 0,
@@ -777,17 +777,17 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
   },
-  enrollBtn: { backgroundColor: '#064E3B', paddingVertical: 14, borderRadius: 14, alignItems: 'center' },
+  enrollBtn: { backgroundColor: '#164E37', paddingVertical: 14, borderRadius: 14, alignItems: 'center' },
   enrolledActionRow: { flexDirection: 'row', gap: 10 },
-  continueBtn: { flex: 1, backgroundColor: '#064E3B', paddingVertical: 14, borderRadius: 14, alignItems: 'center' },
+  continueBtn: { flex: 1, backgroundColor: '#164E37', paddingVertical: 14, borderRadius: 14, alignItems: 'center' },
   cancelBtn: { backgroundColor: '#EF4444', paddingVertical: 14, paddingHorizontal: 16, borderRadius: 14, alignItems: 'center' },
   cancelBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
   actionBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: 'bold' },
   reviewBtn: {
-    backgroundColor: '#F0FDF4', paddingVertical: 14, paddingHorizontal: 14,
-    borderRadius: 14, alignItems: 'center', borderWidth: 1.5, borderColor: '#15803D',
+    backgroundColor: '#DCFCE7', paddingVertical: 14, paddingHorizontal: 14,
+    borderRadius: 14, alignItems: 'center', borderWidth: 1.5, borderColor: '#164E37',
   },
-  reviewBtnText: { color: '#15803D', fontWeight: '700', fontSize: 13 },
+  reviewBtnText: { color: '#166534', fontWeight: '700', fontSize: 13 },
   reviewsSection: { marginTop: 12 },
   publicReviewCard: {
     backgroundColor: '#FFFFFF', padding: 14, borderRadius: 14,

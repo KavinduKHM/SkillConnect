@@ -17,6 +17,7 @@ import Toast from 'react-native-toast-message';
 import { Ionicons } from '@expo/vector-icons';
 import { courseApi, assignmentApi } from '../../api/skill-sharer.service';
 import { Header } from '../../components/common/Header';
+import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { Assignment } from '../../types';
 
 interface CourseWithAssignments {
@@ -31,6 +32,18 @@ export const AssignmentsScreen = ({ navigation }: any) => {
   const [courses, setCourses] = useState<CourseWithAssignments[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  const [confirmConfig, setConfirmConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   // Modal State
   const [modalVisible, setModalVisible] = useState(false);
@@ -163,36 +176,26 @@ export const AssignmentsScreen = ({ navigation }: any) => {
   };
 
   const handleDeleteAssignment = (assignment: Assignment) => {
-    const doDelete = async () => {
-      // Optimistic update
-      setCourses(prev => prev.map(c => ({
-        ...c,
-        assignments: c.assignments.filter(a => a.id !== assignment.id)
-      })));
+    setConfirmConfig({
+      visible: true,
+      title: 'Delete Assignment',
+      message: `Are you sure you want to delete "${assignment.title}"? This cannot be undone.`,
+      onConfirm: async () => {
+        setConfirmConfig((prev) => ({ ...prev, visible: false }));
+        setCourses(prev => prev.map(c => ({
+          ...c,
+          assignments: c.assignments.filter(a => a.id !== assignment.id)
+        })));
 
-      try {
-        await assignmentApi.deleteAssignment(assignment.id);
-        showNotification('Deleted', 'Assignment removed successfully.', 'success');
-      } catch (error: any) {
-        showNotification('Error', error?.error || error?.response?.data?.error || 'Failed to delete assignment.', 'error');
-        fetchCoursesAndAssignments(); // Revert on failure
-      }
-    };
-
-    if (Platform.OS === 'web') {
-      if (window.confirm(`Are you sure you want to delete "${assignment.title}"? This cannot be undone.`)) {
-        doDelete();
-      }
-    } else {
-      Alert.alert(
-        'Delete Assignment',
-        `Are you sure you want to delete "${assignment.title}"? This cannot be undone.`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Delete', style: 'destructive', onPress: doDelete },
-        ]
-      );
-    }
+        try {
+          await assignmentApi.deleteAssignment(assignment.id);
+          showNotification('Deleted', 'Assignment removed successfully.', 'success');
+        } catch (error: any) {
+          showNotification('Error', error?.error || error?.response?.data?.error || 'Failed to delete assignment.', 'error');
+          fetchCoursesAndAssignments(); // Revert on failure
+        }
+      },
+    });
   };
 
   const handleSave = async () => {
@@ -490,6 +493,16 @@ export const AssignmentsScreen = ({ navigation }: any) => {
           </View>
         </View>
       </Modal>
+
+      <ConfirmModal
+        visible={confirmConfig.visible}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        confirmText="Delete"
+        confirmType="danger"
+        onConfirm={confirmConfig.onConfirm}
+        onCancel={() => setConfirmConfig((prev) => ({ ...prev, visible: false }))}
+      />
     </View>
     </View>
   );

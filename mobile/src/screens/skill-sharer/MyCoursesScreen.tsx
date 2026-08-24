@@ -18,12 +18,27 @@ import { courseApi } from '../../api/skill-sharer.service';
 import { authService } from '../../api/auth.service';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Course } from '../../types';
+import { ConfirmModal } from '../../components/common/ConfirmModal';
 
 export const MyCoursesScreen: React.FC = ({ navigation }: any) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [courses, setCourses] = useState<Course[]>([]);
   const [verifiedBadge, setVerifiedBadge] = useState(false);
+
+  const [confirmConfig, setConfirmConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    confirmText?: string;
+    confirmType?: 'danger' | 'primary' | 'warning';
+    onConfirm: () => void;
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   const checkVerificationStatus = async () => {
     try {
@@ -84,82 +99,58 @@ export const MyCoursesScreen: React.FC = ({ navigation }: any) => {
     navigation.navigate('CourseForm', { courseId: course.id });
   };
 
-  const handleDelete = async (course: Course) => {
+  const handleDelete = (course: Course) => {
     if (course.status !== 'DRAFT' && course.status !== 'REJECTED') {
       Toast.show({ type: 'error', text1: 'Cannot Delete', text2: 'Only draft or rejected courses can be deleted.' });
       return;
     }
 
-    const doDelete = async () => {
-      try {
-        await courseApi.deleteCourse(course.id);
-        setCourses(prev => prev.filter((c) => c.id !== course.id));
-        Toast.show({ type: 'success', text1: 'Deleted', text2: 'Course deleted successfully' });
-      } catch (error: any) {
-        console.error('Error deleting course:', error);
-        Toast.show({ type: 'error', text1: 'Error', text2: error?.error || error?.message || 'Failed to delete course' });
-      }
-    };
-
-    if (Platform.OS === 'web') {
-      if (window.confirm(`Are you sure you want to delete "${course.title}"?`)) {
-        doDelete();
-      }
-    } else {
-      Alert.alert(
-        'Delete Course',
-        `Are you sure you want to delete "${course.title}"?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Delete',
-            style: 'destructive',
-            onPress: doDelete,
-          },
-        ]
-      );
-    }
+    setConfirmConfig({
+      visible: true,
+      title: 'Delete Course',
+      message: `Are you sure you want to delete "${course.title}"?`,
+      confirmText: 'Delete',
+      confirmType: 'danger',
+      onConfirm: async () => {
+        setConfirmConfig((prev) => ({ ...prev, visible: false }));
+        try {
+          await courseApi.deleteCourse(course.id);
+          setCourses((prev) => prev.filter((c) => c.id !== course.id));
+          Toast.show({ type: 'success', text1: 'Deleted', text2: 'Course deleted successfully' });
+        } catch (error: any) {
+          console.error('Error deleting course:', error);
+          Toast.show({ type: 'error', text1: 'Error', text2: error?.error || error?.message || 'Failed to delete course' });
+        }
+      },
+    });
   };
 
-  const handleSubmit = async (course: Course) => {
+  const handleSubmit = (course: Course) => {
     if (course.status !== 'DRAFT') {
       Toast.show({ type: 'info', text1: 'Already Submitted', text2: 'This course has already been submitted.' });
       return;
     }
 
-    const doSubmit = async () => {
-      try {
-        await courseApi.submitCourse(course.id);
-        // Update the course in the list
-        setCourses(prev =>
-          prev.map((c) =>
-            c.id === course.id ? { ...c, status: 'SUBMITTED' } : c
-          )
-        );
-        Toast.show({ type: 'success', text1: 'Submitted! ✅', text2: 'Course submitted for admin review.' });
-      } catch (error: any) {
-        console.error('Error submitting course:', error);
-        Toast.show({ type: 'error', text1: 'Error', text2: error?.error || error?.message || 'Failed to submit course' });
-      }
-    };
-
-    if (Platform.OS === 'web') {
-      if (window.confirm(`Are you sure you want to submit "${course.title}" for admin review?`)) {
-        doSubmit();
-      }
-    } else {
-      Alert.alert(
-        'Submit for Approval',
-        `Are you sure you want to submit "${course.title}" for admin review?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Submit',
-            onPress: doSubmit,
-          },
-        ]
-      );
-    }
+    setConfirmConfig({
+      visible: true,
+      title: 'Submit for Approval',
+      message: `Are you sure you want to submit "${course.title}" for admin review?`,
+      confirmText: 'Submit',
+      confirmType: 'primary',
+      onConfirm: async () => {
+        setConfirmConfig((prev) => ({ ...prev, visible: false }));
+        try {
+          await courseApi.submitCourse(course.id);
+          setCourses((prev) =>
+            prev.map((c) => (c.id === course.id ? { ...c, status: 'SUBMITTED' } : c))
+          );
+          Toast.show({ type: 'success', text1: 'Submitted! ✅', text2: 'Course submitted for admin review.' });
+        } catch (error: any) {
+          console.error('Error submitting course:', error);
+          Toast.show({ type: 'error', text1: 'Error', text2: error?.error || error?.message || 'Failed to submit course' });
+        }
+      },
+    });
   };
 
   const onRefresh = async () => {
@@ -170,22 +161,12 @@ export const MyCoursesScreen: React.FC = ({ navigation }: any) => {
 
   const handleCreatePress = () => {
     if (!verifiedBadge) {
-      if (Platform.OS === 'web') {
-        window.alert('Your profile must be approved by an Admin before you can create courses. Please make sure you have added your qualifications and skills.');
-        navigation.navigate('Profile');
-      } else {
-        Alert.alert(
-          'Verification Required',
-          'Your profile must be approved by an Admin before you can create courses. Please make sure you have added your qualifications and skills.',
-          [
-            {
-              text: 'View Professional Profile',
-              onPress: () => navigation.navigate('Profile'),
-            },
-            { text: 'Cancel', style: 'cancel' },
-          ]
-        );
-      }
+      Toast.show({
+        type: 'info',
+        text1: 'Verification Required',
+        text2: 'Your profile must be approved by an Admin before creating courses. Add your qualifications and skills.',
+      });
+      navigation.navigate('Profile');
       return;
     }
     navigation.navigate('CourseCreator');
@@ -239,6 +220,16 @@ export const MyCoursesScreen: React.FC = ({ navigation }: any) => {
         )}
         <View style={styles.footer} />
       </ScrollView>
+
+      <ConfirmModal
+        visible={confirmConfig.visible}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        confirmText={confirmConfig.confirmText}
+        confirmType={confirmConfig.confirmType}
+        onConfirm={confirmConfig.onConfirm}
+        onCancel={() => setConfirmConfig((prev) => ({ ...prev, visible: false }))}
+      />
     </View>
   );
 };

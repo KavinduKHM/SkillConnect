@@ -15,6 +15,7 @@ import Toast from 'react-native-toast-message';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminService, Category } from '../../api/admin.service';
 import { Header } from '../../components/common/Header';
+import { ConfirmModal } from '../../components/common/ConfirmModal';
 
 export const CategoriesScreen = () => {
   const queryClient = useQueryClient();
@@ -24,6 +25,18 @@ export const CategoriesScreen = () => {
     name: '',
     description: '',
     icon: '',
+  });
+
+  const [confirmConfig, setConfirmConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
   });
 
   const { data, isLoading, refetch } = useQuery({
@@ -58,35 +71,26 @@ export const CategoriesScreen = () => {
     }
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    const action = async () => {
-      queryClient.setQueryData(['categories'], (old: any) => 
-        Array.isArray(old) ? old.filter((c: any) => c.id !== id) : old
-      );
-      try {
-        await adminService.deleteCategory(id);
-        Toast.show({ type: 'success', text1: 'Success', text2: 'Category deleted' });
-        queryClient.invalidateQueries({ queryKey: ['categories'] });
-        refetch();
-      } catch (error: any) {
-        Toast.show({ type: 'error', text1: 'Error', text2: error.response?.data?.error || 'Failed to delete' });
-      }
-    };
-
-    if (Platform.OS === 'web') {
-      if (window.confirm(`Are you sure you want to delete "${name}"?`)) {
-        action();
-      }
-    } else {
-      Alert.alert(
-        'Delete Category',
-        `Are you sure you want to delete "${name}"?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Delete', style: 'destructive', onPress: action },
-        ]
-      );
-    }
+  const handleDelete = (id: string, name: string) => {
+    setConfirmConfig({
+      visible: true,
+      title: 'Delete Category',
+      message: `Are you sure you want to delete "${name}"?`,
+      onConfirm: async () => {
+        setConfirmConfig((prev) => ({ ...prev, visible: false }));
+        queryClient.setQueryData(['categories'], (old: any) => 
+          Array.isArray(old) ? old.filter((c: any) => c.id !== id) : old
+        );
+        try {
+          await adminService.deleteCategory(id);
+          Toast.show({ type: 'success', text1: 'Success', text2: 'Category deleted' });
+          queryClient.invalidateQueries({ queryKey: ['categories'] });
+          refetch();
+        } catch (error: any) {
+          Toast.show({ type: 'error', text1: 'Error', text2: error.response?.data?.error || 'Failed to delete' });
+        }
+      },
+    });
   };
 
   const openEditModal = (category: Category) => {
@@ -228,6 +232,16 @@ export const CategoriesScreen = () => {
           </View>
         </View>
       </Modal>
+
+      <ConfirmModal
+        visible={confirmConfig.visible}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        confirmText="Delete"
+        confirmType="danger"
+        onConfirm={confirmConfig.onConfirm}
+        onCancel={() => setConfirmConfig((prev) => ({ ...prev, visible: false }))}
+      />
     </View>
     </View>
   );

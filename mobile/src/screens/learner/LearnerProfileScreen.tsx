@@ -9,16 +9,29 @@ import {
   StatusBar,
   ActivityIndicator,
   Image,
-  Alert,
-  Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fetchMyLearning } from '../../api/learner.service';
+import { ConfirmModal } from '../../components/common/ConfirmModal';
 
 export default function LearnerProfileScreen({ navigation }: any) {
   const [userInfo, setUserInfo] = useState<any>(null);
   const [myLearningData, setMyLearningData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  const [confirmConfig, setConfirmConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    confirmText?: string;
+    confirmType?: 'danger' | 'primary' | 'warning';
+    onConfirm: () => void;
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   const loadProfile = async () => {
     try {
@@ -42,26 +55,19 @@ export default function LearnerProfileScreen({ navigation }: any) {
     loadProfile();
   }, []);
 
-  const handleLogout = async () => {
-    const doLogout = async () => {
-      await AsyncStorage.multiRemove(['@token', '@user']);
-      navigation?.reset({ index: 0, routes: [{ name: 'Auth' }] });
-    };
-
-    if (Platform.OS === 'web') {
-      if (window.confirm('Are you sure you want to sign out of SkillConnect?')) {
-        doLogout();
-      }
-    } else {
-      Alert.alert('Sign Out', 'Are you sure you want to sign out of SkillConnect?', [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Sign Out',
-          style: 'destructive',
-          onPress: doLogout,
-        },
-      ]);
-    }
+  const handleLogout = () => {
+    setConfirmConfig({
+      visible: true,
+      title: 'Sign Out',
+      message: 'Are you sure you want to sign out of SkillConnect?',
+      confirmText: 'Sign Out',
+      confirmType: 'danger',
+      onConfirm: async () => {
+        setConfirmConfig((prev) => ({ ...prev, visible: false }));
+        await AsyncStorage.multiRemove(['@token', '@user']);
+        navigation?.reset({ index: 0, routes: [{ name: 'Auth' }] });
+      },
+    });
   };
 
   const user = userInfo || {
@@ -177,12 +183,22 @@ export default function LearnerProfileScreen({ navigation }: any) {
           </View>
         </ScrollView>
       )}
+
+      <ConfirmModal
+        visible={confirmConfig.visible}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        confirmText={confirmConfig.confirmText}
+        confirmType={confirmConfig.confirmType}
+        onConfirm={confirmConfig.onConfirm}
+        onCancel={() => setConfirmConfig((prev) => ({ ...prev, visible: false }))}
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAF9F6' },
+  container: { flex: 1, backgroundColor: '#FAF9F5' },
   topHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -206,12 +222,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#F1F5F9',
     marginBottom: 16,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
   avatarCircle: {
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: '#064E3B',
+    backgroundColor: '#164E37',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
@@ -220,7 +241,7 @@ const styles = StyleSheet.create({
   userName: { fontSize: 20, fontWeight: '800', color: '#0F172A', marginBottom: 2 },
   userEmail: { fontSize: 13, color: '#64748B', marginBottom: 8 },
   roleBadge: { backgroundColor: '#DCFCE7', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
-  roleBadgeText: { color: '#15803D', fontSize: 11, fontWeight: '700' },
+  roleBadgeText: { color: '#166534', fontSize: 11, fontWeight: '700' },
   statsGrid: {
     flexDirection: 'row',
     backgroundColor: '#FFFFFF',
@@ -250,8 +271,8 @@ const styles = StyleSheet.create({
   instructorSub: { fontSize: 12, color: '#64748B', marginTop: 2, marginBottom: 8 },
   progressRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   progressTrack: { flex: 1, height: 6, backgroundColor: '#F1F5F9', borderRadius: 3, overflow: 'hidden' },
-  progressFill: { height: '100%', backgroundColor: '#064E3B', borderRadius: 3 },
-  progressPctText: { fontSize: 12, fontWeight: '700', color: '#064E3B' },
+  progressFill: { height: '100%', backgroundColor: '#164E37', borderRadius: 3 },
+  progressPctText: { fontSize: 12, fontWeight: '700', color: '#164E37' },
   settingsGroup: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
