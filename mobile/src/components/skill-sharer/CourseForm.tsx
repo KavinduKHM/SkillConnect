@@ -14,6 +14,7 @@ import { Input } from '../common/Input';
 import { Button } from '../common/Button';
 import { CreateCourseInput } from '../../types';
 import * as DocumentPicker from 'expo-document-picker';
+import Toast from 'react-native-toast-message';
 import { courseApi } from '../../api/skill-sharer.service';
 
 interface CourseFormProps {
@@ -108,29 +109,38 @@ export const CourseForm: React.FC<CourseFormProps> = ({
   const languages = ['English', 'Sinhala', 'Tamil', 'Other'];
 
   const handleSubmit = () => {
-  const parsedEstimatedHours =
-    estimatedHours.trim() !== '' ? parseInt(estimatedHours, 10) : undefined;
+    if (!title.trim()) {
+      Toast.show({ type: 'error', text1: 'Required', text2: 'Please enter a course title.' });
+      return;
+    }
+    if (!description.trim()) {
+      Toast.show({ type: 'error', text1: 'Required', text2: 'Please enter a course description.' });
+      return;
+    }
 
-  const data: CreateCourseInput = {
-    title,
-    description,
-    categoryId,
-    difficulty: difficulty as CreateCourseInput['difficulty'],
-    duration,
-    language,
-    prerequisites,
-    learningOutcomes: learningOutcomes
-      .split('\n')
-      .map((o) => o.trim())
-      .filter(Boolean),
-    thumbnail: thumbnail || undefined,
-    ...(parsedEstimatedHours !== undefined
-      ? { estimatedHours: parsedEstimatedHours }
-      : {}),
+    const parsedEstimatedHours =
+      estimatedHours.trim() !== '' ? parseInt(estimatedHours, 10) : undefined;
+
+    const data: CreateCourseInput = {
+      title: title.trim(),
+      description: description.trim(),
+      categoryId,
+      difficulty: difficulty as CreateCourseInput['difficulty'],
+      duration,
+      language,
+      prerequisites,
+      learningOutcomes: learningOutcomes
+        .split('\n')
+        .map((o) => o.trim())
+        .filter(Boolean),
+      thumbnail: thumbnail || undefined,
+      ...(parsedEstimatedHours !== undefined
+        ? { estimatedHours: parsedEstimatedHours }
+        : {}),
+    };
+
+    onSubmit(data);
   };
-
-  onSubmit(data);
-};
 
   return (
     <View style={styles.contentContainer}>

@@ -56,8 +56,37 @@ export default function LessonPlayerScreen({ route, navigation }: any) {
     setActiveMaterial(item);
   };
 
+  const handleDownloadMaterial = (url: string, filename?: string) => {
+    if (!url) return;
+    let targetUrl = url;
+    if (url.includes('dummy.pdf') || url.includes('example.com')) {
+      targetUrl = 'https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf';
+    } else if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      targetUrl = `http://localhost:5000${url.startsWith('/') ? '' : '/'}${url}`;
+    }
+
+    if (Platform.OS === 'web') {
+      try {
+        const link = document.createElement('a');
+        link.href = targetUrl;
+        link.download = filename || 'material.pdf';
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (err) {
+        window.open(targetUrl, '_blank');
+      }
+    } else {
+      Linking.openURL(targetUrl).catch(() => {
+        Alert.alert('Error', 'Could not open or download document');
+      });
+    }
+  };
+
   const renderActiveMaterial = () => {
-    const selected = activeMaterial || videoMaterial;
+    const defaultMaterial = videoMaterial || materials[0];
+    const selected = activeMaterial || defaultMaterial;
 
     if (!selected) {
       return (
@@ -79,11 +108,14 @@ export default function LessonPlayerScreen({ route, navigation }: any) {
     }
 
     let targetUrl = url;
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    if (url.includes('dummy.pdf') || url.includes('example.com')) {
+      targetUrl = 'https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf';
+    } else if (!url.startsWith('http://') && !url.startsWith('https://')) {
       targetUrl = `http://localhost:5000${url.startsWith('/') ? '' : '/'}${url}`;
     }
 
     const isVideo = selected.type === 'VIDEO' || selected.icon === '🎥' || targetUrl.endsWith('.mp4') || targetUrl.endsWith('.webm') || targetUrl.endsWith('.ogg');
+    const isPdf = selected.type === 'PDF' || selected.icon === '📄' || targetUrl.toLowerCase().includes('.pdf') || (selected.title && selected.title.toLowerCase().endsWith('.pdf'));
 
     if (Platform.OS === 'web') {
       if (isVideo) {
@@ -97,13 +129,25 @@ export default function LessonPlayerScreen({ route, navigation }: any) {
           </View>
         );
       } else {
+        const embedUrl = isPdf && targetUrl.startsWith('http')
+          ? `https://docs.google.com/viewer?url=${encodeURIComponent(targetUrl)}&embedded=true`
+          : targetUrl;
+
         return (
           <View style={styles.webFrameContainer}>
             <iframe
-              src={targetUrl}
+              src={embedUrl}
               style={{ width: '100%', height: '100%', border: 'none', backgroundColor: '#FFFFFF' }}
               title={selected.title}
             />
+            {isPdf && (
+              <TouchableOpacity
+                style={styles.openPdfBanner}
+                onPress={() => handleDownloadMaterial(targetUrl, selected.title)}
+              >
+                <Text style={styles.openPdfBannerText}>📥 Download / Open PDF ↗</Text>
+              </TouchableOpacity>
+            )}
           </View>
         );
       }
@@ -162,8 +206,15 @@ export default function LessonPlayerScreen({ route, navigation }: any) {
       const res = await completeLesson(courseId, lessonId);
       setCompleted(true);
       const pct = res.progress?.progressPercentage ?? res.progressPercentage ?? 80;
-      Toast.show({ type: 'success', text1: 'Lesson Completed! 🎉', text2: `Course completion progress is now ${pct}%.` });
-      setTimeout(() => navigation?.goBack(), 1500);
+      Toast.show({ type: 'success', text1: 'Lesson Completed! 🎉', text2: `Course progress: ${pct}%` });
+      // Navigate back to CourseDetail so progress reloads and ticks update
+      setTimeout(() => {
+        if (courseId) {
+          navigation?.navigate('CourseDetail', { courseId });
+        } else {
+          navigation?.goBack();
+        }
+      }, 1500);
     } catch (err: any) {
       const msg = err.response?.data?.error || err.message || 'Could not mark lesson complete';
       Toast.show({ type: 'error', text1: 'Notice', text2: msg });
@@ -238,7 +289,14 @@ export default function LessonPlayerScreen({ route, navigation }: any) {
                     </Text>
                     <Text style={styles.resourceSub}>{subText}</Text>
                   </View>
-                  <TouchableOpacity onPress={() => toggleMaterialCheck(resId)} style={{ padding: 4 }}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      const fileUrl = res.fileUrl || res.externalUrl;
+                      handleDownloadMaterial(fileUrl, res.title);
+                      toggleMaterialCheck(resId);
+                    }}
+                    style={{ padding: 6 }}
+                  >
                     <Text style={styles.downloadIcon}>{isChecked ? '☑️' : '📥'}</Text>
                   </TouchableOpacity>
                 </TouchableOpacity>
@@ -359,5 +417,21 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#E2E8F0',
+  },
+  openPdfBanner: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#064E3B',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  openPdfBannerText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
   },
 });

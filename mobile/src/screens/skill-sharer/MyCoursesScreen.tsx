@@ -92,16 +92,12 @@ export const MyCoursesScreen: React.FC = ({ navigation }: any) => {
 
     const doDelete = async () => {
       try {
-        const response = await courseApi.deleteCourse(course.id);
-        if (response.success) {
-          setCourses(prev => prev.filter((c) => c.id !== course.id));
-          Toast.show({ type: 'success', text1: 'Success', text2: 'Course deleted successfully' });
-        } else {
-          Toast.show({ type: 'error', text1: 'Error', text2: response.error || 'Failed to delete course' });
-        }
-      } catch (error) {
+        await courseApi.deleteCourse(course.id);
+        setCourses(prev => prev.filter((c) => c.id !== course.id));
+        Toast.show({ type: 'success', text1: 'Deleted', text2: 'Course deleted successfully' });
+      } catch (error: any) {
         console.error('Error deleting course:', error);
-        Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to delete course' });
+        Toast.show({ type: 'error', text1: 'Error', text2: error?.error || error?.message || 'Failed to delete course' });
       }
     };
 
@@ -133,21 +129,17 @@ export const MyCoursesScreen: React.FC = ({ navigation }: any) => {
 
     const doSubmit = async () => {
       try {
-        const response = await courseApi.submitCourse(course.id);
-        if (response.success) {
-          // Update the course in the list
-          setCourses(prev =>
-            prev.map((c) =>
-              c.id === course.id ? { ...c, status: 'SUBMITTED' } : c
-            )
-          );
-          Toast.show({ type: 'success', text1: 'Success', text2: 'Course submitted for approval!' });
-        } else {
-          Toast.show({ type: 'error', text1: 'Error', text2: response.error || 'Failed to submit course' });
-        }
-      } catch (error) {
+        await courseApi.submitCourse(course.id);
+        // Update the course in the list
+        setCourses(prev =>
+          prev.map((c) =>
+            c.id === course.id ? { ...c, status: 'SUBMITTED' } : c
+          )
+        );
+        Toast.show({ type: 'success', text1: 'Submitted! ✅', text2: 'Course submitted for admin review.' });
+      } catch (error: any) {
         console.error('Error submitting course:', error);
-        Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to submit course' });
+        Toast.show({ type: 'error', text1: 'Error', text2: error?.error || error?.message || 'Failed to submit course' });
       }
     };
 

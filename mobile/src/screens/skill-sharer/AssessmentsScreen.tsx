@@ -67,14 +67,13 @@ export const AssessmentsScreen = ({ navigation }: any) => {
       setLoading(true);
       const res: any = await courseApi.getMyCourses();
       let myCourses = [];
-      if (res && res.success && Array.isArray(res.data)) {
-        myCourses = res.data;
-      } else if (res && res.data && res.data.success && Array.isArray(res.data.data)) {
+      // Axios wraps response — actual ApiResponse is at res.data, courses array at res.data.data or res.data
+      if (res?.data?.data && Array.isArray(res.data.data)) {
         myCourses = res.data.data;
+      } else if (res?.data && Array.isArray(res.data)) {
+        myCourses = res.data;
       } else if (Array.isArray(res)) {
         myCourses = res;
-      } else if (res && Array.isArray(res.data)) {
-        myCourses = res.data;
       }
 
       if (Array.isArray(myCourses)) {
@@ -82,7 +81,8 @@ export const AssessmentsScreen = ({ navigation }: any) => {
           myCourses.map(async (c: any) => {
             try {
               const quizRes: any = await quizApi.getCourseQuizzes(c.id);
-              const quizzes = quizRes?.quizzes || quizRes?.data || [];
+              // Backend returns { success: true, quizzes: [...] }; axios wraps at .data
+              const quizzes: any[] = quizRes?.data?.quizzes || (Array.isArray(quizRes?.data) ? quizRes.data : []);
               return {
                 id: c.id,
                 title: c.title,

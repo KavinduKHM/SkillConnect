@@ -121,7 +121,7 @@ export const CourseApprovalScreen = () => {
               <StatusBadge status={course.status} />
             </View>
 
-            <Text style={styles.cardDescription} numberOfLines={2}>
+            <Text style={styles.cardDescription} numberOfLines={3}>
               {course.description}
             </Text>
 
@@ -132,12 +132,48 @@ export const CourseApprovalScreen = () => {
               </View>
               <View style={styles.metaItem}>
                 <Text style={styles.metaLabel}>Category:</Text>
-                <Text style={styles.metaValue}>{course.category?.name || 'N/A'}</Text>
+                <Text style={styles.metaValue}>{(course as any).category?.name || 'N/A'}</Text>
               </View>
               <View style={styles.metaItem}>
                 <Text style={styles.metaLabel}>Difficulty:</Text>
                 <Text style={styles.metaValue}>{course.difficulty || 'N/A'}</Text>
               </View>
+              {(course as any).deliveryMethod && (
+                <View style={styles.metaItem}>
+                  <Text style={styles.metaLabel}>Delivery:</Text>
+                  <Text style={styles.metaValue}>{(course as any).deliveryMethod.replace('_', ' ')}</Text>
+                </View>
+              )}
+              {(course as any).estimatedHours != null && (
+                <View style={styles.metaItem}>
+                  <Text style={styles.metaLabel}>Est. Hours:</Text>
+                  <Text style={styles.metaValue}>{(course as any).estimatedHours} hrs</Text>
+                </View>
+              )}
+              {(course as any).duration && (
+                <View style={styles.metaItem}>
+                  <Text style={styles.metaLabel}>Duration:</Text>
+                  <Text style={styles.metaValue}>{(course as any).duration}</Text>
+                </View>
+              )}
+              {Array.isArray((course as any).learningOutcomes) && (course as any).learningOutcomes.length > 0 && (
+                <View style={styles.metaItem}>
+                  <Text style={styles.metaLabel}>Outcomes:</Text>
+                  <Text style={styles.metaValue}>{(course as any).learningOutcomes.length} learning outcomes</Text>
+                </View>
+              )}
+              {(course as any).prerequisites && (
+                <View style={[styles.metaItem, { alignItems: 'flex-start' }]}>
+                  <Text style={styles.metaLabel}>Prereqs:</Text>
+                  <Text style={[styles.metaValue, { flex: 1 }]} numberOfLines={2}>{(course as any).prerequisites}</Text>
+                </View>
+              )}
+              {(course as any).submittedAt && (
+                <View style={styles.metaItem}>
+                  <Text style={styles.metaLabel}>Submitted:</Text>
+                  <Text style={styles.metaValue}>{new Date((course as any).submittedAt).toLocaleDateString()}</Text>
+                </View>
+              )}
             </View>
 
             {course.creator.verifiedBadge && (

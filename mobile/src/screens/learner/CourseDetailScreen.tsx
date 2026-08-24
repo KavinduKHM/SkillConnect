@@ -1,5 +1,4 @@
-// Triggering Metro Re-evaluation
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -13,7 +12,9 @@ import {
   Image,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { fetchCourseDetails, enrollCourse, cancelEnrollment, completeLesson } from '../../api/learner.service';
+import { useFocusEffect } from '@react-navigation/native';
+import { fetchCourseDetails, enrollCourse, cancelEnrollment, completeLesson, fetchCourseAssignments } from '../../api/learner.service';
+import { quizApi } from '../../api/skill-sharer.service';
 import { Header } from '../../components/common/Header';
 
 export default function CourseDetailScreen({ route, navigation }: any) {
@@ -24,28 +25,57 @@ export default function CourseDetailScreen({ route, navigation }: any) {
   const [userEnrollment, setUserEnrollment] = useState<any>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [completedLessonIds, setCompletedLessonIds] = useState<string[]>([]);
+  const [assignments, setAssignments] = useState<any[]>([]);
+  const [quizzes, setQuizzes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
 
   const loadDetails = async () => {
     try {
       setLoading(true);
-      const [res, userStr] = await Promise.all([
+      const [resResult, userStrResult, assignResult, quizResult] = await Promise.allSettled([
         fetchCourseDetails(courseId),
         AsyncStorage.getItem('user'),
+        fetchCourseAssignments(courseId),
+        quizApi.getCourseQuizzes(courseId),
       ]);
-      if (userStr) {
-        try { setCurrentUser(JSON.parse(userStr)); } catch (e) {}
+
+      if (userStrResult.status === 'fulfilled' && userStrResult.value) {
+        try { setCurrentUser(JSON.parse(userStrResult.value)); } catch (e) {}
       }
-      if (res?.course) {
-        setCourseData(res.course);
-        setUserEnrollment(res.userEnrollment);
-        if (res.userEnrollment?.lessonProgress) {
-          const doneIds = res.userEnrollment.lessonProgress
-            .filter((lp: any) => lp.completed)
-            .map((lp: any) => lp.lessonId);
-          setCompletedLessonIds(doneIds);
+
+      if (resResult.status === 'fulfilled' && resResult.value) {
+        const res: any = resResult.value;
+        if (res?.course) {
+          setCourseData(res.course);
+          setUserEnrollment(res.userEnrollment);
+          if (res.userEnrollment?.lessonProgress) {
+            const doneIds = res.userEnrollment.lessonProgress
+              .filter((lp: any) => lp.completed)
+              .map((lp: any) => lp.lessonId);
+            setCompletedLessonIds(doneIds);
+          }
         }
+      }
+
+      if (assignResult.status === 'fulfilled' && assignResult.value) {
+        const assignRes: any = assignResult.value;
+        const list =
+          assignRes?.data?.assignments ||
+          assignRes?.data?.data?.assignments ||
+          assignRes?.assignments ||
+          (Array.isArray(assignRes?.data) ? assignRes.data : []);
+        setAssignments(Array.isArray(list) ? list : []);
+      }
+
+      if (quizResult.status === 'fulfilled' && quizResult.value) {
+        const quizRes: any = quizResult.value;
+        const list =
+          quizRes?.data?.quizzes ||
+          quizRes?.data?.data?.quizzes ||
+          quizRes?.quizzes ||
+          (Array.isArray(quizRes?.data) ? quizRes.data : []);
+        setQuizzes(Array.isArray(list) ? list : []);
       }
     } catch (err) {
       console.log('Error loading course details from API, using fallback data:', err);
@@ -54,9 +84,11 @@ export default function CourseDetailScreen({ route, navigation }: any) {
     }
   };
 
-  useEffect(() => {
-    loadDetails();
-  }, [courseId]);
+  useFocusEffect(
+    useCallback(() => {
+      loadDetails();
+    }, [courseId])
+  );
 
   const handleBack = () => {
     if (navigation?.canGoBack && navigation.canGoBack()) {
@@ -165,6 +197,49 @@ export default function CourseDetailScreen({ route, navigation }: any) {
     currentUser.id === course.creator?.id ||
     currentUser.role === 'SKILL_SHARER' ||
     currentUser.role === 'INSTRUCTOR'
+  );
+  const renderedModules = course.modules && course.modules.length > 0 ? (
+    course.modules.map((mod: any, idx: number) => (
+      <View key={mod.id || idx} style={styles.moduleCard}>
+        <View style={styles.moduleHeaderRow}>
+          <Text style={styles.moduleTitle}>{mod.title}</Text>
+          <Text style={styles.moduleMetaText}>{mod.lessons?.length || 0} lessons</Text>
+        </View>
+
+        {mod.lessons?.map((les: any, lIdx: number) => {
+          const isDone = completedLessonIds.includes(les.id);
+          return (
+            <View key={les.id || lIdx} style={styles.lessonRowWrapper}>
+              {isEnrolled && (
+                <TouchableOpacity style={styles.checkboxBtn} onPress={() => handleToggleLesson(les.id)}>
+                  <Text style={styles.checkboxIcon}>{isDone ? '☑️' : '◯'}</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={styles.lessonRow}
+                onPress={() => {
+                  if (isEnrolled) {
+                    navigation?.navigate('LessonPlayer', { courseId, lessonId: les.id, lessonTitle: les.title });
+                  } else {
+                    Alert.alert('Enrollment Required', 'Please enroll in the course to view lesson contents.');
+                  }
+                }}
+              >
+                <Text style={[styles.lessonItem, isDone && styles.lessonItemDone]}>
+                  {les.title} ({les.estimatedMinutes || 15} mins)
+                </Text>
+                {isEnrolled && <Text style={styles.playTag}>Play ▶</Text>}
+              </TouchableOpacity>
+            </View>
+          );
+        })}
+      </View>
+    ))
+  ) : (
+    <View style={styles.moduleCard}>
+      <Text style={styles.moduleTitle}>Module 1: Introduction</Text>
+      <Text style={styles.lessonItem}>• Course Overview & Fundamentals (20 mins)</Text>
+    </View>
   );
 
   return (
@@ -305,47 +380,73 @@ export default function CourseDetailScreen({ route, navigation }: any) {
 
             {/* Course Content / Syllabus */}
             <Text style={styles.sectionHeading}>Course Content</Text>
-            {course.modules && course.modules.length > 0 ? (
-              course.modules.map((mod: any, idx: number) => (
-                <View key={mod.id || idx} style={styles.moduleCard}>
-                  <View style={styles.moduleHeaderRow}>
-                    <Text style={styles.moduleTitle}>{mod.title}</Text>
-                    <Text style={styles.moduleMetaText}>{mod.lessons?.length || 0} lessons</Text>
-                  </View>
+            {renderedModules}
 
-                  {mod.lessons?.map((les: any, lIdx: number) => {
-                    const isDone = completedLessonIds.includes(les.id);
-                    return (
-                      <View key={les.id || lIdx} style={styles.lessonRowWrapper}>
-                        {isEnrolled && (
-                          <TouchableOpacity style={styles.checkboxBtn} onPress={() => handleToggleLesson(les.id)}>
-                            <Text style={styles.checkboxIcon}>{isDone ? '☑️' : '◯'}</Text>
-                          </TouchableOpacity>
-                        )}
-                        <TouchableOpacity
-                          style={styles.lessonRow}
-                          onPress={() => {
-                            if (isEnrolled) {
-                              navigation?.navigate('LessonPlayer', { courseId, lessonId: les.id, lessonTitle: les.title });
-                            } else {
-                              Alert.alert('Enrollment Required', 'Please enroll in the course to view lesson contents.');
-                            }
-                          }}
-                        >
-                          <Text style={[styles.lessonItem, isDone && styles.lessonItemDone]}>
-                            {les.title} ({les.estimatedMinutes || 15} mins)
-                          </Text>
-                          {isEnrolled && <Text style={styles.playTag}>Play ▶</Text>}
-                        </TouchableOpacity>
-                      </View>
-                    );
-                  })}
-                </View>
-              ))
-            ) : (
-              <View style={styles.moduleCard}>
-                <Text style={styles.moduleTitle}>Module 1: Introduction</Text>
-                <Text style={styles.lessonItem}>• Course Overview & Fundamentals (20 mins)</Text>
+            {/* Assignments & Assessments Section */}
+            {(assignments.length > 0 || quizzes.length > 0) && (
+              <View style={{ marginBottom: 24 }}>
+                <Text style={styles.sectionHeading}>Assignments & Assessments 📝</Text>
+
+                {assignments.map((asgn: any, aIdx: number) => (
+                  <TouchableOpacity
+                    key={asgn.id || aIdx}
+                    style={styles.assignmentCardRow}
+                    onPress={() => {
+                      if (isEnrolled) {
+                        navigation?.navigate('AssignmentDetail', { assignmentId: asgn.id });
+                      } else {
+                        Alert.alert('Enrollment Required', 'Please enroll in the course to view and submit assignments.');
+                      }
+                    }}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 15, fontWeight: '700', color: '#1E293B', marginBottom: 4 }}>
+                        📄 {asgn.title}
+                      </Text>
+                      {asgn.instructions ? (
+                        <Text style={{ fontSize: 13, color: '#64748B' }} numberOfLines={2}>
+                          {asgn.instructions}
+                        </Text>
+                      ) : null}
+                      <Text style={{ fontSize: 12, color: '#94A3B8', marginTop: 4 }}>
+                        Deadline: {asgn.deadline ? new Date(asgn.deadline).toLocaleDateString() : 'No deadline'} | Max Marks: {asgn.maxMarks || 100}
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#4F46E5', marginLeft: 8 }}>
+                      {isEnrolled ? 'Open →' : 'Enroll to View'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+
+                {quizzes.map((qz: any, qIdx: number) => (
+                  <TouchableOpacity
+                    key={qz.id || qIdx}
+                    style={styles.assignmentCardRow}
+                    onPress={() => {
+                      if (isEnrolled) {
+                        navigation?.navigate('AssessmentDetail', {
+                          assessment: qz,
+                          courseName: course.title,
+                          status: 'PENDING',
+                        });
+                      } else {
+                        Alert.alert('Enrollment Required', 'Please enroll in the course to take quizzes.');
+                      }
+                    }}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 15, fontWeight: '700', color: '#1E293B', marginBottom: 4 }}>
+                        🧠 {qz.title || 'Course Quiz'}
+                      </Text>
+                      <Text style={{ fontSize: 12, color: '#94A3B8' }}>
+                        Passing Score: {qz.passingScore || 70}%
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#15803D', marginLeft: 8 }}>
+                      {isEnrolled ? 'Take Quiz →' : 'Enroll to Take'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
               </View>
             )}
 
@@ -656,4 +757,15 @@ const styles = StyleSheet.create({
   },
   reviewsCtaTitle: { fontSize: 15, fontWeight: '700', color: '#166534' },
   reviewsCtaSub: { fontSize: 12, color: '#15803D', marginTop: 2 },
+  assignmentCardRow: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
 });

@@ -53,28 +53,33 @@ export const CourseCreatorScreen = ({ navigation }: any) => {
       }
 
       const response = await courseApi.createCourse(data);
-      const resData = response.data ?? response;
+      const resData: any = response.data ?? response;
       
-      if (response.success) {
+      if (resData.success !== false) {
         Toast.show({
           type: 'success',
-          text1: 'Success',
-          text2: 'Course created successfully!',
+          text1: 'Course Created! 🎉',
+          text2: 'Your course has been created successfully.',
         });
         navigation.navigate('MyCourses');
       } else {
         Toast.show({
           type: 'error',
           text1: 'Error',
-          text2: response.error || 'Failed to create course',
+          text2: resData.error || 'Failed to create course',
         });
       }
     } catch (error: any) {
       console.error('Error creating course:', error);
+      // error.errors or error.data.errors contains backend validator messages
+      const validationErrors: any[] = error?.errors || error?.data?.errors || [];
+      const errorText = validationErrors.length > 0
+        ? validationErrors.map((e: any) => e.msg).join(', ')
+        : (error?.error || error?.message || 'Failed to create course');
       Toast.show({
         type: 'error',
         text1: 'Error',
-        text2: error?.message || 'Failed to create course',
+        text2: errorText,
       });
     } finally {
       setLoading(false);

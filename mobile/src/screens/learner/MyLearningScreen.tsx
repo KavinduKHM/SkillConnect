@@ -40,12 +40,15 @@ export default function MyLearningScreen({ navigation }: any) {
       }
 
       const quizRes: any = await fetchMyQuizzes();
-      const quizzes = quizRes?.quizzes || quizRes?.data || (Array.isArray(quizRes) ? quizRes : []);
+      // Backend returns { success: true, quizzes: [...] }; axios wraps at .data
+      const quizzes: any[] = quizRes?.data?.quizzes || (Array.isArray(quizRes?.data) ? quizRes.data : []);
       setAssessments(quizzes);
 
       // Fetch assignments for all enrolled courses
       const allAssignments: any[] = [];
-      const enrolledCourseIds = [...(res?.inProgress || []), ...(res?.completed || [])].map((c: any) => c.courseId);
+      const enrolledCourseIds = [...(res?.inProgress || []), ...(res?.completed || [])]
+        .map((c: any) => c.courseId || c.course?.id)
+        .filter((id: any): id is string => Boolean(id));
 
       const { fetchCourseAssignments, fetchLearnerSubmissions, fetchMyCertificates, fetchMyCompletionRequests } = require('../../api/learner.service');
 
@@ -62,23 +65,36 @@ export default function MyLearningScreen({ navigation }: any) {
       for (const cId of Array.from(new Set(enrolledCourseIds))) {
         try {
           const assignRes: any = await fetchCourseAssignments(cId as string);
-          const courseAssignments = assignRes?.assignments || assignRes?.data?.assignments || [];
+          // Backend returns { success: true, assignments: [...] }
+          // Axios wraps this at response.data, so: assignRes.data.assignments
+          const courseAssignments: any[] =
+            assignRes?.data?.assignments ||
+            assignRes?.data?.data?.assignments ||
+            assignRes?.assignments ||
+            (Array.isArray(assignRes?.data) ? assignRes.data : []);
 
           for (const assignment of courseAssignments) {
             try {
               const subRes: any = await fetchLearnerSubmissions(assignment.id);
-              const subs = subRes?.submissions || subRes?.data || [];
+              // Backend returns { success: true, submissions: [...] } → axios wraps at .data
+              const subs: any[] =
+                subRes?.data?.submissions ||
+                subRes?.data?.data?.submissions ||
+                subRes?.submissions ||
+                (Array.isArray(subRes?.data) ? subRes.data : []);
               assignment.mySubmission = subs.length > 0 ? subs[0] : null;
             } catch (e) {
               assignment.mySubmission = null;
             }
-            const matchedCourse = [...(res?.inProgress || []), ...(res?.completed || [])].find((c: any) => c.courseId === cId)?.course;
+            const matchedCourse = [...(res?.inProgress || []), ...(res?.completed || [])].find(
+              (c: any) => (c.courseId || c.course?.id) === cId
+            )?.course;
             if (matchedCourse && !assignment.course) assignment.course = matchedCourse;
 
             allAssignments.push(assignment);
           }
         } catch (e) {
-          console.log(`Failed to fetch assignments for course ${cId}`);
+          console.log(`Failed to fetch assignments for course ${cId}`, e);
         }
       }
       setAssignments(allAssignments);

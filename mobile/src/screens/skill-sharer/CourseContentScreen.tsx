@@ -16,6 +16,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
+import Toast from 'react-native-toast-message';
 import { courseService, moduleService, lessonService, materialService } from '../../api/skill-sharer.service';
 import { Header } from '../../components/common/Header';
 
@@ -278,8 +279,8 @@ const handleAddModule = async () => {
 
       setUploading(true);
       await materialService.uploadMaterial(formData);
-      Alert.alert('Success', 'Material uploaded successfully');
-      loadData();
+      await loadData();
+      Toast.show({ type: 'success', text1: 'Material Added ✅', text2: `${file.name || 'File'} added to lesson successfully.` });
     } catch (error: any) {
       Alert.alert('Error', error.error || 'Failed to upload material');
     } finally {
