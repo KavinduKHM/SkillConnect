@@ -9,11 +9,13 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
-  Platform,
   Linking,
+  Platform,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { Ionicons } from '@expo/vector-icons';
 import { assignmentApi } from '../../api/skill-sharer.service';
+import { Header } from '../../components/common/Header';
 import { AssignmentSubmission } from '../../types';
 
 export const AssignmentSubmissionsScreen = ({ route, navigation }: any) => {
@@ -36,11 +38,7 @@ export const AssignmentSubmissionsScreen = ({ route, navigation }: any) => {
   }, [assignmentId]);
 
   const showNotification = (title: string, message: string) => {
-    if (Platform.OS === 'web') {
-      window.alert(`${title}: ${message}`);
-    } else {
-      Alert.alert(title, message);
-    }
+    Toast.show({ type: title.toLowerCase().includes('success') ? 'success' : 'error', text1: title, text2: message });
   };
 
   const fetchSubmissions = async () => {
@@ -185,16 +183,9 @@ export const AssignmentSubmissionsScreen = ({ route, navigation }: any) => {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation?.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#111827" />
-        </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle} numberOfLines={1}>Submissions</Text>
-          <Text style={styles.headerSubtitle} numberOfLines={1}>{assignmentTitle || 'Assignment'}</Text>
-        </View>
-      </View>
+    <View style={{ flex: 1 }}>
+      <Header title="Assignment Submissions" showBack={true} />
+      <View style={styles.container}>
 
       <View style={styles.content}>
         {loading && !refreshing ? (
@@ -293,6 +284,7 @@ export const AssignmentSubmissionsScreen = ({ route, navigation }: any) => {
           </View>
         </View>
       </Modal>
+    </View>
     </View>
   );
 };

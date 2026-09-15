@@ -111,26 +111,35 @@ export class CourseService {
     });
   }
 
-  // Delete draft course (only drafts)
+  // Delete draft or rejected course (cleaning up non-cascade relations)
   async deleteCourse(id: string, creatorId: string): Promise<Course> {
-    // Check if course is a draft
+    // Check if course is a draft or rejected
     const course = await prisma.course.findFirst({
       where: {
         id,
         creatorId,
-        status: 'DRAFT',
+        status: { in: ['DRAFT', 'REJECTED'] },
       },
     });
 
     if (!course) {
-      throw new Error('Only draft courses can be deleted');
+      throw new Error('Only draft or rejected courses can be deleted');
     }
 
-    return prisma.course.delete({
-      where: {
-        id,
-        creatorId,
-      },
-    });
+    // Clean up any remaining records that don't cascade delete on DB level
+    await prisma.$transaction([
+      prisma.learningHistory.deleteMany({ where: { courseId: id } }),
+      prisma.learnerRecommendation.deleteMany({ where: { courseId: id } }),
+      prisma.report.deleteMany({ where: { courseId: id } }),
+      prisma.certificate.deleteMany({ where: { courseId: id } }),
+      prisma.course.delete({
+        where: {
+          id,
+          creatorId,
+        },
+      }),
+    ]);
+
+    return course;
   }
 }

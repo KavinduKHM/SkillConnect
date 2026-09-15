@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,10 +7,16 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
+  Alert,
+  Platform,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 // ✅ Use your existing API service instead
-import { courseApi, profileApi } from '../../api/skill-sharer.service';
+import { courseApi, profileService } from '../../api/skill-sharer.service';
+import { authService } from '../../api/auth.service';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
+import { Header } from '../../components/common/Header';
 
 interface Course {
   id: string;
@@ -28,19 +34,45 @@ export const DashboardScreen = ({ navigation }: any) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    loadUserData();
-    loadCourses();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadUserData();
+      loadCourses();
+    }, [])
+  );
 
   const loadUserData = async () => {
     try {
-      // ✅ Get user data from storage
+      // 1. Get cached user from storage
       const userData = await AsyncStorage.getItem('user');
       if (userData) {
         const user = JSON.parse(userData);
         setUserName(user.name || 'User');
         setVerifiedBadge(user.verifiedBadge || false);
+      }
+
+      // 2. Fetch profile from API to check if skills are setup
+      const profileRes = await profileService.getMyProfile();
+      const profile = profileRes?.data?.data ?? profileRes?.data;
+      if (profile) {
+        if (!profile.skills || profile.skills.length === 0) {
+          Toast.show({
+            type: 'info',
+            text1: 'Add Your Skills',
+            text2: 'Please specify your skills so that the admin can verify your account.',
+          });
+          navigation.navigate('Profile');
+          return;
+        }
+      }
+
+      // 3. Fetch fresh user data from API to sync verifiedBadge status
+      const res = await authService.getMe();
+      const freshUser = res.data?.data ?? res.data;
+      if (freshUser) {
+        setUserName(freshUser.name || 'User');
+        setVerifiedBadge(freshUser.verifiedBadge || false);
+        await AsyncStorage.setItem('user', JSON.stringify(freshUser));
       }
     } catch (error) {
       console.error('Error loading user data:', error);
@@ -54,8 +86,8 @@ export const DashboardScreen = ({ navigation }: any) => {
         setCourses(response.data);
       } else if (Array.isArray(response)) {
         setCourses(response);
-      } else if (response && Array.isArray(response.data?.data)) {
-        setCourses(response.data.data);
+      } else if (response && Array.isArray((response as any).data?.data)) {
+        setCourses((response as any).data.data);
       } else {
         setCourses([]);
       }
@@ -71,6 +103,19 @@ export const DashboardScreen = ({ navigation }: any) => {
   const onRefresh = () => {
     setRefreshing(true);
     loadCourses();
+  };
+
+  const handleCreateCoursePress = () => {
+    if (!verifiedBadge) {
+      Toast.show({
+        type: 'info',
+        text1: 'Verification Required',
+        text2: 'Your profile must be approved by an Admin before creating courses. Add your qualifications and skills.',
+      });
+      navigation.navigate('Profile');
+      return;
+    }
+    navigation.navigate('CourseCreator');
   };
 
   const getStatusColor = (status: string) => {
@@ -112,12 +157,15 @@ export const DashboardScreen = ({ navigation }: any) => {
   }
 
   return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
-    >
+    <View style={{ flex: 1 }}>
+      <Header title="Skill Sharer Dashboard" />
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
       {/* User Info */}
       <View style={styles.header}>
         <View>
@@ -157,7 +205,7 @@ export const DashboardScreen = ({ navigation }: any) => {
         <View style={styles.actionGrid}>
           <TouchableOpacity
             style={styles.actionCard}
-            onPress={() => navigation.navigate('CourseCreator')}
+            onPress={handleCreateCoursePress}
           >
             <Text style={styles.actionIcon}>➕</Text>
             <Text style={styles.actionLabel}>Create Course</Text>
@@ -246,51 +294,60 @@ export const DashboardScreen = ({ navigation }: any) => {
         </View>
       )}
     </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#FAF9F5',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#FAF9F5',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: 'white',
+    backgroundColor: '#FFFFFF',
     padding: 20,
-    margin: 16,
-    borderRadius: 12,
-    shadowColor: '#000',
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 12,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
     elevation: 2,
   },
   welcome: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 13,
+    color: '#64748B',
   },
   userName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#0F172A',
+    letterSpacing: -0.5,
   },
   verifiedBadge: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#DCFCE7',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
   },
   verifiedText: {
-    color: 'white',
-    fontWeight: '600',
+    color: '#166534',
+    fontWeight: '700',
     fontSize: 12,
   },
   statsContainer: {
@@ -300,27 +357,30 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   statCard: {
-    backgroundColor: 'white',
+    backgroundColor: '#FFFFFF',
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 18,
     alignItems: 'center',
     flex: 1,
     marginHorizontal: 4,
-    shadowColor: '#000',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
     elevation: 2,
   },
   statNumber: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#2196F3',
+    fontWeight: '800',
+    color: '#164E37',
   },
   statLabel: {
     fontSize: 12,
-    color: '#666',
+    color: '#64748B',
     marginTop: 4,
+    fontWeight: '500',
   },
   section: {
     marginHorizontal: 16,
@@ -328,8 +388,8 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: '800',
+    color: '#0F172A',
     marginBottom: 12,
   },
   actionGrid: {
@@ -338,16 +398,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   actionCard: {
-    backgroundColor: 'white',
+    backgroundColor: '#FFFFFF',
     width: '48%',
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 18,
     alignItems: 'center',
-    marginBottom: 8,
-    shadowColor: '#000',
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
     elevation: 2,
   },
   actionIcon: {
@@ -355,18 +417,21 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   actionLabel: {
-    fontSize: 14,
-    color: '#333',
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#334155',
   },
   courseCard: {
-    backgroundColor: 'white',
+    backgroundColor: '#FFFFFF',
     padding: 16,
-    borderRadius: 12,
-    marginBottom: 8,
-    shadowColor: '#000',
+    borderRadius: 18,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
     elevation: 2,
   },
   courseHeader: {
@@ -377,8 +442,8 @@ const styles = StyleSheet.create({
   },
   courseTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: '700',
+    color: '#0F172A',
     flex: 1,
   },
   statusBadge: {
@@ -388,13 +453,14 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 10,
-    color: 'white',
-    fontWeight: '600',
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
   courseDescription: {
     fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
+    color: '#64748B',
+    marginBottom: 10,
+    lineHeight: 20,
   },
   courseFooter: {
     flexDirection: 'row',
@@ -408,11 +474,11 @@ const styles = StyleSheet.create({
   },
   difficultyText: {
     fontSize: 10,
-    color: 'white',
-    fontWeight: '600',
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
   courseDate: {
     fontSize: 12,
-    color: '#999',
+    color: '#94A3B8',
   },
 });

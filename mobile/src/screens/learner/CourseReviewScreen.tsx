@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -21,6 +22,7 @@ import {
   deleteCourseReview,
   fetchCourseDetails,
 } from '../../api/learner.service';
+import { Header } from '../../components/common/Header';
 
 const STAR_COUNT = 5;
 
@@ -120,24 +122,24 @@ export default function CourseReviewScreen({ route, navigation }: any) {
 
   const handleSubmitReview = async () => {
     if (rating === 0) {
-      Alert.alert('Rating Required', 'Please select a star rating between 1 and 5.');
+      Toast.show({ type: 'error', text1: 'Rating Required', text2: 'Please select a star rating between 1 and 5.' });
       return;
     }
     try {
       setSubmitting(true);
       if (isEditing && myReview) {
         await updateCourseReview(myReview.id, { rating, comment, review: comment } as any);
-        Alert.alert('Success', 'Your review has been updated!');
+        Toast.show({ type: 'success', text1: 'Success', text2: 'Your review has been updated!' });
       } else {
         await createCourseReview({ courseId, rating, comment, review: comment } as any);
-        Alert.alert('Success', 'Your review has been submitted!');
+        Toast.show({ type: 'success', text1: 'Success', text2: 'Your review has been submitted!' });
       }
       setIsEditing(false);
       setComment('');
       loadReviews();
     } catch (err: any) {
       const errMsg = err?.response?.data?.error || err?.error || err?.message || 'Failed to submit review.';
-      Alert.alert('Notice', errMsg);
+      Toast.show({ type: 'error', text1: 'Notice', text2: errMsg });
     } finally {
       setSubmitting(false);
     }
@@ -164,7 +166,7 @@ export default function CourseReviewScreen({ route, navigation }: any) {
             setMyReview(null);
             loadReviews();
           } catch (err: any) {
-            Alert.alert('Error', err?.error || err?.message || 'Failed to delete review.');
+            Toast.show({ type: 'error', text1: 'Error', text2: err?.error || err?.message || 'Failed to delete review.' });
           }
         }
       }
@@ -179,28 +181,20 @@ export default function CourseReviewScreen({ route, navigation }: any) {
   const canReview = hasCompleted || !!myReview;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#4F46E5" />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => {
-            if (navigation?.canGoBack && navigation.canGoBack()) {
-              navigation.goBack();
-            } else {
-              navigation?.navigate('CourseList');
-            }
-          }}
-          style={styles.backBtn}
-        >
-          <Ionicons name="arrow-back" size={22} color="#fff" />
-        </TouchableOpacity>
-        <View style={{ flex: 1, marginLeft: 12 }}>
-          <Text style={styles.headerTitle}>Ratings & Reviews</Text>
-          <Text style={styles.headerSub} numberOfLines={1}>{courseTitle || 'Course Reviews'}</Text>
-        </View>
-      </View>
+      <Header
+        title="Ratings & Reviews"
+        showBack={true}
+        onBackPress={() => {
+          if (navigation?.canGoBack && navigation.canGoBack()) {
+            navigation.goBack();
+          } else {
+            navigation?.navigate('CourseList');
+          }
+        }}
+      />
 
       <ScrollView contentContainerStyle={styles.content}>
 
@@ -364,7 +358,7 @@ export default function CourseReviewScreen({ route, navigation }: any) {
           })
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -381,7 +375,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 17, fontWeight: '700', color: '#fff' },
   headerSub: { fontSize: 12, color: '#C7D2FE', marginTop: 2 },
-  content: { padding: 16, gap: 16, paddingBottom: 40 },
+  content: { flexGrow: 1, padding: 16, gap: 16, paddingBottom: 40 },
 
   // Summary
   summaryCard: {

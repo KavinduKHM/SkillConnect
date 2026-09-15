@@ -13,8 +13,12 @@ import {
   Switch,
   Platform,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { courseApi, quizApi } from '../../api/skill-sharer.service';
+import { Header } from '../../components/common/Header';
+
+import { ConfirmModal } from '../../components/common/ConfirmModal';
 
 interface Quiz {
   id: string;
@@ -40,6 +44,18 @@ export const AssessmentsScreen = ({ navigation }: any) => {
   const [courses, setCourses] = useState<CourseWithQuizzes[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  const [confirmConfig, setConfirmConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   // Modal State
   const [modalVisible, setModalVisible] = useState(false);
@@ -86,14 +102,23 @@ export const AssessmentsScreen = ({ navigation }: any) => {
     try {
       setLoading(true);
       const res: any = await courseApi.getMyCourses();
-      const myCourses = res?.data || (Array.isArray(res) ? res : []);
+      let myCourses = [];
+      // Axios wraps response — actual ApiResponse is at res.data, courses array at res.data.data or res.data
+      if (res?.data?.data && Array.isArray(res.data.data)) {
+        myCourses = res.data.data;
+      } else if (res?.data && Array.isArray(res.data)) {
+        myCourses = res.data;
+      } else if (Array.isArray(res)) {
+        myCourses = res;
+      }
 
       if (Array.isArray(myCourses)) {
         const enrichedCourses: CourseWithQuizzes[] = await Promise.all(
           myCourses.map(async (c: any) => {
             try {
               const quizRes: any = await quizApi.getCourseQuizzes(c.id);
-              const quizzes = quizRes?.quizzes || quizRes?.data || [];
+              // Backend returns { success: true, quizzes: [...] }; axios wraps at .data
+              const quizzes: any[] = quizRes?.data?.quizzes || (Array.isArray(quizRes?.data) ? quizRes.data : []);
               return {
                 id: c.id,
                 title: c.title,
@@ -114,14 +139,14 @@ export const AssessmentsScreen = ({ navigation }: any) => {
         );
         setCourses(enrichedCourses);
         if (enrichedCourses.length > 0 && !selectedCourseId) {
-          setSelectedCourseId(enrichedCourses[0].id);
+          setSelectedCourseId(enrichedCourses[0]?.id || '');
         }
       } else {
         setCourses([]);
       }
     } catch (error) {
       console.error('Error fetching courses and assessments:', error);
-      Alert.alert('Error', 'Failed to load courses.');
+      Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to load courses.' });
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -131,7 +156,7 @@ export const AssessmentsScreen = ({ navigation }: any) => {
   const handleOpenCreateModal = (targetCourseId?: string) => {
     setIsEditing(false);
     setCurrentQuizId(null);
-    const chosenCourseId = targetCourseId || (courses.length > 0 ? courses[0].id : '');
+    const chosenCourseId = targetCourseId || (courses.length > 0 ? courses[0]?.id || '' : '');
     setSelectedCourseId(chosenCourseId);
     
     const matchedCourse = courses.find((c) => c.id === chosenCourseId);
@@ -160,41 +185,41 @@ export const AssessmentsScreen = ({ navigation }: any) => {
   };
 
   const handleDeleteQuiz = (quiz: Quiz) => {
-    Alert.alert(
-      'Delete Assessment',
-      `Are you sure you want to delete "${quiz.title}"? This cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await quizApi.deleteQuizLink(quiz.id);
-              Alert.alert('Deleted', 'Assessment removed successfully.');
-              fetchCoursesAndAssessments();
-            } catch (error: any) {
-              Alert.alert('Error', error?.response?.data?.error || 'Failed to delete assessment.');
-            }
-          },
-        },
-      ]
-    );
+    setConfirmConfig({
+      visible: true,
+      title: 'Delete Assessment',
+      message: `Are you sure you want to delete "${quiz.title}"? This cannot be undone.`,
+      onConfirm: async () => {
+        setConfirmConfig((prev) => ({ ...prev, visible: false }));
+        setCourses(prev => prev.map(c => ({
+          ...c,
+          assessments: c.assessments.filter(q => q.id !== quiz.id)
+        })));
+
+        try {
+          await quizApi.deleteQuizLink(quiz.id);
+          Toast.show({ type: 'success', text1: 'Deleted', text2: 'Assessment removed successfully.' });
+        } catch (error: any) {
+          Toast.show({ type: 'error', text1: 'Error', text2: error?.response?.data?.error || 'Failed to delete assessment.' });
+          fetchCoursesAndAssessments(); // Revert on failure
+        }
+      },
+    });
   };
 
   const handleSave = async () => {
     if (!selectedCourseId) {
-      Alert.alert('Validation Error', 'Please select a course for this assessment.');
+      Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Please select a course for this assessment.' });
       return;
     }
 
     if (!formLink.trim()) {
-      Alert.alert('Validation Error', 'Google Form link is required.');
+      Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Google Form link is required.' });
       return;
     }
 
     if (!formLink.startsWith('http://') && !formLink.startsWith('https://')) {
-      Alert.alert('Validation Error', 'Google Form link must start with https:// or http://');
+      Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Google Form link must start with https:// or http://' });
       return;
     }
 
@@ -216,17 +241,17 @@ export const AssessmentsScreen = ({ navigation }: any) => {
 
       if (isEditing && currentQuizId) {
         await quizApi.updateQuizLink(currentQuizId, payload);
-        Alert.alert('Success', 'Assessment updated successfully!');
+        Toast.show({ type: 'success', text1: 'Success', text2: 'Assessment updated successfully!' });
       } else {
         await quizApi.createQuizLink(payload);
-        Alert.alert('Success', 'New assessment created successfully!');
+        Toast.show({ type: 'success', text1: 'Success', text2: 'New assessment created successfully!' });
       }
 
       setModalVisible(false);
       fetchCoursesAndAssessments();
     } catch (error: any) {
       console.error('Error saving assessment:', error);
-      Alert.alert('Error', error?.response?.data?.error || error?.message || 'Failed to save assessment');
+      Toast.show({ type: 'error', text1: 'Error', text2: error?.response?.data?.error || error?.message || 'Failed to save assessment' });
     } finally {
       setIsSaving(false);
     }
@@ -331,21 +356,21 @@ export const AssessmentsScreen = ({ navigation }: any) => {
   );
 
   return (
-    <View style={styles.container}>
-      {/* Top Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#111827" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Course Assessments</Text>
-        <TouchableOpacity
-          style={styles.headerCreateBtn}
-          onPress={() => handleOpenCreateModal()}
-        >
-          <Ionicons name="add" size={20} color="#FFF" />
-          <Text style={styles.headerCreateBtnText}>Create</Text>
-        </TouchableOpacity>
-      </View>
+    <View style={{ flex: 1 }}>
+      <Header
+        title="Course Assessments"
+        showBack={true}
+        rightComponent={
+          <TouchableOpacity
+            style={styles.headerCreateBtn}
+            onPress={() => handleOpenCreateModal()}
+          >
+            <Ionicons name="add" size={20} color="#FFF" />
+            <Text style={styles.headerCreateBtnText}>Create</Text>
+          </TouchableOpacity>
+        }
+      />
+      <View style={styles.container}>
 
       {/* Main List */}
       {loading && !refreshing ? (
@@ -600,6 +625,16 @@ export const AssessmentsScreen = ({ navigation }: any) => {
           </View>
         </View>
       </Modal>
+      <ConfirmModal
+        visible={confirmConfig.visible}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        confirmText="Delete"
+        confirmType="danger"
+        onConfirm={confirmConfig.onConfirm}
+        onCancel={() => setConfirmConfig((prev) => ({ ...prev, visible: false }))}
+      />
+    </View>
     </View>
   );
 };

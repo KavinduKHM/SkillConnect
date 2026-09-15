@@ -23,9 +23,11 @@ function LearnerBottomTabs() {
   return (
     <Tab.Navigator
       initialRouteName="HomeTab"
+      // @ts-ignore
+      sceneContainerStyle={{ flex: 1 }}
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#064E3B',
+        tabBarActiveTintColor: '#164E37',
         tabBarInactiveTintColor: '#94A3B8',
         tabBarStyle: {
           backgroundColor: '#FFFFFF',
@@ -33,10 +35,15 @@ function LearnerBottomTabs() {
           height: 64,
           paddingBottom: 10,
           paddingTop: 8,
+          elevation: 8,
+          shadowColor: '#0F172A',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.04,
+          shadowRadius: 8,
         },
         tabBarLabelStyle: {
           fontSize: 11,
-          fontWeight: '600',
+          fontWeight: '700',
         },
       }}
     >
@@ -86,7 +93,7 @@ function LearnerBottomTabs() {
 
 export default function LearnerNavigator() {
   return (
-    <Stack.Navigator initialRouteName="MainTabs" screenOptions={{ headerShown: false }}>
+    <Stack.Navigator initialRouteName="MainTabs" screenOptions={{ headerShown: false, cardStyle: { flex: 1 } }}>
       <Stack.Screen name="MainTabs" component={LearnerBottomTabs} />
       <Stack.Screen name="HomeScreen" component={HomeScreen} />
       <Stack.Screen name="CourseList" component={CourseListScreen} />

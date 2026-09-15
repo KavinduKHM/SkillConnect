@@ -4,8 +4,10 @@ import {
   StatusBar, TouchableOpacity, TextInput, ActivityIndicator,
   Alert, FlatList,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { Header } from '../../components/common/Header';
 import { certificateApi, recommendationApi } from '../../api/skill-sharer.service';
 import { courseApi } from '../../api/skill-sharer.service';
 
@@ -32,8 +34,17 @@ export function RecommendationScreen({ navigation }: any) {
     try {
       setLoadingCourses(true);
       const res: any = await courseApi.getMyCourses();
-      const courses = res?.data || res?.courses || (Array.isArray(res) ? res : []);
-      const published = courses.filter((c: any) => c.status === 'PUBLISHED' || c.status === 'APPROVED');
+      let myCourses = [];
+      if (res && res.success && Array.isArray(res.data)) {
+        myCourses = res.data;
+      } else if (res && res.data && res.data.success && Array.isArray(res.data.data)) {
+        myCourses = res.data.data;
+      } else if (Array.isArray(res)) {
+        myCourses = res;
+      } else if (res && Array.isArray(res.data)) {
+        myCourses = res.data;
+      }
+      const published = myCourses.filter((c: any) => c.status === 'PUBLISHED' || c.status === 'APPROVED');
       setMyCourses(published);
     } catch (err) {
       console.log('Failed to load courses', err);
@@ -47,20 +58,24 @@ export function RecommendationScreen({ navigation }: any) {
       setLoadingLearners(true);
       setCompletedLearners([]);
       const res: any = await recommendationApi.getMyCourseLearners(courseId);
-      const learners = res?.data || res?.learners || (Array.isArray(res) ? res : []);
+      const data = res?.data || res;
+      const learners = data?.learners || data?.data || (Array.isArray(data) ? data : []);
+      
       if (Array.isArray(learners) && learners.length > 0) {
         setCompletedLearners(learners);
       } else {
         // Fallback to completion requests
         const reqRes: any = await certificateApi.getCourseCompletionRequests(courseId);
-        const requests = reqRes?.data || reqRes?.requests || [];
+        const reqData = reqRes?.data || reqRes;
+        const requests = reqData?.requests || reqData?.data || (Array.isArray(reqData) ? reqData : []);
         setCompletedLearners(requests);
       }
     } catch (err) {
       console.log('Failed to load learners', err);
       try {
         const reqRes: any = await certificateApi.getCourseCompletionRequests(courseId);
-        const requests = reqRes?.data || reqRes?.requests || [];
+        const reqData = reqRes?.data || reqRes;
+        const requests = reqData?.requests || reqData?.data || (Array.isArray(reqData) ? reqData : []);
         setCompletedLearners(requests);
       } catch (e) {
         console.log('Fallback failed too', e);
@@ -78,15 +93,15 @@ export function RecommendationScreen({ navigation }: any) {
 
   const handleSubmit = async () => {
     if (!selectedLearner) {
-      Alert.alert('Select a Learner', 'Please select a learner to recommend.');
+      Toast.show({ type: 'error', text1: 'Select a Learner', text2: 'Please select a learner to recommend.' });
       return;
     }
     if (!title.trim()) {
-      Alert.alert('Title Required', 'Please provide a short title for the recommendation.');
+      Toast.show({ type: 'error', text1: 'Title Required', text2: 'Please provide a short title for the recommendation.' });
       return;
     }
     if (!content.trim() || content.trim().length < 5) {
-      Alert.alert('Content Required', 'Please write at least 5 characters for the recommendation.');
+      Toast.show({ type: 'error', text1: 'Content Required', text2: 'Please write at least 5 characters for the recommendation.' });
       return;
     }
     try {
@@ -102,18 +117,18 @@ export function RecommendationScreen({ navigation }: any) {
         isPublic,
       };
       if (editingRec) {
-        await recommendationApi.update(editingRec.id, { title: data.title, content: data.content, message: data.message, isPublic });
-        Alert.alert('Updated!', 'Recommendation updated successfully.');
+        await recommendationApi.update(editingRec.id, { title: data.title, content: data.content, message: data.message, isPublic } as any);
+        Toast.show({ type: 'success', text1: 'Updated!', text2: 'Recommendation updated successfully.' });
       } else {
         await recommendationApi.create(data);
-        Alert.alert('Sent!', `Your recommendation for ${selectedLearner.learner?.name || 'the learner'} has been submitted.`);
+        Toast.show({ type: 'success', text1: 'Sent!', text2: `Your recommendation for ${selectedLearner.learner?.name || 'the learner'} has been submitted.` });
       }
       setTitle('');
       setContent('');
       setSelectedLearner(null);
       setEditingRec(null);
     } catch (err: any) {
-      Alert.alert('Error', err?.error || err?.message || 'Failed to submit recommendation.');
+      Toast.show({ type: 'error', text1: 'Error', text2: err?.error || err?.message || 'Failed to submit recommendation.' });
     } finally {
       setSubmitting(false);
     }
@@ -128,8 +143,9 @@ export function RecommendationScreen({ navigation }: any) {
           try {
             await recommendationApi.delete(id);
             setHistory(prev => prev.filter(r => r.id !== id));
+            Toast.show({ type: 'success', text1: 'Deleted', text2: 'Recommendation deleted.' });
           } catch (err: any) {
-            Alert.alert('Error', err?.error || 'Failed to delete.');
+            Toast.show({ type: 'error', text1: 'Error', text2: err?.error || 'Failed to delete.' });
           }
         }
       }
@@ -137,21 +153,10 @@ export function RecommendationScreen({ navigation }: any) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#4F46E5" />
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
+      <Header title="Learner Recommendations" showBack={true} />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={22} color="#fff" />
-        </TouchableOpacity>
-        <View style={{ flex: 1, marginLeft: 12 }}>
-          <Text style={styles.headerTitle}>Learner Recommendations</Text>
-          <Text style={styles.headerSub}>Recognize outstanding learners</Text>
-        </View>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { flexGrow: 1 }]}>
         {/* Info Banner */}
         <View style={styles.infoBanner}>
           <Ionicons name="information-circle" size={20} color="#3B82F6" />
