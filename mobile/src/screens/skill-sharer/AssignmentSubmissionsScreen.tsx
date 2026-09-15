@@ -19,9 +19,10 @@ import { Header } from '../../components/common/Header';
 import { AssignmentSubmission } from '../../types';
 
 export const AssignmentSubmissionsScreen = ({ route, navigation }: any) => {
-  const { assignmentId, assignmentTitle } = route.params || {};
+  const { assignmentId, assignmentTitle, maxMarks } = route.params || {};
   const [submissions, setSubmissions] = useState<AssignmentSubmission[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   
   // Grading Modal State
   const [modalVisible, setModalVisible] = useState(false);
@@ -165,7 +166,9 @@ export const AssignmentSubmissionsScreen = ({ route, navigation }: any) => {
           <View>
             <Text style={styles.gradeLabel}>Current Grade:</Text>
             <Text style={styles.gradeValue}>
-              {item.grade !== null && item.grade !== undefined ? `${item.grade}` : 'Not Graded'}
+              {item.grade !== null && item.grade !== undefined
+                ? `${item.grade} / ${maxMarks || 100}`
+                : 'Not Graded'}
             </Text>
           </View>
           <TouchableOpacity 
@@ -185,7 +188,7 @@ export const AssignmentSubmissionsScreen = ({ route, navigation }: any) => {
       <View style={styles.container}>
 
       <View style={styles.content}>
-        {loading ? (
+        {loading && !refreshing ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#4F46E5" />
             <Text style={styles.loadingText}>Loading submissions...</Text>
@@ -194,7 +197,7 @@ export const AssignmentSubmissionsScreen = ({ route, navigation }: any) => {
           <View style={styles.emptyState}>
             <Ionicons name="documents-outline" size={64} color="#D1D5DB" />
             <Text style={styles.emptyStateTitle}>No Submissions Yet</Text>
-            <Text style={styles.emptyStateText}>When learners submit their assignments, they will appear here.</Text>
+            <Text style={styles.emptyStateText}>When learners submit their answers and files, they will appear here.</Text>
           </View>
         ) : (
           <FlatList
@@ -203,6 +206,11 @@ export const AssignmentSubmissionsScreen = ({ route, navigation }: any) => {
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.listContainer}
             showsVerticalScrollIndicator={false}
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              fetchSubmissions().finally(() => setRefreshing(false));
+            }}
           />
         )}
       </View>
@@ -217,7 +225,7 @@ export const AssignmentSubmissionsScreen = ({ route, navigation }: any) => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Grade Submission</Text>
+              <Text style={styles.modalTitle}>Grade & Feedback</Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
                 <Ionicons name="close" size={24} color="#6B7280" />
               </TouchableOpacity>
@@ -225,17 +233,17 @@ export const AssignmentSubmissionsScreen = ({ route, navigation }: any) => {
 
             <View style={styles.modalBody}>
               <Text style={styles.learnerNameModal}>
-                Learner: {selectedSubmission?.learner?.name}
+                Learner: {selectedSubmission?.learner?.name} ({selectedSubmission?.learner?.email})
               </Text>
               
               <View style={styles.formGroup}>
-                <Text style={styles.label}>Grade (Score) *</Text>
+                <Text style={styles.label}>Grade (Max: {maxMarks || 100}) *</Text>
                 <TextInput
                   style={styles.input}
                   value={grade}
                   onChangeText={setGrade}
                   keyboardType="numeric"
-                  placeholder="e.g. 85"
+                  placeholder={`e.g. ${maxMarks || 100}`}
                 />
               </View>
 
