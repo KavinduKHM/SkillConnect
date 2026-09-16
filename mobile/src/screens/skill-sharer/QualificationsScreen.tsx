@@ -21,10 +21,10 @@ interface Qualification {
   institution: string;
   year: number;
   description?: string;
-  status: 'PENDING_VERIFICATION' | 'VERIFIED' | 'REJECTED';
+  status: 'PENDING' | 'VERIFIED' | 'REJECTED';
 }
 
-export default function QualificationsScreen() {
+export default function QualificationsScreen({ navigation }: any) {
   const [qualifications, setQualifications] = useState<Qualification[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -39,17 +39,24 @@ export default function QualificationsScreen() {
     description: '',
   });
 
+  const unwrapResponse = <T,>(response: unknown): T | undefined => {
+    const payload = response as { data?: { data?: T } | T } | undefined;
+    return (payload?.data && typeof payload.data === 'object' && 'data' in payload.data
+      ? payload.data.data
+      : payload?.data) as T | undefined;
+  };
+
   const loadQualifications = async () => {
     try {
       const profileResponse = await profileService.getMyProfile();
-      const profile = profileResponse?.data?.data ?? profileResponse?.data;
+      const profile = unwrapResponse<{ id: string }>(profileResponse);
       if (!profile?.id) {
         throw new Error('Profile not found');
       }
       setProfileId(profile.id);
 
       const response = await qualificationService.getQualifications();
-      const qualificationData = response?.data?.data ?? response?.data;
+      const qualificationData = unwrapResponse<Qualification[]>(response);
       setQualifications(Array.isArray(qualificationData) ? qualificationData : []);
     } catch (error) {
       Alert.alert('Error', 'Failed to load qualifications');
@@ -121,8 +128,7 @@ export default function QualificationsScreen() {
           Alert.alert('Error', 'Your profile could not be found');
           return;
         }
-        await qualificationService.createQualification({
-          profileId,
+        await qualificationService.createQualification(profileId, {
           title: formData.title.trim(),
           institution: formData.institution.trim(),
           year,
@@ -226,6 +232,13 @@ export default function QualificationsScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          accessibilityLabel="Go back"
+        >
+          <Ionicons name="arrow-back" size={23} color="#3B2924" />
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>Qualifications</Text>
         <TouchableOpacity
           style={styles.addButton}
@@ -359,6 +372,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 8,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+    shadowColor: '#7D4938',
+    shadowOpacity: 0.08,
+    shadowRadius: 5,
+    elevation: 1,
   },
   headerTitle: {
     fontSize: 22,

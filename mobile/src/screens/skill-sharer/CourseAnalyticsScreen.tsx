@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { progressService } from '../../api/skill-sharer.service';
+import { progressApi } from '../../api/skill-sharer.service';
 
 interface Analytics {
   totalEnrollments: number;
@@ -34,7 +34,7 @@ export default function CourseAnalyticsScreen() {
 
   const loadData = async () => {
     try {
-      const response = await progressService.getCourseAnalytics(courseId);
+      const response = await progressApi.getCourseAnalytics(courseId);
       const responseData = response?.data?.data ?? response?.data;
       setAnalytics(responseData || null);
     } catch (error: any) {

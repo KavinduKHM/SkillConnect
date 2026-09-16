@@ -11,8 +11,10 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { profileService } from '../../api/skill-sharer.service';
+import * as skillSharerService from '../../api/skill-sharer.service';
 import { authService } from '../../api/auth.service';
+
+const profileService = skillSharerService as any;
 
 interface ProfileData {
   bio: string;

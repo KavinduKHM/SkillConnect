@@ -8,6 +8,7 @@ import {
   Alert,
   Platform,
 } from 'react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import Toast from 'react-native-toast-message';
 import { useFocusEffect } from '@react-navigation/native';
 import { Header } from '../../components/common/Header';
@@ -52,13 +53,11 @@ export const MyCoursesScreen: React.FC = ({ navigation }: any) => {
   );
 
   const handleCoursePress = (course: Course) => {
-    // Navigate to course detail
-    navigation.navigate('CourseDetail', { courseId: course.id });
+    navigation.navigate('CourseContent', { courseId: course.id });
   };
 
   const handleEdit = (course: Course) => {
-    // Navigate to course editor (coming in Sprint 2)
-    Toast.show({ type: 'info', text1: 'Edit Course', text2: `Editing: ${course.title}` });
+    navigation.navigate('CourseCreator', { courseId: course.id });
   };
 
   const handleDelete = async (course: Course) => {
@@ -171,11 +170,30 @@ export const MyCoursesScreen: React.FC = ({ navigation }: any) => {
       />
       
       <ScrollView
+        style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
+        <View style={styles.summaryRow}>
+          <View>
+            <Text style={styles.summaryTitle}>Creator Studio</Text>
+            <Text style={styles.summarySubtitle}>Curriculum Hub</Text>
+          </View>
+          <View style={styles.totalPill}><Text style={styles.totalValue}>{courses.length}</Text><Text style={styles.totalLabel}> Total</Text></View>
+        </View>
+        <View style={styles.filterBar}>
+          <Ionicons name="search-outline" size={18} color="#8B6B60" />
+          <Text style={styles.searchPlaceholder}>Search course title, keyword...</Text>
+          <View style={styles.filterButton}><Ionicons name="options-outline" size={18} color="#3B2924" /></View>
+        </View>
+        <View style={styles.statusRow}>
+          <View style={styles.activeStatus}><Text style={styles.activeStatusText}>All</Text><Text style={styles.activeStatusCount}>{courses.length}</Text></View>
+          <View style={styles.statusPill}><Text style={styles.statusPillText}>Published</Text><Text style={styles.publishedCount}>{courses.filter((course) => course.status === 'PUBLISHED').length}</Text></View>
+          <View style={styles.statusPill}><Text style={styles.statusPillText}>Drafts</Text><Text style={styles.draftCount}>{courses.filter((course) => course.status === 'DRAFT').length}</Text></View>
+          <View style={styles.statusPill}><Text style={styles.statusPillText}>Pending Review</Text></View>
+        </View>
         {courses.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>No courses yet</Text>
@@ -196,6 +214,9 @@ export const MyCoursesScreen: React.FC = ({ navigation }: any) => {
                 courseId: course.id,
                 courseTitle: course.title,
               })}
+              onViewAnalytics={() => navigation.navigate('CourseAnalytics', {
+                courseId: course.id,
+              })}
             />
           ))
         )}
@@ -208,13 +229,39 @@ export const MyCoursesScreen: React.FC = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#FFF9F7',
+  },
+  scrollView: {
+    backgroundColor: '#FFF9F7',
   },
   scrollContent: {
     flexGrow: 1,
-    paddingTop: 16,
+    paddingTop: 5,
     paddingBottom: 40,
   },
+  summaryRow: {
+    paddingHorizontal: 16,
+    paddingBottom: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  summaryTitle: { color: '#5D2B1E', fontSize: 13, fontWeight: '700', letterSpacing: 0.5 },
+  summarySubtitle: { color: '#8A6B61', fontSize: 12, marginTop: 2 },
+  totalPill: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF0EC', borderRadius: 14, paddingHorizontal: 10, paddingVertical: 6 },
+  totalValue: { color: '#B3310D', fontSize: 13, fontWeight: '700' },
+  totalLabel: { color: '#8A6B61', fontSize: 11 },
+  filterBar: { marginHorizontal: 16, height: 42, borderRadius: 12, borderWidth: 1, borderColor: '#E8D2CC', backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center', paddingLeft: 12, marginBottom: 12 },
+  searchPlaceholder: { flex: 1, color: '#A58C84', fontSize: 12, marginLeft: 8 },
+  filterButton: { width: 42, height: 42, borderLeftWidth: 1, borderLeftColor: '#E8D2CC', alignItems: 'center', justifyContent: 'center' },
+  statusRow: { flexDirection: 'row', gap: 7, paddingHorizontal: 16, marginBottom: 14 },
+  activeStatus: { flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#B3310D', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 7 },
+  activeStatusText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
+  activeStatusCount: { color: '#B3310D', backgroundColor: '#FFFFFF', borderRadius: 10, paddingHorizontal: 5, paddingVertical: 1, fontSize: 10, fontWeight: '700' },
+  statusPill: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderColor: '#E8D2CC', backgroundColor: '#FFFFFF', borderRadius: 16, paddingHorizontal: 10, paddingVertical: 7 },
+  statusPillText: { color: '#4C3934', fontSize: 11 },
+  publishedCount: { color: '#16804B', fontSize: 10, fontWeight: '700' },
+  draftCount: { color: '#B56A00', fontSize: 10, fontWeight: '700' },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
