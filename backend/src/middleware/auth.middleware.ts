@@ -54,3 +54,30 @@ export const isAuthenticated = async (
     res.status(401).json({ error: 'Unauthorized' });
   }
 };
+
+export const optionalAuth = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      if (token) {
+        const decoded = verifyToken(token);
+        if (decoded?.userId) {
+          const user = await prisma.user.findUnique({
+            where: { id: decoded.userId },
+          });
+          if (user && user.status !== UserStatus.SUSPENDED) {
+            req.user = user;
+          }
+        }
+      }
+    }
+  } catch (error) {
+    // Ignore error for optional authentication
+  }
+  next();
+};

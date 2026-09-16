@@ -8,8 +8,10 @@ import {
   Alert,
   TextInput,
   Modal,
+  Platform,
   RefreshControl,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminService, Skill, Category } from '../../api/admin.service';
 
@@ -42,7 +44,7 @@ export const SkillsScreen = () => {
 
   const handleSave = async () => {
     if (!formData.name) {
-      Alert.alert('Error', 'Skill name is required');
+      Toast.show({ type: 'error', text1: 'Error', text2: 'Skill name is required' });
       return;
     }
 
@@ -56,10 +58,10 @@ export const SkillsScreen = () => {
 
       if (editingSkill) {
         await adminService.updateSkill(editingSkill.id, payload);
-        Alert.alert('Success', 'Skill updated');
+        Toast.show({ type: 'success', text1: 'Success', text2: 'Skill updated' });
       } else {
         await adminService.createSkill(payload);
-        Alert.alert('Success', 'Skill created');
+        Toast.show({ type: 'success', text1: 'Success', text2: 'Skill created' });
       }
       setModalVisible(false);
       setEditingSkill(null);
@@ -67,32 +69,39 @@ export const SkillsScreen = () => {
       queryClient.invalidateQueries({ queryKey: ['skills'] });
       refetch();
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to save');
+      Toast.show({ type: 'error', text1: 'Error', text2: error.response?.data?.error || 'Failed to save' });
     }
   };
 
   const handleDelete = async (id: string, name: string) => {
-    Alert.alert(
-      'Delete Skill',
-      `Are you sure you want to delete "${name}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await adminService.deleteSkill(id);
-              Alert.alert('Success', 'Skill deleted');
-              queryClient.invalidateQueries({ queryKey: ['skills'] });
-              refetch();
-            } catch (error: any) {
-              Alert.alert('Error', error.response?.data?.error || 'Failed to delete');
-            }
-          },
-        },
-      ]
-    );
+    const action = async () => {
+      queryClient.setQueryData(['skills'], (old: any) => 
+        Array.isArray(old) ? old.filter((s: any) => s.id !== id) : old
+      );
+      try {
+        await adminService.deleteSkill(id);
+        Toast.show({ type: 'success', text1: 'Success', text2: 'Skill deleted' });
+        queryClient.invalidateQueries({ queryKey: ['skills'] });
+        refetch();
+      } catch (error: any) {
+        Toast.show({ type: 'error', text1: 'Error', text2: error.response?.data?.error || 'Failed to delete' });
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Are you sure you want to delete "${name}"?`)) {
+        action();
+      }
+    } else {
+      Alert.alert(
+        'Delete Skill',
+        `Are you sure you want to delete "${name}"?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Delete', style: 'destructive', onPress: action },
+        ]
+      );
+    }
   };
 
   const openEditModal = (skill: Skill) => {
@@ -125,6 +134,8 @@ export const SkillsScreen = () => {
       </View>
 
       <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
         refreshControl={
           <RefreshControl refreshing={isLoading} onRefresh={refetch} />
         }

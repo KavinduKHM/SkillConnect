@@ -7,8 +7,10 @@ import {
   TouchableOpacity,
   Alert,
   TextInput,
+  Platform,
   RefreshControl,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminService, Qualification } from '../../api/admin.service';
 import { StatusBadge } from '../../components/admin/StatusBadge';
@@ -28,54 +30,71 @@ export const QualificationsScreen = () => {
   });
 
   const handleVerify = async (id: string) => {
-    Alert.alert(
-      'Verify Qualification',
-      'Are you sure you want to verify this qualification?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Verify',
-          onPress: async () => {
-            try {
-              await adminService.verifyQualification(id);
-              Alert.alert('Success', 'Qualification verified');
-              queryClient.invalidateQueries({ queryKey: ['pending-qualifications'] });
-              refetch();
-            } catch (error: any) {
-              Alert.alert('Error', error.response?.data?.error || 'Failed to verify');
-            }
-          },
-        },
-      ]
-    );
+    const action = async () => {
+      queryClient.setQueryData(['pending-qualifications'], (old: any) => 
+        Array.isArray(old) ? old.filter((q: any) => q.id !== id) : old
+      );
+      try {
+        await adminService.verifyQualification(id);
+        Toast.show({ type: 'success', text1: 'Success', text2: 'Qualification verified' });
+        queryClient.invalidateQueries({ queryKey: ['pending-qualifications'] });
+        refetch();
+      } catch (error: any) {
+        Toast.show({ type: 'error', text1: 'Error', text2: error.response?.data?.error || 'Failed to verify' });
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm('Are you sure you want to verify this qualification?')) {
+        action();
+      }
+    } else {
+      Alert.alert(
+        'Verify Qualification',
+        'Are you sure you want to verify this qualification?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Verify', onPress: action },
+        ]
+      );
+    }
   };
 
   const handleReject = async (id: string) => {
-    Alert.prompt(
-      'Reject Qualification',
-      'Please enter a reason for rejection:',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reject',
-          onPress: async (reason?: string) => {
-            if (!reason) {
-              Alert.alert('Error', 'Please provide a reason');
-              return;
-            }
-            try {
-              await adminService.rejectQualification(id, reason);
-              Alert.alert('Success', 'Qualification rejected');
-              queryClient.invalidateQueries({ queryKey: ['pending-qualifications'] });
-              refetch();
-            } catch (error: any) {
-              Alert.alert('Error', error.response?.data?.error || 'Failed to reject');
-            }
-          },
-        },
-      ],
-      'plain-text'
-    );
+    const action = async (reason?: string) => {
+      if (!reason) {
+        Toast.show({ type: 'error', text1: 'Error', text2: 'Please provide a reason' });
+        return;
+      }
+      queryClient.setQueryData(['pending-qualifications'], (old: any) => 
+        Array.isArray(old) ? old.filter((q: any) => q.id !== id) : old
+      );
+      try {
+        await adminService.rejectQualification(id, reason);
+        Toast.show({ type: 'success', text1: 'Success', text2: 'Qualification rejected' });
+        queryClient.invalidateQueries({ queryKey: ['pending-qualifications'] });
+        refetch();
+      } catch (error: any) {
+        Toast.show({ type: 'error', text1: 'Error', text2: error.response?.data?.error || 'Failed to reject' });
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      const reason = window.prompt('Please enter a reason for rejection:');
+      if (reason !== null) {
+        action(reason);
+      }
+    } else {
+      Alert.prompt(
+        'Reject Qualification',
+        'Please enter a reason for rejection:',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Reject', onPress: action },
+        ],
+        'plain-text'
+      );
+    }
   };
 
   const qualifications = Array.isArray(data) ? data : [];
@@ -83,6 +102,7 @@ export const QualificationsScreen = () => {
   return (
     <ScrollView
       style={styles.container}
+      contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
       refreshControl={
         <RefreshControl refreshing={isLoading} onRefresh={refetch} />
       }

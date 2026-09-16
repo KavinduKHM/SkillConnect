@@ -1,0 +1,12 @@
+Unable to resolve module ./Badge from C:\Users\User\Documents\GitHub\SkillConnect\node_modules\@react-navigation\bottom-tabs\lib\module\views\TabBarIcon.js: 
+
+None of these files exist:
+  * ..\node_modules\@react-navigation\bottom-tabs\lib\module\views\Badge(.web.ts|.ts|.web.tsx|.tsx|.web.mjs|.mjs|.web.js|.js|.web.jsx|.jsx|.web.json|.json|.web.cjs|.cjs|.web.scss|.scss|.web.sass|.sass|.web.css|.css)
+  * ..\node_modules\@react-navigation\bottom-tabs\lib\module\views\Badge
+[0m [90m 1 |[39m [36mimport[39m [33mReact[39m [36mfrom[39m [32m'react'[39m[33m;[39m
+ [90m 2 |[39m [36mimport[39m { [33mStyleSheet[39m[33m,[39m [33mView[39m } [36mfrom[39m [32m'react-native'[39m[33m;[39m
+[31m[1m>[22m[39m[90m 3 |[39m [36mimport[39m [33mBadge[39m [36mfrom[39m [32m'./Badge'[39m[33m;[39m
+ [90m   |[39m                    [31m[1m^[22m[39m
+ [90m 4 |[39m [36mexport[39m [36mdefault[39m [36mfunction[39m [33mTabBarIcon[39m(_ref) {
+ [90m 5 |[39m   [36mlet[39m {
+ [90m 6 |[39m     route[33m:[39m _[33m,[39m[0m

@@ -13,6 +13,7 @@ import {
   Switch,
   Platform,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { courseApi, quizApi } from '../../api/skill-sharer.service';
 
@@ -99,7 +100,7 @@ export const AssessmentsScreen = ({ navigation }: any) => {
       }
     } catch (error) {
       console.error('Error fetching courses and assessments:', error);
-      Alert.alert('Error', 'Failed to load courses.');
+      Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to load courses.' });
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -138,41 +139,55 @@ export const AssessmentsScreen = ({ navigation }: any) => {
   };
 
   const handleDeleteQuiz = (quiz: Quiz) => {
-    Alert.alert(
-      'Delete Assessment',
-      `Are you sure you want to delete "${quiz.title}"? This cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await quizApi.deleteQuizLink(quiz.id);
-              Alert.alert('Deleted', 'Assessment removed successfully.');
-              fetchCoursesAndAssessments();
-            } catch (error: any) {
-              Alert.alert('Error', error?.response?.data?.error || 'Failed to delete assessment.');
-            }
+    const doDelete = async () => {
+      // Optimistic Update
+      setCourses(prev => prev.map(c => ({
+        ...c,
+        assessments: c.assessments.filter(q => q.id !== quiz.id)
+      })));
+
+      try {
+        await quizApi.deleteQuizLink(quiz.id);
+        Toast.show({ type: 'success', text1: 'Deleted', text2: 'Assessment removed successfully.' });
+      } catch (error: any) {
+        Toast.show({ type: 'error', text1: 'Error', text2: error?.response?.data?.error || 'Failed to delete assessment.' });
+        fetchCoursesAndAssessments(); // Revert on failure
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Are you sure you want to delete "${quiz.title}"? This cannot be undone.`)) {
+        doDelete();
+      }
+    } else {
+      Alert.alert(
+        'Delete Assessment',
+        `Are you sure you want to delete "${quiz.title}"? This cannot be undone.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: doDelete,
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
 
   const handleSave = async () => {
     if (!selectedCourseId) {
-      Alert.alert('Validation Error', 'Please select a course for this assessment.');
+      Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Please select a course for this assessment.' });
       return;
     }
 
     if (!formLink.trim()) {
-      Alert.alert('Validation Error', 'Google Form link is required.');
+      Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Google Form link is required.' });
       return;
     }
 
     if (!formLink.startsWith('http://') && !formLink.startsWith('https://')) {
-      Alert.alert('Validation Error', 'Google Form link must start with https:// or http://');
+      Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Google Form link must start with https:// or http://' });
       return;
     }
 
@@ -194,17 +209,17 @@ export const AssessmentsScreen = ({ navigation }: any) => {
 
       if (isEditing && currentQuizId) {
         await quizApi.updateQuizLink(currentQuizId, payload);
-        Alert.alert('Success', 'Assessment updated successfully!');
+        Toast.show({ type: 'success', text1: 'Success', text2: 'Assessment updated successfully!' });
       } else {
         await quizApi.createQuizLink(payload);
-        Alert.alert('Success', 'New assessment created successfully!');
+        Toast.show({ type: 'success', text1: 'Success', text2: 'New assessment created successfully!' });
       }
 
       setModalVisible(false);
       fetchCoursesAndAssessments();
     } catch (error: any) {
       console.error('Error saving assessment:', error);
-      Alert.alert('Error', error?.response?.data?.error || error?.message || 'Failed to save assessment');
+      Toast.show({ type: 'error', text1: 'Error', text2: error?.response?.data?.error || error?.message || 'Failed to save assessment' });
     } finally {
       setIsSaving(false);
     }

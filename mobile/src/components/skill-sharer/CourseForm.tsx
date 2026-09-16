@@ -65,7 +65,7 @@ export const CourseForm: React.FC<CourseFormProps> = ({
 };
 
   return (
-    <ScrollView style={styles.container}>
+    <View style={styles.contentContainer}>
       <Text style={styles.sectionTitle}>Course Information</Text>
 
       <Input
@@ -191,15 +191,18 @@ export const CourseForm: React.FC<CourseFormProps> = ({
         loading={loading}
         style={styles.submitButton}
       />
-    </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  scrollView: {
     flex: 1,
-    padding: 16,
     backgroundColor: '#F9FAFB',
+  },
+  contentContainer: {
+    padding: 16,
+    paddingBottom: 40,
   },
   sectionTitle: {
     fontSize: 18,

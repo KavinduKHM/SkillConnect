@@ -12,7 +12,6 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
 import { completeQuiz } from '../../api/learner.service';
 
 export const AssessmentDetailScreen = ({ route, navigation }: any) => {
@@ -22,34 +21,37 @@ export const AssessmentDetailScreen = ({ route, navigation }: any) => {
 
   if (!assessment) {
     return (
-      <View style={styles.centerContainer}>
-        <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
-        <Text style={{ marginTop: 12, fontSize: 16, color: '#374151', fontWeight: '600' }}>Assessment data missing.</Text>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={styles.backBtnText}>Go Back</Text>
+      <SafeAreaView style={styles.centerContainer}>
+        <Text style={{ fontSize: 32, marginBottom: 8 }}>⚠️</Text>
+        <Text style={{ fontSize: 16, color: '#374151', fontWeight: '600', marginBottom: 12 }}>
+          Assessment details not available.
+        </Text>
+        <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.primaryBtn}>
+          <Text style={styles.primaryBtnText}>Go Back</Text>
         </TouchableOpacity>
-      </View>
+      </SafeAreaView>
     );
   }
 
-  const courseTitle = route.params?.courseName || assessment.course?.title || 'Course Assessment';
+  const courseTitle = route.params?.courseName || assessment.course?.title || 'React Native Mobile App Development';
   const assessmentTitle = assessment.title || `${courseTitle} - Final Assessment`;
   const dueDate = route.params?.dueDate || (assessment.dueDate ? new Date(assessment.dueDate).toLocaleDateString() : 'No due date');
+  const googleFormUrl = assessment.url || assessment.formUrl;
 
   const handleOpenForm = async () => {
     try {
-      if (!assessment.url) {
-        Alert.alert('Error', 'No Google Form link provided.');
+      if (!googleFormUrl) {
+        Alert.alert('Notice', 'No Google Form link provided for this assessment.');
         return;
       }
-      const supported = await Linking.canOpenURL(assessment.url);
-      if (supported) {
-        await Linking.openURL(assessment.url);
+      const canOpen = await Linking.canOpenURL(googleFormUrl);
+      if (canOpen) {
+        await Linking.openURL(googleFormUrl);
       } else {
-        Alert.alert('Error', `Cannot open this URL: ${assessment.url}`);
+        Alert.alert('Error', 'Cannot open the provided form URL.');
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to open the assessment link in browser.');
+      Alert.alert('Error', 'Failed to open assessment form link.');
     }
   };
 
@@ -58,11 +60,11 @@ export const AssessmentDetailScreen = ({ route, navigation }: any) => {
       setIsSubmitting(true);
       await completeQuiz(assessment.id);
       setStatus('COMPLETED');
-      
+
       if (Platform.OS === 'web') {
-        window.alert('Assessment Submitted! Your completion has been recorded successfully.');
+        window.alert('Assessment Completed! Your completion has been recorded successfully.');
       } else {
-        Alert.alert('Assessment Submitted!', 'Your completion has been recorded successfully.');
+        Alert.alert('Assessment Completed!', 'Your completion has been recorded successfully.');
       }
 
       if (route.params?.loadMyLearning) {
@@ -71,9 +73,9 @@ export const AssessmentDetailScreen = ({ route, navigation }: any) => {
     } catch (error: any) {
       const errMsg = error?.response?.data?.error || error?.error || error?.message || 'Failed to update assessment status';
       if (Platform.OS === 'web') {
-        window.alert('Error: ' + errMsg);
+        window.alert('Notice: ' + errMsg);
       } else {
-        Alert.alert('Error', errMsg);
+        Alert.alert('Notice', errMsg);
       }
     } finally {
       setIsSubmitting(false);
@@ -92,8 +94,8 @@ export const AssessmentDetailScreen = ({ route, navigation }: any) => {
         'Have you completely finished and submitted the Google Form assessment?',
         [
           { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Yes, Mark Completed', 
+          {
+            text: 'Yes, Mark Completed',
             onPress: doSubmitCompletion,
           },
         ]
@@ -103,54 +105,49 @@ export const AssessmentDetailScreen = ({ route, navigation }: any) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FAF9F6" />
 
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtnIcon} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#111827" />
+      <View style={styles.topHeader}>
+        <TouchableOpacity style={styles.circleBtn} onPress={() => navigation?.goBack()}>
+          <Text style={styles.circleBtnText}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Course Assessment</Text>
-        <View style={{ width: 24 }} />
+        <Text style={styles.headerTitle}>Course Assessment 📝</Text>
+        <View style={{ width: 38 }} />
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 40 }}>
         {/* Title & Status */}
         <View style={styles.topCard}>
           <Text style={styles.courseName}>{courseTitle}</Text>
           <Text style={styles.assessmentTitle}>{assessmentTitle}</Text>
-          
-          <View style={[styles.statusBadge, { backgroundColor: status === 'PENDING' ? '#FEF3C7' : '#DEF7EC' }]}>
-            <Ionicons 
-              name={status === 'PENDING' ? "time-outline" : "checkmark-circle"} 
-              size={16} 
-              color={status === 'PENDING' ? "#D97706" : "#059669"} 
-              style={{ marginRight: 6 }}
-            />
-            <Text style={[styles.statusText, { color: status === 'PENDING' ? '#D97706' : '#059669' }]}>
-              {status === 'PENDING' ? 'Action Required: Pending' : 'Completed ✓'}
+
+          <View style={[styles.statusBadge, { backgroundColor: status === 'COMPLETED' ? '#DCFCE7' : '#FEF3C7' }]}>
+            <Text style={[styles.statusText, { color: status === 'COMPLETED' ? '#15803D' : '#D97706' }]}>
+              {status === 'COMPLETED' ? '✓ Completed' : 'Action Required: Pending'}
             </Text>
           </View>
         </View>
 
-        {/* 1. Assessment Instructions */}
+        {/* 1. Instructions */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="information-circle-outline" size={20} color="#4F46E5" />
+            <Text style={styles.sectionIcon}>ℹ️</Text>
             <Text style={styles.sectionTitle}>Instructions</Text>
           </View>
           <Text style={styles.sectionText}>
-            {assessment.instructions || 'Please complete the Google Form linked below. Answer all questions according to the course materials.'}
+            {assessment.instructions ||
+              'Please complete the Google Form linked below. Answer all required questions according to the course material covered.'}
           </Text>
         </View>
 
         {/* 2. Assessment Requirements */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="ribbon-outline" size={20} color="#059669" />
+            <Text style={styles.sectionIcon}>🎖️</Text>
             <Text style={styles.sectionTitle}>Assessment Requirements</Text>
           </View>
-          
+
           <View style={styles.requirementRow}>
             <Text style={styles.requirementLabel}>Passing Score:</Text>
             <Text style={styles.requirementValue}>
@@ -174,29 +171,24 @@ export const AssessmentDetailScreen = ({ route, navigation }: any) => {
         {/* Action Buttons */}
         <View style={styles.actionSection}>
           <TouchableOpacity style={styles.primaryBtn} onPress={handleOpenForm}>
-            <Ionicons name="logo-google" size={18} color="#FFF" style={styles.btnIcon} />
-            <Text style={styles.primaryBtnText}>Open Google Form</Text>
-            <Ionicons name="open-outline" size={18} color="#FFF" style={{ marginLeft: 6 }} />
+            <Text style={styles.primaryBtnText}>Open Google Form 📋</Text>
           </TouchableOpacity>
 
-          {status === 'PENDING' && (
-            <TouchableOpacity 
-              style={styles.secondaryBtn} 
+          {status !== 'COMPLETED' && (
+            <TouchableOpacity
+              style={styles.secondaryBtn}
               onPress={handleMarkCompleted}
               disabled={isSubmitting}
             >
               {isSubmitting ? (
-                <ActivityIndicator color="#4F46E5" />
+                <ActivityIndicator color="#064E3B" />
               ) : (
-                <>
-                  <Ionicons name="checkmark-circle-outline" size={20} color="#4F46E5" style={styles.btnIcon} />
-                  <Text style={styles.secondaryBtnText}>Mark as Submitted & Completed</Text>
-                </>
+                <Text style={styles.secondaryBtnText}>Mark as Submitted & Completed ✓</Text>
               )}
             </TouchableOpacity>
           )}
 
-          <TouchableOpacity style={styles.returnBtn} onPress={() => navigation.goBack()}>
+          <TouchableOpacity style={styles.returnBtn} onPress={() => navigation?.goBack()}>
             <Text style={styles.returnBtnText}>Return to Platform</Text>
           </TouchableOpacity>
         </View>
@@ -208,174 +200,78 @@ export const AssessmentDetailScreen = ({ route, navigation }: any) => {
 export default AssessmentDetailScreen;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  header: {
+  container: { flex: 1, backgroundColor: '#FAF9F6' },
+  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: '#FAF9F6' },
+  topHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    paddingTop: 50,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    paddingTop: 12,
+    paddingBottom: 8,
   },
-  backBtnIcon: {
-    padding: 4,
+  circleBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#111827',
-  },
-  content: {
-    padding: 16,
-    flex: 1,
-  },
+  circleBtnText: { fontSize: 16, color: '#0F172A' },
+  headerTitle: { fontSize: 18, fontWeight: '800', color: '#0F172A' },
+  content: { flexGrow: 1, paddingHorizontal: 20, paddingTop: 12 },
   topCard: {
     backgroundColor: '#FFFFFF',
-    padding: 18,
-    borderRadius: 16,
+    padding: 20,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#F1F5F9',
     marginBottom: 16,
   },
-  courseName: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#4F46E5',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 4,
-  },
-  assessmentTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginBottom: 12,
-  },
+  courseName: { fontSize: 12, fontWeight: '700', color: '#064E3B', textTransform: 'uppercase', marginBottom: 4 },
+  assessmentTitle: { fontSize: 18, fontWeight: '800', color: '#0F172A', marginBottom: 12 },
   statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
     alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: 10,
   },
-  statusText: {
-    fontWeight: '700',
-    fontSize: 13,
-  },
+  statusText: { fontSize: 12, fontWeight: '700' },
   section: {
     backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderRadius: 16,
+    padding: 18,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#1F2937',
-    marginLeft: 8,
-  },
-  sectionText: {
-    fontSize: 14,
-    color: '#4B5563',
-    lineHeight: 22,
-  },
-  requirementRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  requirementLabel: {
-    fontSize: 13,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-  requirementValue: {
-    fontSize: 13,
-    color: '#111827',
-    fontWeight: '600',
-  },
-  actionSection: {
-    marginTop: 10,
-    marginBottom: 40,
-  },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  sectionIcon: { fontSize: 18 },
+  sectionTitle: { fontSize: 16, fontWeight: '800', color: '#0F172A' },
+  sectionText: { fontSize: 14, color: '#475569', lineHeight: 22 },
+  requirementRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 },
+  requirementLabel: { fontSize: 13, color: '#64748B' },
+  requirementValue: { fontSize: 13, fontWeight: '700', color: '#0F172A' },
+  actionSection: { gap: 12, marginTop: 8 },
   primaryBtn: {
-    backgroundColor: '#4F46E5',
-    flexDirection: 'row',
-    paddingVertical: 15,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-    shadowColor: '#4F46E5',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  primaryBtnText: {
-    color: '#FFF',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  secondaryBtn: {
-    backgroundColor: '#EEF2FF',
-    flexDirection: 'row',
+    backgroundColor: '#064E3B',
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: 14,
     alignItems: 'center',
-    justifyContent: 'center',
+  },
+  primaryBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
+  secondaryBtn: {
+    backgroundColor: '#DCFCE7',
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#C7D2FE',
-    marginBottom: 12,
+    borderColor: '#86EFAC',
   },
-  secondaryBtnText: {
-    color: '#4F46E5',
-    fontWeight: 'bold',
-    fontSize: 15,
-  },
-  returnBtn: {
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  returnBtnText: {
-    color: '#6B7280',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  btnIcon: {
-    marginRight: 8,
-  },
-  backBtn: {
-    marginTop: 16,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    backgroundColor: '#4F46E5',
-    borderRadius: 8,
-  },
-  backBtnText: {
-    color: '#FFF',
-    fontWeight: '600',
-  },
+  secondaryBtnText: { color: '#15803D', fontSize: 15, fontWeight: '700' },
+  returnBtn: { paddingVertical: 12, alignItems: 'center' },
+  returnBtnText: { color: '#64748B', fontSize: 14, fontWeight: '600' },
 });

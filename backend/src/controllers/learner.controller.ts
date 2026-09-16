@@ -3,6 +3,7 @@ import {
   getPublishedCourses,
   getCourseDetails,
   getCategories,
+  getSkillSharerProfile,
   enrollInCourse,
   cancelEnrollment,
   getMyLearning,
@@ -53,6 +54,17 @@ export const listCategories = async (req: Request, res: Response): Promise<void>
   } catch (error: any) {
     logger.error('Error in listCategories controller:', error);
     res.status(500).json({ error: error.message });
+  }
+};
+
+export const getSharerProfile = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const profile = await getSkillSharerProfile(id as string);
+    res.status(200).json(profile);
+  } catch (error: any) {
+    logger.error('Error in getSharerProfile controller:', error);
+    res.status(404).json({ error: error.message });
   }
 };
 
@@ -128,16 +140,16 @@ export const getLesson = async (req: any, res: Response): Promise<void> => {
 export const completeLesson = async (req: any, res: Response): Promise<void> => {
   try {
     const learnerId = req.user.id;
-    const { courseId, lessonId } = req.body;
+    const { courseId, lessonId, completed } = req.body;
 
     if (!courseId || !lessonId) {
       res.status(400).json({ error: 'courseId and lessonId are required' });
       return;
     }
 
-    const result = await markLessonComplete(learnerId, courseId, lessonId);
+    const result = await markLessonComplete(learnerId, courseId, lessonId, completed);
     res.status(200).json({
-      message: 'Lesson marked as completed',
+      message: 'Lesson progress updated',
       progress: result,
     });
   } catch (error: any) {

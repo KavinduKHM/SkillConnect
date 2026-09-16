@@ -5,9 +5,12 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
+  Platform,
+  Alert,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface HeaderProps {
   title: string;
@@ -24,11 +27,48 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const navigation = useNavigation();
 
+  const canGoBack = navigation.canGoBack();
+  const displayBack = showBack || canGoBack;
+
   const handleBack = () => {
     if (onBackPress) {
       onBackPress();
-    } else {
+    } else if (canGoBack) {
       navigation.goBack();
+    }
+  };
+
+  const performLogout = async () => {
+    try {
+      await AsyncStorage.multiRemove(['@token', '@user', 'token', 'user']);
+      if (Platform.OS === 'web') {
+        window.location.replace('/');
+      } else {
+        try {
+          if (typeof (navigation as any).replace === 'function') {
+            (navigation as any).replace('Auth');
+          } else {
+            (navigation as any).navigate('Auth');
+          }
+        } catch (navErr) {
+          (navigation as any).navigate('Auth');
+        }
+      }
+    } catch (e) {
+      console.warn("Logout handler failed", e);
+    }
+  };
+
+  const handleLogout = () => {
+    if (Platform.OS === 'web') {
+      if (window.confirm('Are you sure you want to sign out?')) {
+        performLogout();
+      }
+    } else {
+      Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Sign Out', style: 'destructive', onPress: performLogout },
+      ]);
     }
   };
 
@@ -36,14 +76,19 @@ export const Header: React.FC<HeaderProps> = ({
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
         <View style={styles.leftContainer}>
-          {showBack && (
+          {displayBack && (
             <TouchableOpacity onPress={handleBack} style={styles.backButton}>
               <Ionicons name="arrow-back" size={24} color="#1F2937" />
             </TouchableOpacity>
           )}
           <Text style={styles.title}>{title}</Text>
         </View>
-        {rightComponent && <View style={styles.rightContainer}>{rightComponent}</View>}
+        <View style={styles.rightContainer}>
+          {rightComponent}
+          <TouchableOpacity onPress={handleLogout} style={[styles.logoutButton, rightComponent ? { marginLeft: 16 } : {}]}>
+            <Ionicons name="log-out-outline" size={24} color="#EF4444" />
+          </TouchableOpacity>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -78,5 +123,9 @@ const styles = StyleSheet.create({
   rightContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
   },
+  logoutButton: {
+    padding: 4,
+  }
 });
