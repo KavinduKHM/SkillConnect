@@ -12,7 +12,8 @@ import { courseApi } from '../../api/skill-sharer.service';
 import { fetchCategories } from '../../api/learner.service';
 import { Category } from '../../types';
 
-export const CourseCreatorScreen: React.FC = ({ navigation }: any) => {
+export const CourseCreatorScreen: React.FC = ({ navigation, route }: any) => {
+  const courseId = route?.params?.courseId as string | undefined;
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
@@ -29,6 +30,13 @@ export const CourseCreatorScreen: React.FC = ({ navigation }: any) => {
         } else {
           setCategories([]);
         }
+
+        if (courseId) {
+          const courseResponse = await courseApi.getCourse(courseId);
+          if (courseResponse.success && courseResponse.data) {
+            setInitialCourse(courseResponse.data);
+          }
+        }
       } catch (error) {
         console.error('Error fetching categories:', error);
         setCategories([]);
@@ -37,7 +45,9 @@ export const CourseCreatorScreen: React.FC = ({ navigation }: any) => {
       }
     };
     loadCategories();
-  }, []);
+  }, [courseId]);
+
+  const [initialCourse, setInitialCourse] = useState<any>(undefined);
 
   const handleSubmit = async (data: any) => {
     try {
@@ -52,13 +62,15 @@ export const CourseCreatorScreen: React.FC = ({ navigation }: any) => {
         return;
       }
 
-      const response = await courseApi.createCourse(data);
+      const response = courseId
+        ? await courseApi.updateCourse(courseId, data)
+        : await courseApi.createCourse(data);
       
       if (response.success) {
         Toast.show({
           type: 'success',
           text1: 'Success',
-          text2: 'Course created successfully!',
+          text2: courseId ? 'Course updated successfully!' : 'Course created successfully!',
         });
         navigation.navigate('MyCourses');
       } else {
@@ -86,13 +98,15 @@ export const CourseCreatorScreen: React.FC = ({ navigation }: any) => {
 
   return (
     <View style={styles.container}>
-      <Header title="Create Course" showBack />
+      <Header title={courseId ? 'Edit Course' : 'Create Course'} showBack />
       
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1 }}>
         <CourseForm
           onSubmit={handleSubmit}
           loading={loading}
           categories={categories}
+          initialCourse={initialCourse}
+          submitLabel={courseId ? 'Update Course' : 'Create Course Draft  →'}
         />
       </ScrollView>
     </View>
@@ -105,6 +119,6 @@ export default CourseCreatorScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#FFF9F7',
   },
 });
