@@ -22,6 +22,7 @@ interface Qualification {
   year: number;
   description?: string;
   status: 'PENDING' | 'VERIFIED' | 'REJECTED';
+  documents?: { id: string; fileName: string; fileType?: string }[];
 }
 
 export default function QualificationsScreen({ navigation }: any) {
@@ -195,14 +196,26 @@ export default function QualificationsScreen({ navigation }: any) {
     <View style={styles.qualificationCard}>
       <View style={styles.cardHeader}>
         <Text style={styles.cardTitle}>{item.title}</Text>
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
-          <Text style={styles.statusText}>{getStatusText(item.status)}</Text>
+        <View style={[styles.statusBadge, { borderColor: getStatusColor(item.status) }]}>
+          <Ionicons name={item.status === 'VERIFIED' ? 'checkmark-circle-outline' : item.status === 'REJECTED' ? 'close-circle-outline' : 'time-outline'} size={14} color={getStatusColor(item.status)} />
+          <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>{getStatusText(item.status)}</Text>
         </View>
       </View>
-      <Text style={styles.cardInstitution}>{item.institution}</Text>
-      <Text style={styles.cardYear}>{item.year}</Text>
-      {item.description && <Text style={styles.cardDescription}>{item.description}</Text>}
+      <Text style={styles.cardInstitution}>{item.institution} <Text style={styles.cardYear}>• Class of {item.year}</Text></Text>
+      {item.description && <View style={styles.remarks}><Text style={styles.remarksLabel}>Remarks: </Text><Text style={styles.cardDescription}>{item.description}</Text></View>}
+      {item.documents?.map((document) => (
+        <View key={document.id} style={styles.documentRow}>
+          <Ionicons name="document-text-outline" size={18} color="#8C746B" />
+          <Text style={styles.documentName} numberOfLines={1}>{document.fileName}</Text>
+          <Text style={styles.documentType}>{document.fileType?.split('/').pop()?.toUpperCase() || 'PDF'}</Text>
+        </View>
+      ))}
+      <View style={styles.divider} />
       <View style={styles.cardActions}>
+        <TouchableOpacity style={styles.detailsButton} onPress={() => Alert.alert('Qualification Details', `${item.title}\n${item.institution}\nClass of ${item.year}`)}>
+          <Ionicons name="information-circle-outline" size={16} color="#8C746B" />
+          <Text style={styles.detailsText}>Details</Text>
+        </TouchableOpacity>
         <TouchableOpacity
           style={styles.editButton}
           onPress={() => openEditModal(item)}
@@ -239,7 +252,10 @@ export default function QualificationsScreen({ navigation }: any) {
         >
           <Ionicons name="arrow-back" size={23} color="#3B2924" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Qualifications</Text>
+        <View style={styles.headerCopy}>
+          <Text style={styles.headerTitle}>Qualifications</Text>
+          <Text style={styles.headerSubtitle}>Instructor Credentials</Text>
+        </View>
         <TouchableOpacity
           style={styles.addButton}
           onPress={openAddModal}
@@ -247,6 +263,19 @@ export default function QualificationsScreen({ navigation }: any) {
           <Ionicons name="add" size={20} color="#FFFFFF" />
           <Text style={styles.addButtonText}>Add</Text>
         </TouchableOpacity>
+      </View>
+
+      <View style={styles.verificationBanner}>
+        <View style={styles.bannerIcon}><Ionicons name="school" size={22} color="#A66A00" /></View>
+        <View style={styles.bannerCopy}>
+          <Text style={styles.bannerTitle}>Verification in Progress</Text>
+          <Text style={styles.bannerText}>Verified credentials unlock the <Text style={styles.bannerAccent}>"Top Instructor"</Text> badge & boost your course reach by up to 40%.</Text>
+        </View>
+      </View>
+
+      <View style={styles.listHeading}>
+        <Text style={styles.listTitle}>ALL SUBMITTED ({qualifications.length})</Text>
+        <View style={styles.reviewBadge}><View style={styles.reviewDot} /><Text style={styles.reviewText}>Reviewing Submissions</Text></View>
       </View>
 
       <FlatList
@@ -265,6 +294,13 @@ export default function QualificationsScreen({ navigation }: any) {
               Add your qualifications to get verified
             </Text>
           </View>
+        }
+        ListFooterComponent={
+          <TouchableOpacity style={styles.addAnother} onPress={openAddModal}>
+            <View style={styles.addAnotherIcon}><Ionicons name="add" size={28} color="#B3310D" /></View>
+            <Text style={styles.addAnotherTitle}>Add Another Qualification</Text>
+            <Text style={styles.addAnotherText}>Upload diplomas, academic degrees, or certifications</Text>
+          </TouchableOpacity>
         }
       />
 
@@ -358,7 +394,7 @@ export default function QualificationsScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#FBF7F2',
   },
   centered: {
     flex: 1,
@@ -369,35 +405,52 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
+    paddingHorizontal: 21,
+    paddingTop: 14,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EFE3D8',
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#FFFCF9',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
+    borderWidth: 1,
+    borderColor: '#EBDCCC',
     shadowColor: '#7D4938',
     shadowOpacity: 0.08,
     shadowRadius: 5,
     elevation: 1,
   },
+  headerCopy: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 10,
+  },
   headerTitle: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: 'bold',
-    color: '#111827',
+    color: '#171311',
+  },
+  headerSubtitle: {
+    color: '#866E65',
+    fontSize: 14,
+    marginTop: 2,
   },
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#4F46E5',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+    backgroundColor: '#B3310D',
+    paddingHorizontal: 17,
+    paddingVertical: 12,
+    borderRadius: 24,
+    shadowColor: '#B3310D',
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 3,
   },
   addButtonText: {
     color: '#FFFFFF',
@@ -405,52 +458,154 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   listContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 40,
+    paddingHorizontal: 21,
+    paddingTop: 3,
+    paddingBottom: 24,
   },
+  verificationBanner: {
+    flexDirection: 'row',
+    marginHorizontal: 21,
+    marginTop: 21,
+    padding: 15,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#F2D19B',
+    backgroundColor: '#FFF8ED',
+  },
+  bannerIcon: {
+    width: 47,
+    height: 47,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FBE8C7',
+  },
+  bannerCopy: { flex: 1, marginLeft: 15 },
+  bannerTitle: { color: '#1D1714', fontSize: 16, fontWeight: '700', marginBottom: 4 },
+  bannerText: { color: '#654F45', fontSize: 14, lineHeight: 22 },
+  bannerAccent: { color: '#B3310D' },
+  listHeading: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginHorizontal: 25,
+    marginTop: 22,
+    marginBottom: 13,
+  },
+  listTitle: { color: '#896F64', fontSize: 14, fontWeight: '600', letterSpacing: 0.3 },
+  reviewBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#F0D291',
+    backgroundColor: '#FFF8E9',
+  },
+  reviewDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#E8A32C', marginRight: 7 },
+  reviewText: { color: '#A66A00', fontSize: 11, fontWeight: '600' },
   qualificationCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    backgroundColor: '#FFFCF9',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#ECDDD0',
+    padding: 21,
+    marginBottom: 17,
+    shadowColor: '#6E3828',
     shadowOpacity: 0.05,
-    shadowRadius: 2,
+    shadowRadius: 8,
     elevation: 1,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 5,
   },
   cardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
+    fontSize: 19,
+    fontWeight: '700',
+    color: '#171311',
     flex: 1,
   },
   statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingVertical: 7,
+    borderRadius: 18,
+    borderWidth: 1,
+    backgroundColor: '#FFF8E7',
   },
   statusText: {
-    fontSize: 10,
-    color: '#FFFFFF',
-    fontWeight: '500',
+    fontSize: 13,
+    fontWeight: '600',
+    marginLeft: 4,
   },
   cardInstitution: {
-    fontSize: 14,
-    color: '#6B7280',
+    fontSize: 15,
+    color: '#B3310D',
+    marginBottom: 14,
   },
   cardYear: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    marginTop: 2,
+    color: '#80695F',
   },
   cardDescription: {
+    flex: 1,
+    fontSize: 14,
+    color: '#3B2D27',
+    fontStyle: 'italic',
+  },
+  remarks: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FAF4EE',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#EFE1D5',
+    paddingHorizontal: 13,
+    paddingVertical: 13,
+    marginBottom: 14,
+  },
+  remarksLabel: { color: '#8C746B', fontSize: 14 },
+  documentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FAF4EE',
+    borderRadius: 11,
+    borderWidth: 1,
+    borderColor: '#EFE1D5',
+    paddingHorizontal: 13,
+    paddingVertical: 10,
+    marginBottom: 13,
+  },
+  documentName: { flex: 1, color: '#2B211D', fontSize: 14, marginLeft: 10 },
+  documentType: { color: '#A79086', fontSize: 12, fontWeight: '700' },
+  divider: { height: 1, backgroundColor: '#EFE1D5', marginBottom: 14 },
+  detailsButton: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  detailsText: { color: '#8C746B', fontSize: 15, marginLeft: 5 },
+  addAnother: {
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#EADACB',
+    borderStyle: 'dashed',
+    borderRadius: 20,
+    paddingVertical: 22,
+    marginBottom: 10,
+  },
+  addAnotherIcon: {
+    width: 51,
+    height: 51,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFF0EC',
+    marginBottom: 10,
+  },
+  addAnotherTitle: { color: '#1D1714', fontSize: 16, fontWeight: '700' },
+  addAnotherText: { color: '#8C746B', fontSize: 13, marginTop: 5 },
+  cardDescriptionOld: {
     fontSize: 14,
     color: '#374151',
     marginTop: 6,
@@ -458,31 +613,39 @@ const styles = StyleSheet.create({
   cardActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
-    marginTop: 8,
+    gap: 10,
   },
   editButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E6D6C7',
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
   },
   editButtonText: {
-    fontSize: 12,
-    color: '#4F46E5',
+    fontSize: 14,
+    color: '#8B3A20',
     marginLeft: 4,
   },
   deleteButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: '#F3B7AE',
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
   },
   deleteButtonText: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#EF4444',
     marginLeft: 4,
   },
   emptyState: {
     alignItems: 'center',
-    paddingVertical: 60,
+    paddingVertical: 35,
   },
   emptyTitle: {
     fontSize: 18,
