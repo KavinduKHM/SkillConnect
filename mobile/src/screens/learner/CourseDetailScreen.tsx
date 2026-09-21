@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Platform,
 } from 'react-native';
 import { fetchCourseDetails, enrollCourse, cancelEnrollment, completeLesson } from '../../api/learner.service';
 import { COLORS } from '../../theme/colors';
@@ -170,7 +171,12 @@ export default function CourseDetailScreen({ route, navigation }: any) {
           <Text style={styles.loadingText}>Loading course details...</Text>
         </View>
       ) : (
-        <ScrollView style={styles.scrollContent} contentContainerStyle={{ paddingBottom: 100 }}>
+        <ScrollView
+          style={styles.scrollContent}
+          contentContainerStyle={{ paddingBottom: 140 }}
+          showsVerticalScrollIndicator={true}
+          persistentScrollbar={true}
+        >
           <View style={styles.contentPadding}>
             {/* Hero Image Banner */}
             <Image source={{ uri: course.thumbnail || 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=800&q=80' }} style={styles.heroImage} />
@@ -324,58 +330,107 @@ export default function CourseDetailScreen({ route, navigation }: any) {
         </ScrollView>
       )}
 
-      {/* Sticky Bottom Bar */}
-      <View style={styles.bottomBar}>
-        {actionLoading ? (
-          <ActivityIndicator color={COLORS.primary} />
-        ) : isEnrolled ? (
-          <View style={styles.enrolledActionRow}>
-            {progressPct >= 100 ? (
+      {/* Sticky Bottom Actions & Footer Navigation Bar */}
+      <View style={styles.bottomFixedContainer}>
+        <View style={styles.bottomBar}>
+          {actionLoading ? (
+            <ActivityIndicator color={COLORS.primary} />
+          ) : isEnrolled ? (
+            <View style={styles.enrolledActionRow}>
+              {progressPct >= 100 ? (
+                <TouchableOpacity
+                  style={styles.continueBtn}
+                  onPress={() =>
+                    Alert.alert(
+                      'Completion Request Sent! 🎓',
+                      'Your course completion request has been submitted to your instructor. Once verified, your course certificate will be available under My Learning!',
+                      [{ text: 'View My Dashboard', onPress: () => navigation?.navigate('MainTabs', { screen: 'MyLearningTab' }) }]
+                    )
+                  }
+                >
+                  <Text style={styles.actionBtnText}>Request Certificate 🎓</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={styles.continueBtn}
+                  onPress={() =>
+                    navigation?.navigate('LessonPlayer', {
+                      courseId,
+                      lessonId: course.modules?.[0]?.lessons?.[0]?.id || 'l1',
+                      lessonTitle: course.title,
+                    })
+                  }
+                >
+                  <Text style={styles.actionBtnText}>Continue Learning ▶</Text>
+                </TouchableOpacity>
+              )}
               <TouchableOpacity
-                style={styles.continueBtn}
-                onPress={() =>
-                  Alert.alert(
-                    'Completion Request Sent! 🎓',
-                    'Your course completion request has been submitted to your instructor. Once verified, your course certificate will be available under My Learning!',
-                    [{ text: 'View My Dashboard', onPress: () => navigation?.navigate('MyLearningTab') }]
-                  )
-                }
+                style={styles.reviewBtn}
+                onPress={() => navigation?.navigate('CourseReview', {
+                  courseId,
+                  courseTitle: course.title,
+                  hasCompleted: userEnrollment?.status === 'COMPLETED',
+                })}
               >
-                <Text style={styles.actionBtnText}>Request Certificate 🎓</Text>
+                <Text style={styles.reviewBtnText}>⭐ Review</Text>
               </TouchableOpacity>
-            ) : (
-              <TouchableOpacity
-                style={styles.continueBtn}
-                onPress={() =>
-                  navigation?.navigate('LessonPlayer', {
-                    courseId,
-                    lessonId: course.modules?.[0]?.lessons?.[0]?.id || 'l1',
-                    lessonTitle: course.title,
-                  })
-                }
-              >
-                <Text style={styles.actionBtnText}>Continue Learning ▶</Text>
+              <TouchableOpacity style={styles.cancelBtn} onPress={handleCancelEnrollment}>
+                <Text style={styles.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
-            )}
-            <TouchableOpacity
-              style={styles.reviewBtn}
-              onPress={() => navigation?.navigate('CourseReview', {
-                courseId,
-                courseTitle: course.title,
-                hasCompleted: userEnrollment?.status === 'COMPLETED',
-              })}
-            >
-              <Text style={styles.reviewBtnText}>⭐ Review</Text>
+            </View>
+          ) : (
+            <TouchableOpacity style={styles.enrollBtn} onPress={handleEnroll}>
+              <Text style={styles.actionBtnText}>Enroll in Course</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.cancelBtn} onPress={handleCancelEnrollment}>
-              <Text style={styles.cancelBtnText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <TouchableOpacity style={styles.enrollBtn} onPress={handleEnroll}>
-            <Text style={styles.actionBtnText}>Enroll in Course</Text>
+          )}
+        </View>
+
+        {/* Footer Navigation Bar (matching Home page) */}
+        <View style={styles.footerNavBar}>
+          <TouchableOpacity
+            style={styles.footerTabItem}
+            activeOpacity={0.8}
+            onPress={() => navigation?.navigate('MainTabs', { screen: 'HomeTab' })}
+          >
+            <View style={styles.footerTabIconWrapper}>
+              <Text style={styles.footerTabIcon}>🎓</Text>
+            </View>
+            <Text style={styles.footerTabLabel}>Learn</Text>
           </TouchableOpacity>
-        )}
+
+          <TouchableOpacity
+            style={styles.footerTabItem}
+            activeOpacity={0.8}
+            onPress={() => navigation?.navigate('MainTabs', { screen: 'CourseListTab' })}
+          >
+            <View style={styles.footerTabIconWrapper}>
+              <Text style={styles.footerTabIcon}>🧭</Text>
+            </View>
+            <Text style={styles.footerTabLabel}>Explore</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.footerTabItem}
+            activeOpacity={0.8}
+            onPress={() => navigation?.navigate('MainTabs', { screen: 'MyLearningTab' })}
+          >
+            <View style={styles.footerTabIconWrapper}>
+              <Text style={styles.footerTabIcon}>💬</Text>
+            </View>
+            <Text style={styles.footerTabLabel}>My Learning</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.footerTabItem}
+            activeOpacity={0.8}
+            onPress={() => navigation?.navigate('MainTabs', { screen: 'ProfileTab' })}
+          >
+            <View style={styles.footerTabIconWrapper}>
+              <Text style={styles.footerTabIcon}>👤</Text>
+            </View>
+            <Text style={styles.footerTabLabel}>Profile</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -406,7 +461,14 @@ const styles = StyleSheet.create({
   rightIcons: { flexDirection: 'row', gap: 8 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: { marginTop: 10, color: COLORS.neutralMedium },
-  scrollContent: { flex: 1 },
+  scrollContent: {
+    flex: 1,
+    ...Platform.select({
+      web: {
+        overflowY: 'scroll',
+      },
+    }),
+  },
   contentPadding: { paddingHorizontal: 18, paddingTop: 10 },
   heroImage: { width: '100%', height: 200, borderRadius: 20, marginBottom: 14 },
   enrolledBadgeTag: {
@@ -495,12 +557,21 @@ const styles = StyleSheet.create({
   lessonItem: { fontSize: 13, color: COLORS.neutralDark, flex: 1 },
   lessonItemDone: { textDecorationLine: 'line-through', color: COLORS.primary, fontWeight: '600' },
   playTag: { fontSize: 11, color: COLORS.primary, fontWeight: '800' },
-  bottomBar: {
-    paddingHorizontal: 18,
-    paddingVertical: 14,
+  bottomFixedContainer: {
     backgroundColor: COLORS.white,
     borderTopWidth: 1,
     borderTopColor: COLORS.borderWarm,
+    elevation: 8,
+    shadowColor: COLORS.neutralDark,
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+  },
+  bottomBar: {
+    paddingHorizontal: 18,
+    paddingTop: 10,
+    paddingBottom: 8,
+    backgroundColor: COLORS.white,
   },
   enrollBtn: { backgroundColor: COLORS.primaryDark, paddingVertical: 14, borderRadius: 18, alignItems: 'center' },
   enrolledActionRow: { flexDirection: 'row', gap: 10 },
@@ -520,5 +591,34 @@ const styles = StyleSheet.create({
   },
   reviewsCtaTitle: { fontSize: 15, fontWeight: '800', color: COLORS.neutralDark },
   reviewsCtaSub: { fontSize: 12, color: COLORS.neutralMedium, marginTop: 2 },
-});>>>>>>> 4336ca0c7b6497cff2379a0e31f9914bc68a85a8
+  footerNavBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    backgroundColor: COLORS.white,
+    borderTopWidth: 1,
+    borderTopColor: '#F3E5DC',
+    height: 58,
+    paddingBottom: 4,
+    paddingTop: 4,
+  },
+  footerTabItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+  },
+  footerTabIconWrapper: {
+    paddingHorizontal: 12,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  footerTabIcon: {
+    fontSize: 18,
+  },
+  footerTabLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.neutralMedium,
+    marginTop: 2,
+  },
 });
