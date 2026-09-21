@@ -11,6 +11,7 @@ import {
   getLesson,
   completeLesson,
   fetchProgress,
+  fetchLearningHistoryController,
 } from '../controllers/learner.controller.js';
 
 const router = express.Router();
@@ -33,6 +34,7 @@ router.use(isAuthenticated);
 router.post('/enrollments', enroll);
 router.delete('/enrollments/:courseId', cancel);
 router.get('/my-learning', getMyLearningDashboard);
+router.get('/history', fetchLearningHistoryController);
 
 // Learning & Progress Tracking
 router.get('/lessons/:lessonId', getLesson);

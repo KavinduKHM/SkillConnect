@@ -442,9 +442,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.bgWarm,
     ...Platform.select({
       web: {
-        height: '100vh',
-        maxHeight: '100vh',
-        overflow: 'hidden',
+        height: '100vh' as any,
+        maxHeight: '100vh' as any,
+        overflow: 'hidden' as any,
       },
     }),
   },

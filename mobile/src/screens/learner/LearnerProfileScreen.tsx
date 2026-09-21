@@ -145,8 +145,19 @@ export default function LearnerProfileScreen({ navigation }: any) {
             })}
 
             {/* Account Settings */}
-            <Text style={styles.sectionHeading}>Account Settings</Text>
+            <Text style={styles.sectionHeading}>Account Settings & History</Text>
             <View style={styles.settingsGroup}>
+              <TouchableOpacity
+                style={styles.settingsRow}
+                onPress={() => navigation?.navigate('LearningHistory')}
+              >
+                <Text style={styles.settingsIcon}>📜</Text>
+                <Text style={[styles.settingsLabel, { color: COLORS.primary, fontWeight: '800' }]}>
+                  View Learning History & Growth
+                </Text>
+                <Text style={styles.chevron}>›</Text>
+              </TouchableOpacity>
+              <View style={styles.rowDivider} />
               <TouchableOpacity style={styles.settingsRow}>
                 <Text style={styles.settingsIcon}>✏️</Text>
                 <Text style={styles.settingsLabel}>Edit Personal Details</Text>

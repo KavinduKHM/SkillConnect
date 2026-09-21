@@ -138,10 +138,14 @@ export default function HomeScreen({ navigation }: any) {
 
             <View style={styles.headerRightActions}>
               {/* Streak Badge */}
-              <View style={styles.streakBadge}>
+              <TouchableOpacity
+                style={styles.streakBadge}
+                activeOpacity={0.8}
+                onPress={() => navigation?.navigate('LearningHistory')}
+              >
                 <Text style={styles.streakIcon}>🔥</Text>
                 <Text style={styles.streakText}>7d</Text>
-              </View>
+              </TouchableOpacity>
 
               {/* Notification Bell */}
               <TouchableOpacity style={styles.bellIconBtn} activeOpacity={0.8}>

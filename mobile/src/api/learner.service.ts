@@ -189,3 +189,12 @@ export const fetchMyRecommendations = async () => {
   const response = await client.get('/recommendations/me');
   return response.data;
 };
+
+// ============================================================
+// LEARNING HISTORY
+// ============================================================
+
+export const fetchLearningHistory = async () => {
+  const response = await client.get('/learner/history');
+  return response.data;
+};

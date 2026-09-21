@@ -15,6 +15,7 @@ import { COLORS } from '../theme/colors';
 import AssignmentDetailScreen from '../screens/learner/AssignmentDetailScreen';
 import CourseReviewScreen from '../screens/learner/CourseReviewScreen';
 import MyRecommendationsScreen from '../screens/learner/MyRecommendationsScreen';
+import LearningHistoryScreen from '../screens/learner/LearningHistoryScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -140,6 +141,7 @@ export default function LearnerNavigator() {
       <Stack.Screen name="AssignmentDetail" component={AssignmentDetailScreen} />
       <Stack.Screen name="CourseReview" component={CourseReviewScreen} />
       <Stack.Screen name="MyRecommendations" component={MyRecommendationsScreen} />
+      <Stack.Screen name="LearningHistory" component={LearningHistoryScreen} />
     </Stack.Navigator>
   );
 }
