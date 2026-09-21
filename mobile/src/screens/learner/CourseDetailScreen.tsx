@@ -300,6 +300,26 @@ export default function CourseDetailScreen({ route, navigation }: any) {
                 </View>
               ))
             ) : null}
+
+            {/* Reviews Section */}
+            <TouchableOpacity
+              style={styles.reviewsCtaRow}
+              onPress={() => navigation?.navigate('CourseReview', {
+                courseId,
+                courseTitle: course.title,
+                hasCompleted: userEnrollment?.status === 'COMPLETED',
+              })}
+            >
+              <View>
+                <Text style={styles.reviewsCtaTitle}>⭐ Ratings & Reviews</Text>
+                {course.courseReviews && course.courseReviews.length > 0 ? (
+                  <Text style={styles.reviewsCtaSub}>{course.courseReviews.length} review{course.courseReviews.length !== 1 ? 's' : ''} from learners</Text>
+                ) : (
+                  <Text style={styles.reviewsCtaSub}>Be the first to review this course</Text>
+                )}
+              </View>
+              <Text style={{ fontSize: 18, color: COLORS.primary }}>›</Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       )}
@@ -337,6 +357,16 @@ export default function CourseDetailScreen({ route, navigation }: any) {
                 <Text style={styles.actionBtnText}>Continue Learning ▶</Text>
               </TouchableOpacity>
             )}
+            <TouchableOpacity
+              style={styles.reviewBtn}
+              onPress={() => navigation?.navigate('CourseReview', {
+                courseId,
+                courseTitle: course.title,
+                hasCompleted: userEnrollment?.status === 'COMPLETED',
+              })}
+            >
+              <Text style={styles.reviewBtnText}>⭐ Review</Text>
+            </TouchableOpacity>
             <TouchableOpacity style={styles.cancelBtn} onPress={handleCancelEnrollment}>
               <Text style={styles.cancelBtnText}>Cancel</Text>
             </TouchableOpacity>
@@ -478,4 +508,17 @@ const styles = StyleSheet.create({
   cancelBtn: { backgroundColor: '#EF4444', paddingVertical: 14, paddingHorizontal: 18, borderRadius: 18, alignItems: 'center' },
   cancelBtnText: { color: COLORS.white, fontWeight: '800', fontSize: 14 },
   actionBtnText: { color: COLORS.white, fontSize: 15, fontWeight: '800' },
+  reviewBtn: {
+    backgroundColor: COLORS.badgeOrangeBg, paddingVertical: 14, paddingHorizontal: 16,
+    borderRadius: 18, alignItems: 'center', borderWidth: 1, borderColor: COLORS.primary,
+  },
+  reviewBtnText: { color: COLORS.primary, fontWeight: '800', fontSize: 13 },
+  reviewsCtaRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    backgroundColor: COLORS.cardBgSoft, padding: 14, borderRadius: 16,
+    borderWidth: 1, borderColor: COLORS.borderWarm, marginTop: 12, marginBottom: 8,
+  },
+  reviewsCtaTitle: { fontSize: 15, fontWeight: '800', color: COLORS.neutralDark },
+  reviewsCtaSub: { fontSize: 12, color: COLORS.neutralMedium, marginTop: 2 },
+});>>>>>>> 4336ca0c7b6497cff2379a0e31f9914bc68a85a8
 });

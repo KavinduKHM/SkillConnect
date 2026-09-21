@@ -12,6 +12,9 @@ import AssessmentDetailScreen from '../screens/learner/AssessmentDetailScreen';
 import SkillSharerProfileScreen from '../screens/learner/SkillSharerProfileScreen';
 import LearnerProfileScreen from '../screens/learner/LearnerProfileScreen';
 import { COLORS } from '../theme/colors';
+import AssignmentDetailScreen from '../screens/learner/AssignmentDetailScreen';
+import CourseReviewScreen from '../screens/learner/CourseReviewScreen';
+import MyRecommendationsScreen from '../screens/learner/MyRecommendationsScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -134,6 +137,9 @@ export default function LearnerNavigator() {
       <Stack.Screen name="AssessmentDetail" component={AssessmentDetailScreen} />
       <Stack.Screen name="SkillSharerProfile" component={SkillSharerProfileScreen} />
       <Stack.Screen name="LearnerProfile" component={LearnerProfileScreen} />
+      <Stack.Screen name="AssignmentDetail" component={AssignmentDetailScreen} />
+      <Stack.Screen name="CourseReview" component={CourseReviewScreen} />
+      <Stack.Screen name="MyRecommendations" component={MyRecommendationsScreen} />
     </Stack.Navigator>
   );
 }

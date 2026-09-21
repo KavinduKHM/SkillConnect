@@ -164,6 +164,13 @@ export const DashboardScreen = ({ navigation }: any) => {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.actionCard}
+            onPress={() => navigation.navigate('CompletionRequests')}
+          >
+            <Text style={styles.actionIcon}>🎓</Text>
+            <Text style={styles.actionLabel}>Certificates</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionCard}
             onPress={() => navigation.navigate('MyCourses')}
           >
             <Text style={styles.actionIcon}>📚</Text>
@@ -196,6 +203,13 @@ export const DashboardScreen = ({ navigation }: any) => {
           >
             <Text style={styles.actionIcon}>🎓</Text>
             <Text style={styles.actionLabel}>Qualifications</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionCard, { borderWidth: 1.5, borderColor: '#F59E0B', backgroundColor: '#FFFBEB' }]}
+            onPress={() => navigation.navigate('Recommendations')}
+          >
+            <Text style={styles.actionIcon}>🏅</Text>
+            <Text style={[styles.actionLabel, { color: '#92400E', fontWeight: '700' }]}>Recommend</Text>
           </TouchableOpacity>
         </View>
       </View>

@@ -10,6 +10,9 @@ import {
   ActivityIndicator,
   RefreshControl,
   Image,
+  ScrollView,
+  Platform,
+  Linking,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { fetchMyLearning, fetchMyQuizzes } from '../../api/learner.service';
@@ -19,7 +22,10 @@ export default function MyLearningScreen({ navigation }: any) {
   const [inProgressCourses, setInProgressCourses] = useState<any[]>([]);
   const [completedCourses, setCompletedCourses] = useState<any[]>([]);
   const [assessments, setAssessments] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'IN_PROGRESS' | 'COMPLETED' | 'ASSESSMENTS' | 'CERTIFICATES'>('IN_PROGRESS');
+  const [assignments, setAssignments] = useState<any[]>([]);
+  const [certificates, setCertificates] = useState<any[]>([]);
+  const [completionRequests, setCompletionRequests] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'IN_PROGRESS' | 'COMPLETED' | 'ASSESSMENTS' | 'ASSIGNMENTS' | 'CERTIFICATES'>('IN_PROGRESS');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -35,6 +41,45 @@ export default function MyLearningScreen({ navigation }: any) {
       const quizRes: any = await fetchMyQuizzes();
       const quizzes = quizRes?.quizzes || quizRes?.data || (Array.isArray(quizRes) ? quizRes : []);
       setAssessments(quizzes);
+
+      // Fetch assignments & certificates dynamically
+      const allAssignments: any[] = [];
+      const enrolledCourseIds = [...(res?.inProgress || []), ...(res?.completed || [])].map((c: any) => c.courseId);
+      
+      const { fetchCourseAssignments, fetchLearnerSubmissions, fetchMyCertificates, fetchMyCompletionRequests } = require('../../api/learner.service');
+
+      const certsRes = await fetchMyCertificates().catch(() => null);
+      if (certsRes) setCertificates(certsRes.certificates || []);
+
+      const reqsRes = await fetchMyCompletionRequests().catch(() => null);
+      if (reqsRes) {
+        const pendingOrRejected = (reqsRes.requests || []).filter((req: any) => req.status !== 'APPROVED');
+        setCompletionRequests(pendingOrRejected);
+      }
+      
+      for (const cId of Array.from(new Set(enrolledCourseIds))) {
+        try {
+          const assignRes: any = await fetchCourseAssignments(cId as string);
+          const courseAssignments = assignRes?.assignments || assignRes?.data?.assignments || [];
+          
+          for (const assignment of courseAssignments) {
+            try {
+              const subRes: any = await fetchLearnerSubmissions(assignment.id);
+              const subs = subRes?.submissions || subRes?.data || [];
+              assignment.mySubmission = subs.length > 0 ? subs[0] : null;
+            } catch (e) {
+              assignment.mySubmission = null;
+            }
+            const matchedCourse = [...(res?.inProgress || []), ...(res?.completed || [])].find((c: any) => c.courseId === cId)?.course;
+            if (matchedCourse && !assignment.course) assignment.course = matchedCourse;
+            
+            allAssignments.push(assignment);
+          }
+        } catch (e) {
+          console.log(`Failed to fetch assignments for course ${cId}`);
+        }
+      }
+      setAssignments(allAssignments);
     } catch (err) {
       console.log('Error fetching my-learning from API, using demo data:', err);
       setInProgressCourses([
@@ -90,6 +135,20 @@ export default function MyLearningScreen({ navigation }: any) {
     }, [])
   );
 
+  const downloadCertificate = async (certificate: any) => {
+    try {
+      const url = `http://localhost:5000/api/certificates/${certificate.id}/download`;
+      if (Platform.OS === 'web') {
+        window.open(url, '_blank');
+      } else {
+        await Linking.openURL(url);
+      }
+    } catch (error) {
+      console.log('Error opening PDF download:', error);
+      alert('Could not download the certificate.');
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.bgWarm} />
@@ -97,11 +156,11 @@ export default function MyLearningScreen({ navigation }: any) {
       {/* Main Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>My Learning Dashboard</Text>
-        <Text style={styles.headerSubtitle}>Track active courses, progress & certificates</Text>
+        <Text style={styles.headerSubtitle}>Track active courses, progress, assignments & certificates</Text>
       </View>
 
       {/* Navigation Filter Tabs */}
-      <View style={styles.tabSection}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabSection}>
         <TouchableOpacity
           style={[styles.tabPill, activeTab === 'IN_PROGRESS' && styles.tabPillActive]}
           onPress={() => setActiveTab('IN_PROGRESS')}
@@ -125,7 +184,16 @@ export default function MyLearningScreen({ navigation }: any) {
           onPress={() => setActiveTab('ASSESSMENTS')}
         >
           <Text style={[styles.tabPillText, activeTab === 'ASSESSMENTS' && styles.tabPillTextActive]}>
-            Assessments
+            Quizzes
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.tabPill, activeTab === 'ASSIGNMENTS' && styles.tabPillActive]}
+          onPress={() => setActiveTab('ASSIGNMENTS')}
+        >
+          <Text style={[styles.tabPillText, activeTab === 'ASSIGNMENTS' && styles.tabPillTextActive]}>
+            Assignments
           </Text>
         </TouchableOpacity>
 
@@ -137,7 +205,7 @@ export default function MyLearningScreen({ navigation }: any) {
             Certificates
           </Text>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
 
       {/* Content List */}
       {loading && !refreshing ? (
@@ -190,6 +258,43 @@ export default function MyLearningScreen({ navigation }: any) {
               </Text>
             </TouchableOpacity>
           )}
+        />
+      ) : activeTab === 'ASSIGNMENTS' ? (
+        <FlatList
+          data={assignments}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContainer}
+          renderItem={({ item }) => {
+            const hasSubmission = Boolean(item.mySubmission);
+            const isGraded = Boolean(item.mySubmission && (item.mySubmission.status === 'COMPLETED' || item.mySubmission.status === 'GRADED' || (item.mySubmission.grade !== null && item.mySubmission.grade !== undefined)));
+            const status = isGraded ? 'GRADED' : (hasSubmission ? (item.mySubmission.status || 'SUBMITTED') : 'PENDING');
+            const courseName = item.course?.title || 'Course Assignment';
+            const dueDate = item.deadline ? new Date(item.deadline).toLocaleDateString() : 'No deadline';
+            
+            return (
+              <View style={styles.card}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <Text style={styles.courseTitle}>{courseName}</Text>
+                  <View style={{ backgroundColor: isGraded ? COLORS.badgeGreenBg : COLORS.badgeOrangeBg, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 }}>
+                    <Text style={{ color: isGraded ? COLORS.badgeGreenText : COLORS.primary, fontSize: 11, fontWeight: '800' }}>
+                      {status}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={styles.creatorName}>{item.title}</Text>
+                <Text style={{ fontSize: 12, color: COLORS.neutralMedium, marginVertical: 6 }}>Due Date: {dueDate}</Text>
+                
+                <TouchableOpacity
+                  style={styles.continueBtn}
+                  onPress={() => navigation?.navigate('AssignmentDetail', { assignmentId: item.id })}
+                >
+                  <Text style={styles.continueBtnText}>
+                    {isGraded ? 'View Grade & Feedback →' : hasSubmission ? 'View Submission →' : 'Submit Assignment →'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            );
+          }}
         />
       ) : activeTab === 'CERTIFICATES' ? (
         <FlatList
@@ -292,7 +397,7 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 18, paddingTop: 12, paddingBottom: 6 },
   headerTitle: { fontSize: 24, fontWeight: '800', color: COLORS.neutralDark, letterSpacing: -0.3 },
   headerSubtitle: { fontSize: 13, color: COLORS.neutralMedium, marginTop: 2 },
-  tabSection: { flexDirection: 'row', paddingHorizontal: 18, gap: 8, marginVertical: 12 },
+  tabSection: { paddingHorizontal: 18, marginVertical: 12, flexGrow: 0 },
   tabPill: {
     backgroundColor: COLORS.white,
     paddingHorizontal: 14,
@@ -300,6 +405,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: COLORS.borderWarm,
+    marginRight: 8,
   },
   tabPillActive: { backgroundColor: COLORS.primaryDark, borderColor: COLORS.primaryDark },
   tabPillText: { fontSize: 12, fontWeight: '700', color: COLORS.neutralDark },

@@ -66,6 +66,22 @@ export const requestCourseCompletion = async (learnerId: string, courseId: strin
   if (existingReq) {
     if (existingReq.status === 'APPROVED') throw new Error('Course already completed and approved.');
     if (existingReq.status === 'PENDING') throw new Error('Completion request is already pending.');
+    if (existingReq.status === 'REJECTED') {
+      const eligibility = await checkCourseRequirements(learnerId, courseId);
+      if (!eligibility.eligible) {
+        throw new Error(`Cannot request completion: ${eligibility.reason}`);
+      }
+
+      return prisma.completionRequest.update({
+        where: { id: existingReq.id },
+        data: {
+          status: CompletionRequestStatus.PENDING,
+          requestedAt: new Date(),
+          rejectionReason: null,
+          reviewedAt: null,
+        },
+      });
+    }
   }
 
   const eligibility = await checkCourseRequirements(learnerId, courseId);

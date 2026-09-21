@@ -25,8 +25,22 @@ import {
 const router = express.Router();
 
 // ============================================================
-// 1. UPLOAD TESTING (Temporary)
+// 1. FILE UPLOADS (Cloudinary / Local Storage)
 // ============================================================
+router.post('/upload', uploadAssignmentFiles, async (req, res) => {
+  try {
+    const files = req.files as Express.Multer.File[];
+    if (!files || files.length === 0) {
+      res.status(400).json({ error: 'No files uploaded' });
+      return;
+    }
+    const uploadResults = await uploadMultipleFiles(files, 'assignments');
+    res.status(200).json({ success: true, files: uploadResults });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 router.post('/upload-test', uploadAssignmentFiles, async (req, res) => {
   try {
     const files = req.files as Express.Multer.File[];
