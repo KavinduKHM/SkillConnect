@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -9,11 +9,11 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  ScrollView,
   Image,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { fetchMyLearning, fetchMyQuizzes } from '../../api/learner.service';
+import { COLORS } from '../../theme/colors';
 
 export default function MyLearningScreen({ navigation }: any) {
   const [inProgressCourses, setInProgressCourses] = useState<any[]>([]);
@@ -45,22 +45,37 @@ export default function MyLearningScreen({ navigation }: any) {
           course: {
             title: 'React Native Development',
             category: { name: 'Mobile Development' },
-            creator: { name: 'John Perera', verifiedBadge: true },
+            creator: { name: 'Skill Sharer', verifiedBadge: true },
             thumbnail: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=600&q=80',
           },
-          courseProgress: { completedLessons: 16, totalLessons: 20 },
+          courseProgress: { completedLessons: 16, totalLessons: 20, lastLessonTitle: 'Lesson 5: State Management' },
         },
         {
           id: 'e2',
           courseId: 'c2',
           progressPercentage: 35,
           course: {
-            title: 'UX Research Fundamentals',
-            category: { name: 'Design & Arts' },
-            creator: { name: 'Sarah Chen', verifiedBadge: true },
-            thumbnail: 'https://images.unsplash.com/photo-1531403009284-440f080d1e12?auto=format&fit=crop&w=600&q=80',
+            title: 'UX Micro-interactions',
+            category: { name: 'Arts & Design' },
+            creator: { name: 'Elena Rostova', verifiedBadge: true },
+            thumbnail: 'https://images.unsplash.com/photo-1581291518857-4e27b48ff24e?auto=format&fit=crop&w=600&q=80',
           },
-          courseProgress: { completedLessons: 7, totalLessons: 20 },
+          courseProgress: { completedLessons: 7, totalLessons: 20, lastLessonTitle: 'Lesson 3: Animated Transitions' },
+        },
+      ]);
+
+      setCompletedCourses([
+        {
+          id: 'ec1',
+          courseId: 'c3',
+          progressPercentage: 100,
+          completedAt: '2026-09-10',
+          course: {
+            title: 'UI/UX Design Masterclass',
+            category: { name: 'Arts & Design' },
+            creator: { name: 'Elena Rostova', verifiedBadge: true },
+            thumbnail: 'https://images.unsplash.com/photo-1542038784456-1ea8e935640e?auto=format&fit=crop&w=600&q=80',
+          },
         },
       ]);
     } finally {
@@ -77,14 +92,15 @@ export default function MyLearningScreen({ navigation }: any) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FAF9F6" />
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.bgWarm} />
 
-      {/* Header */}
+      {/* Main Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>My Learning</Text>
+        <Text style={styles.headerTitle}>My Learning Dashboard</Text>
+        <Text style={styles.headerSubtitle}>Track active courses, progress & certificates</Text>
       </View>
 
-      {/* Filter Tabs */}
+      {/* Navigation Filter Tabs */}
       <View style={styles.tabSection}>
         <TouchableOpacity
           style={[styles.tabPill, activeTab === 'IN_PROGRESS' && styles.tabPillActive]}
@@ -112,13 +128,22 @@ export default function MyLearningScreen({ navigation }: any) {
             Assessments
           </Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.tabPill, activeTab === 'CERTIFICATES' && styles.tabPillActive]}
+          onPress={() => setActiveTab('CERTIFICATES')}
+        >
+          <Text style={[styles.tabPillText, activeTab === 'CERTIFICATES' && styles.tabPillTextActive]}>
+            Certificates
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* Content List */}
       {loading && !refreshing ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#064E3B" />
-          <Text style={styles.loadingText}>Loading dashboard...</Text>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={styles.loadingText}>Loading my learning...</Text>
         </View>
       ) : activeTab === 'ASSESSMENTS' ? (
         <FlatList
@@ -128,6 +153,7 @@ export default function MyLearningScreen({ navigation }: any) {
           renderItem={({ item }) => (
             <TouchableOpacity
               style={styles.card}
+              activeOpacity={0.9}
               onPress={() =>
                 navigation?.navigate('AssessmentDetail', {
                   assessment: item,
@@ -141,7 +167,7 @@ export default function MyLearningScreen({ navigation }: any) {
                 <Text style={styles.courseTitle}>{item.course?.title || 'React Native Mobile App Development'}</Text>
                 <View
                   style={{
-                    backgroundColor: item.completions?.[0]?.status === 'COMPLETED' ? '#DCFCE7' : '#FEF3C7',
+                    backgroundColor: item.completions?.[0]?.status === 'COMPLETED' ? COLORS.badgeGreenBg : COLORS.badgeOrangeBg,
                     paddingHorizontal: 8,
                     paddingVertical: 3,
                     borderRadius: 8,
@@ -149,21 +175,43 @@ export default function MyLearningScreen({ navigation }: any) {
                 >
                   <Text
                     style={{
-                      color: item.completions?.[0]?.status === 'COMPLETED' ? '#15803D' : '#D97706',
+                      color: item.completions?.[0]?.status === 'COMPLETED' ? COLORS.badgeGreenText : COLORS.primary,
                       fontSize: 11,
-                      fontWeight: '700',
+                      fontWeight: '800',
                     }}
                   >
                     {item.completions?.[0]?.status === 'COMPLETED' ? '✓ Completed' : 'Pending'}
                   </Text>
                 </View>
               </View>
-              <Text style={styles.creatorName}>{item.title || 'React Native Development Final Assessment'}</Text>
-              <Text style={{ fontSize: 12, color: '#064E3B', fontWeight: '600', marginTop: 8 }}>
+              <Text style={styles.creatorName}>{item.title || 'React Native Final Assessment'}</Text>
+              <Text style={{ fontSize: 12, color: COLORS.primary, fontWeight: '800', marginTop: 8 }}>
                 Take Assessment / View Details →
               </Text>
             </TouchableOpacity>
           )}
+        />
+      ) : activeTab === 'CERTIFICATES' ? (
+        <FlatList
+          data={completedCourses}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContainer}
+          renderItem={({ item }) => {
+            const course = item.course || {};
+            return (
+              <View style={styles.certCard}>
+                <Text style={styles.certIcon}>🎖️</Text>
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text style={styles.certTitle}>Certificate of Completion</Text>
+                  <Text style={styles.certCourseName}>{course.title || 'UI/UX Design Masterclass'}</Text>
+                  <Text style={styles.certDate}>Issued: September 2026 • Verified SkillConnect</Text>
+                </View>
+                <TouchableOpacity style={styles.certDownloadBtn}>
+                  <Text style={styles.certDownloadBtnText}>View 📜</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          }}
         />
       ) : (
         <FlatList
@@ -171,7 +219,7 @@ export default function MyLearningScreen({ navigation }: any) {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContainer}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadMyLearning(); }} />
+            <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadMyLearning(); }} tintColor={COLORS.primary} />
           }
           renderItem={({ item }) => {
             const course = item.course || {};
@@ -193,35 +241,42 @@ export default function MyLearningScreen({ navigation }: any) {
                   <View style={{ flex: 1, marginLeft: 12 }}>
                     <Text style={styles.courseTitle}>{course.title || 'React Native Development'}</Text>
                     <View style={styles.creatorRow}>
-                      <Text style={styles.creatorName}>{course.creator?.name || 'John Perera'}</Text>
+                      <Text style={styles.creatorName}>{course.creator?.name || 'Skill Sharer'}</Text>
                       {course.creator?.verifiedBadge && (
                         <View style={styles.verifiedBadge}>
-                          <Text style={styles.verifiedText}>✓</Text>
+                          <Text style={styles.verifiedText}>✔</Text>
                         </View>
                       )}
                     </View>
-                    <Text style={styles.lastAccessedText}>Last accessed: 2 hours ago</Text>
+                    <Text style={styles.lastAccessedText}>Continue from: {item.courseProgress?.lastLessonTitle || 'Last completed lesson'}</Text>
                   </View>
                 </View>
 
-                {/* Green Progress Track */}
+                {/* Progress Bar & Percentage */}
                 <View style={styles.progressSection}>
+                  <View style={styles.progressTextRow}>
+                    <Text style={styles.progressText}>
+                      {completedLessons} / {totalLessons} lessons completed
+                    </Text>
+                    <Text style={styles.progressPctText}>{pct}%</Text>
+                  </View>
+
                   <View style={styles.progressTrack}>
                     <View style={[styles.progressFill, { width: `${pct}%` }]} />
                   </View>
-                  <Text style={styles.progressText}>
-                    {completedLessons}/{totalLessons} lessons completed ({pct}%)
-                  </Text>
                 </View>
 
-                {/* Continue Learning Button */}
+                {/* Action Button */}
                 <TouchableOpacity
                   style={styles.continueBtn}
+                  activeOpacity={0.9}
                   onPress={() =>
                     navigation?.navigate('CourseDetail', { courseId: item.courseId || course.id, course })
                   }
                 >
-                  <Text style={styles.continueBtnText}>Continue Learning</Text>
+                  <Text style={styles.continueBtnText}>
+                    {activeTab === 'COMPLETED' ? 'Review Course Material' : 'Continue Learning ▶'}
+                  </Text>
                 </TouchableOpacity>
               </View>
             );
@@ -233,53 +288,71 @@ export default function MyLearningScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAF9F6' },
-  header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
-  headerTitle: { fontSize: 28, fontWeight: '800', color: '#0F172A', letterSpacing: -0.5 },
-  tabSection: { flexDirection: 'row', paddingHorizontal: 20, gap: 8, marginBottom: 16 },
+  container: { flex: 1, backgroundColor: COLORS.bgWarm },
+  header: { paddingHorizontal: 18, paddingTop: 12, paddingBottom: 6 },
+  headerTitle: { fontSize: 24, fontWeight: '800', color: COLORS.neutralDark, letterSpacing: -0.3 },
+  headerSubtitle: { fontSize: 13, color: COLORS.neutralMedium, marginTop: 2 },
+  tabSection: { flexDirection: 'row', paddingHorizontal: 18, gap: 8, marginVertical: 12 },
   tabPill: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 16,
+    backgroundColor: COLORS.white,
+    paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: COLORS.borderWarm,
   },
-  tabPillActive: { backgroundColor: '#064E3B', borderColor: '#064E3B' },
-  tabPillText: { fontSize: 13, fontWeight: '600', color: '#475569' },
-  tabPillTextActive: { color: '#FFFFFF' },
+  tabPillActive: { backgroundColor: COLORS.primaryDark, borderColor: COLORS.primaryDark },
+  tabPillText: { fontSize: 12, fontWeight: '700', color: COLORS.neutralDark },
+  tabPillTextActive: { color: COLORS.white },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { marginTop: 10, color: '#64748B' },
-  listContainer: { paddingHorizontal: 20, paddingBottom: 40, gap: 16 },
+  loadingText: { marginTop: 10, color: COLORS.neutralMedium },
+  listContainer: { paddingHorizontal: 18, paddingBottom: 40, gap: 14 },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.white,
     borderRadius: 20,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
+    borderColor: COLORS.borderWarm,
     elevation: 2,
+    shadowColor: COLORS.neutralDark,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
   },
   cardTopRow: { flexDirection: 'row', alignItems: 'center' },
-  cardThumbnail: { width: 56, height: 56, borderRadius: 14 },
-  courseTitle: { fontSize: 15, fontWeight: '700', color: '#0F172A', marginBottom: 4 },
-  creatorRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 2 },
-  creatorName: { fontSize: 12, color: '#64748B' },
-  verifiedBadge: { backgroundColor: '#DCFCE7', width: 16, height: 16, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
-  verifiedText: { fontSize: 10, fontWeight: '800', color: '#15803D' },
-  lastAccessedText: { fontSize: 11, color: '#94A3B8' },
+  cardThumbnail: { width: 60, height: 60, borderRadius: 14 },
+  courseTitle: { fontSize: 15, fontWeight: '800', color: COLORS.neutralDark, marginBottom: 4 },
+  creatorRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 4 },
+  creatorName: { fontSize: 12, color: COLORS.neutralMedium },
+  verifiedBadge: { backgroundColor: COLORS.primary, width: 14, height: 14, borderRadius: 7, justifyContent: 'center', alignItems: 'center' },
+  verifiedText: { fontSize: 9, fontWeight: '900', color: COLORS.white },
+  lastAccessedText: { fontSize: 11, color: COLORS.neutralLight },
   progressSection: { marginTop: 14, marginBottom: 14 },
-  progressTrack: { height: 8, backgroundColor: '#F1F5F9', borderRadius: 4, overflow: 'hidden', marginBottom: 6 },
-  progressFill: { height: '100%', backgroundColor: '#064E3B', borderRadius: 4 },
-  progressText: { fontSize: 12, color: '#64748B', fontWeight: '500' },
+  progressTextRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
+  progressText: { fontSize: 12, color: COLORS.neutralDark, fontWeight: '600' },
+  progressPctText: { fontSize: 12, color: COLORS.primary, fontWeight: '800' },
+  progressTrack: { height: 8, backgroundColor: '#F3E5DC', borderRadius: 4, overflow: 'hidden' },
+  progressFill: { height: '100%', backgroundColor: COLORS.primaryDark, borderRadius: 4 },
   continueBtn: {
-    backgroundColor: '#064E3B',
+    backgroundColor: COLORS.primaryDark,
     paddingVertical: 12,
-    borderRadius: 14,
+    borderRadius: 16,
     alignItems: 'center',
   },
-  continueBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  continueBtnText: { color: COLORS.white, fontSize: 14, fontWeight: '800' },
+  certCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.white,
+    padding: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: COLORS.borderWarm,
+  },
+  certIcon: { fontSize: 32 },
+  certTitle: { fontSize: 12, fontWeight: '700', color: COLORS.primary },
+  certCourseName: { fontSize: 15, fontWeight: '800', color: COLORS.neutralDark, marginTop: 2 },
+  certDate: { fontSize: 11, color: COLORS.neutralMedium, marginTop: 2 },
+  certDownloadBtn: { backgroundColor: COLORS.badgeOrangeBg, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
+  certDownloadBtnText: { color: COLORS.primary, fontSize: 12, fontWeight: '800' },
 });

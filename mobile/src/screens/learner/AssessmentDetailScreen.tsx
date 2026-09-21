@@ -13,6 +13,7 @@ import {
   Platform,
 } from 'react-native';
 import { completeQuiz } from '../../api/learner.service';
+import { COLORS } from '../../theme/colors';
 
 export const AssessmentDetailScreen = ({ route, navigation }: any) => {
   const { assessment } = route.params || {};
@@ -23,7 +24,7 @@ export const AssessmentDetailScreen = ({ route, navigation }: any) => {
     return (
       <SafeAreaView style={styles.centerContainer}>
         <Text style={{ fontSize: 32, marginBottom: 8 }}>⚠️</Text>
-        <Text style={{ fontSize: 16, color: '#374151', fontWeight: '600', marginBottom: 12 }}>
+        <Text style={{ fontSize: 16, color: COLORS.neutralDark, fontWeight: '700', marginBottom: 12 }}>
           Assessment details not available.
         </Text>
         <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.primaryBtn}>
@@ -105,7 +106,7 @@ export const AssessmentDetailScreen = ({ route, navigation }: any) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FAF9F6" />
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.bgWarm} />
 
       {/* Header */}
       <View style={styles.topHeader}>
@@ -122,8 +123,8 @@ export const AssessmentDetailScreen = ({ route, navigation }: any) => {
           <Text style={styles.courseName}>{courseTitle}</Text>
           <Text style={styles.assessmentTitle}>{assessmentTitle}</Text>
 
-          <View style={[styles.statusBadge, { backgroundColor: status === 'COMPLETED' ? '#DCFCE7' : '#FEF3C7' }]}>
-            <Text style={[styles.statusText, { color: status === 'COMPLETED' ? '#15803D' : '#D97706' }]}>
+          <View style={[styles.statusBadge, { backgroundColor: status === 'COMPLETED' ? COLORS.badgeGreenBg : COLORS.badgeOrangeBg }]}>
+            <Text style={[styles.statusText, { color: status === 'COMPLETED' ? COLORS.badgeGreenText : COLORS.primary }]}>
               {status === 'COMPLETED' ? '✓ Completed' : 'Action Required: Pending'}
             </Text>
           </View>
@@ -181,7 +182,7 @@ export const AssessmentDetailScreen = ({ route, navigation }: any) => {
               disabled={isSubmitting}
             >
               {isSubmitting ? (
-                <ActivityIndicator color="#064E3B" />
+                <ActivityIndicator color={COLORS.primary} />
               ) : (
                 <Text style={styles.secondaryBtnText}>Mark as Submitted & Completed ✓</Text>
               )}
@@ -200,13 +201,13 @@ export const AssessmentDetailScreen = ({ route, navigation }: any) => {
 export default AssessmentDetailScreen;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAF9F6' },
-  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: '#FAF9F6' },
+  container: { flex: 1, backgroundColor: COLORS.bgWarm },
+  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: COLORS.bgWarm },
   topHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 18,
     paddingTop: 12,
     paddingBottom: 8,
   },
@@ -214,64 +215,64 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.white,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: COLORS.borderWarm,
   },
-  circleBtnText: { fontSize: 16, color: '#0F172A' },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: '#0F172A' },
-  content: { paddingHorizontal: 20, paddingTop: 12 },
+  circleBtnText: { fontSize: 16, color: COLORS.neutralDark },
+  headerTitle: { fontSize: 17, fontWeight: '800', color: COLORS.neutralDark },
+  content: { paddingHorizontal: 18, paddingTop: 10 },
   topCard: {
-    backgroundColor: '#FFFFFF',
-    padding: 20,
+    backgroundColor: COLORS.white,
+    padding: 18,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: COLORS.borderWarm,
     marginBottom: 16,
   },
-  courseName: { fontSize: 12, fontWeight: '700', color: '#064E3B', textTransform: 'uppercase', marginBottom: 4 },
-  assessmentTitle: { fontSize: 18, fontWeight: '800', color: '#0F172A', marginBottom: 12 },
+  courseName: { fontSize: 12, fontWeight: '800', color: COLORS.primary, textTransform: 'uppercase', marginBottom: 4 },
+  assessmentTitle: { fontSize: 18, fontWeight: '800', color: COLORS.neutralDark, marginBottom: 12 },
   statusBadge: {
     alignSelf: 'flex-start',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 10,
   },
-  statusText: { fontSize: 12, fontWeight: '700' },
+  statusText: { fontSize: 12, fontWeight: '800' },
   section: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.white,
     padding: 18,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: COLORS.borderWarm,
     marginBottom: 16,
   },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   sectionIcon: { fontSize: 18 },
-  sectionTitle: { fontSize: 16, fontWeight: '800', color: '#0F172A' },
-  sectionText: { fontSize: 14, color: '#475569', lineHeight: 22 },
+  sectionTitle: { fontSize: 16, fontWeight: '800', color: COLORS.neutralDark },
+  sectionText: { fontSize: 14, color: COLORS.neutralMedium, lineHeight: 22 },
   requirementRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 },
-  requirementLabel: { fontSize: 13, color: '#64748B' },
-  requirementValue: { fontSize: 13, fontWeight: '700', color: '#0F172A' },
+  requirementLabel: { fontSize: 12, color: COLORS.neutralMedium },
+  requirementValue: { fontSize: 12, fontWeight: '800', color: COLORS.neutralDark },
   actionSection: { gap: 12, marginTop: 8 },
   primaryBtn: {
-    backgroundColor: '#064E3B',
+    backgroundColor: COLORS.primaryDark,
     paddingVertical: 14,
-    borderRadius: 14,
+    borderRadius: 18,
     alignItems: 'center',
   },
-  primaryBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
+  primaryBtnText: { color: COLORS.white, fontSize: 15, fontWeight: '800' },
   secondaryBtn: {
-    backgroundColor: '#DCFCE7',
+    backgroundColor: COLORS.badgeOrangeBg,
     paddingVertical: 14,
-    borderRadius: 14,
+    borderRadius: 18,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#86EFAC',
+    borderColor: COLORS.primary,
   },
-  secondaryBtnText: { color: '#15803D', fontSize: 15, fontWeight: '700' },
+  secondaryBtnText: { color: COLORS.primary, fontSize: 15, fontWeight: '800' },
   returnBtn: { paddingVertical: 12, alignItems: 'center' },
-  returnBtnText: { color: '#64748B', fontSize: 14, fontWeight: '600' },
+  returnBtnText: { color: COLORS.neutralMedium, fontSize: 14, fontWeight: '600' },
 });

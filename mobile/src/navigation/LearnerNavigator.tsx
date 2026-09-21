@@ -1,7 +1,7 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text } from 'react-native';
+import { Text, View } from 'react-native';
 
 import HomeScreen from '../screens/learner/HomeScreen';
 import CourseListScreen from '../screens/learner/CourseListScreen';
@@ -11,6 +11,7 @@ import LessonPlayerScreen from '../screens/learner/LessonPlayerScreen';
 import AssessmentDetailScreen from '../screens/learner/AssessmentDetailScreen';
 import SkillSharerProfileScreen from '../screens/learner/SkillSharerProfileScreen';
 import LearnerProfileScreen from '../screens/learner/LearnerProfileScreen';
+import { COLORS } from '../theme/colors';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -21,18 +22,23 @@ function LearnerBottomTabs() {
       initialRouteName="HomeTab"
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#064E3B',
-        tabBarInactiveTintColor: '#94A3B8',
+        tabBarActiveTintColor: COLORS.primary,
+        tabBarInactiveTintColor: COLORS.neutralLight,
         tabBarStyle: {
-          backgroundColor: '#FFFFFF',
-          borderTopColor: '#F1F5F9',
-          height: 64,
+          backgroundColor: COLORS.white,
+          borderTopColor: COLORS.borderWarm,
+          height: 66,
           paddingBottom: 10,
           paddingTop: 8,
+          elevation: 8,
+          shadowColor: COLORS.neutralDark,
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.05,
+          shadowRadius: 6,
         },
         tabBarLabelStyle: {
           fontSize: 11,
-          fontWeight: '600',
+          fontWeight: '700',
         },
       }}
     >
@@ -40,8 +46,19 @@ function LearnerBottomTabs() {
         name="HomeTab"
         component={HomeScreen}
         options={{
-          tabBarLabel: 'Home',
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 18, color }}>🏠</Text>,
+          tabBarLabel: 'Learn',
+          tabBarIcon: ({ color, focused }) => (
+            <View
+              style={{
+                backgroundColor: focused ? COLORS.badgeOrangeBg : 'transparent',
+                paddingHorizontal: 12,
+                paddingVertical: 4,
+                borderRadius: 12,
+              }}
+            >
+              <Text style={{ fontSize: 18, color: focused ? COLORS.primary : color }}>🎓</Text>
+            </View>
+          ),
         }}
       />
       <Tab.Screen
@@ -49,7 +66,18 @@ function LearnerBottomTabs() {
         component={CourseListScreen}
         options={{
           tabBarLabel: 'Explore',
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 18, color }}>🧭</Text>,
+          tabBarIcon: ({ color, focused }) => (
+            <View
+              style={{
+                backgroundColor: focused ? COLORS.badgeOrangeBg : 'transparent',
+                paddingHorizontal: 12,
+                paddingVertical: 4,
+                borderRadius: 12,
+              }}
+            >
+              <Text style={{ fontSize: 18, color: focused ? COLORS.primary : color }}>🧭</Text>
+            </View>
+          ),
         }}
       />
       <Tab.Screen
@@ -57,15 +85,18 @@ function LearnerBottomTabs() {
         component={MyLearningScreen}
         options={{
           tabBarLabel: 'My Learning',
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 18, color }}>📑</Text>,
-        }}
-      />
-      <Tab.Screen
-        name="CertificatesTab"
-        component={MyLearningScreen}
-        options={{
-          tabBarLabel: 'Certificates',
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 18, color }}>🎖️</Text>,
+          tabBarIcon: ({ color, focused }) => (
+            <View
+              style={{
+                backgroundColor: focused ? COLORS.badgeOrangeBg : 'transparent',
+                paddingHorizontal: 12,
+                paddingVertical: 4,
+                borderRadius: 12,
+              }}
+            >
+              <Text style={{ fontSize: 18, color: focused ? COLORS.primary : color }}>💬</Text>
+            </View>
+          ),
         }}
       />
       <Tab.Screen
@@ -73,7 +104,18 @@ function LearnerBottomTabs() {
         component={LearnerProfileScreen}
         options={{
           tabBarLabel: 'Profile',
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 18, color }}>👤</Text>,
+          tabBarIcon: ({ color, focused }) => (
+            <View
+              style={{
+                backgroundColor: focused ? COLORS.badgeOrangeBg : 'transparent',
+                paddingHorizontal: 12,
+                paddingVertical: 4,
+                borderRadius: 12,
+              }}
+            >
+              <Text style={{ fontSize: 18, color: focused ? COLORS.primary : color }}>👤</Text>
+            </View>
+          ),
         }}
       />
     </Tab.Navigator>
@@ -95,3 +137,4 @@ export default function LearnerNavigator() {
     </Stack.Navigator>
   );
 }
+

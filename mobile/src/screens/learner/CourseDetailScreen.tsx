@@ -12,6 +12,7 @@ import {
   Image,
 } from 'react-native';
 import { fetchCourseDetails, enrollCourse, cancelEnrollment, completeLesson } from '../../api/learner.service';
+import { COLORS } from '../../theme/colors';
 
 export default function CourseDetailScreen({ route, navigation }: any) {
   const courseId = route.params?.courseId || 'c1';
@@ -72,7 +73,7 @@ export default function CourseDetailScreen({ route, navigation }: any) {
       setActionLoading(true);
       const res = await enrollCourse(courseId);
       setUserEnrollment(res.enrollment || res);
-      Alert.alert('Enrolled Successfully! 🎉', 'You are now enrolled. Enjoy learning!', [
+      Alert.alert('Enrolled Successfully! 🎉', 'You are now enrolled in this course. Enjoy learning!', [
         { text: 'Start Learning', onPress: () => loadDetails() },
       ]);
     } catch (err: any) {
@@ -111,7 +112,7 @@ export default function CourseDetailScreen({ route, navigation }: any) {
     description:
       'Learn to build robust cross-platform mobile apps from scratch. Master core concepts, design interactive UIs, and confidently deploy to global app stores.',
     category: { name: 'Mobile Development' },
-    difficulty: 'Intermed.',
+    difficulty: 'Intermediate',
     duration: '20 hours',
     rating: 4.8,
     reviewCount: 245,
@@ -121,20 +122,20 @@ export default function CourseDetailScreen({ route, navigation }: any) {
     modules: [
       {
         id: 'm1',
-        title: 'Module 1: Introduction',
+        title: 'Module 1: Introduction to Mobile Development',
         lessons: [
           { id: 'l1', title: 'Course Setup & Expo CLI', estimatedMinutes: 15 },
-          { id: 'l2', title: 'JSX & React Native Components', estimatedMinutes: 15 },
-          { id: 'l3', title: 'Flexbox Layouts & Styling', estimatedMinutes: 15 },
+          { id: 'l2', title: 'JSX & React Native Core Components', estimatedMinutes: 20 },
+          { id: 'l3', title: 'Flexbox Layouts & Custom Styling', estimatedMinutes: 25 },
         ],
       },
       {
         id: 'm2',
-        title: 'Module 2: Core Concepts',
+        title: 'Module 2: State & Navigation',
         lessons: [
-          { id: 'l4', title: 'Lesson 4: Components & Props', estimatedMinutes: 20 },
-          { id: 'l5', title: 'Lesson 5: State Management', estimatedMinutes: 25 },
-          { id: 'l6', title: 'Lesson 6: Navigation', estimatedMinutes: 20 },
+          { id: 'l4', title: 'Components & Props Deep-Dive', estimatedMinutes: 20 },
+          { id: 'l5', title: 'State Management with Hooks', estimatedMinutes: 30 },
+          { id: 'l6', title: 'React Navigation & Stack Routes', estimatedMinutes: 25 },
         ],
       },
     ],
@@ -145,13 +146,14 @@ export default function CourseDetailScreen({ route, navigation }: any) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FAF9F6" />
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.bgWarm} />
 
-      {/* Navigation Header */}
+      {/* Navigation Top Header */}
       <View style={styles.topHeader}>
         <TouchableOpacity style={styles.circleBtn} onPress={() => navigation?.goBack()}>
           <Text style={styles.circleBtnText}>←</Text>
         </TouchableOpacity>
+        <Text style={styles.headerTitle} numberOfLines={1}>Course Details</Text>
         <View style={styles.rightIcons}>
           <TouchableOpacity style={styles.circleBtn}>
             <Text style={styles.circleBtnText}>🔗</Text>
@@ -164,7 +166,7 @@ export default function CourseDetailScreen({ route, navigation }: any) {
 
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#064E3B" />
+          <ActivityIndicator size="large" color={COLORS.primary} />
           <Text style={styles.loadingText}>Loading course details...</Text>
         </View>
       ) : (
@@ -183,7 +185,7 @@ export default function CourseDetailScreen({ route, navigation }: any) {
             {/* Title */}
             <Text style={styles.courseTitle}>{course.title}</Text>
 
-            {/* Instructor Card */}
+            {/* Skill Sharer Instructor Card */}
             <TouchableOpacity
               style={styles.instructorCard}
               activeOpacity={0.85}
@@ -199,19 +201,20 @@ export default function CourseDetailScreen({ route, navigation }: any) {
               </View>
               <View style={{ flex: 1, marginLeft: 12 }}>
                 <View style={styles.nameBadgeRow}>
-                  <Text style={styles.instructorName}>{course.creator?.name || 'John Perera'}</Text>
+                  <Text style={styles.instructorName}>{course.creator?.name || 'Skill Sharer'}</Text>
                   <View style={styles.verifiedPill}>
-                    <Text style={styles.verifiedPillText}>✓ Verified</Text>
+                    <Text style={styles.verifiedPillText}>✔ Verified</Text>
                   </View>
                 </View>
+                <Text style={styles.instructorSub}>Instructor & Skill Sharer</Text>
               </View>
-              <Text style={styles.viewProfileLink}>View Profile</Text>
+              <Text style={styles.viewProfileLink}>View Profile →</Text>
             </TouchableOpacity>
 
-            {/* Metrics Box (4 columns) */}
+            {/* Key Metrics Grid (4 columns) */}
             <View style={styles.metricsGrid}>
               <View style={styles.metricCol}>
-                <Text style={styles.metricValue}>⭐ {course.rating || 4.8}</Text>
+                <Text style={styles.metricValue}>★ {course.rating || 4.8}</Text>
                 <Text style={styles.metricSub}>({course.reviewCount || 245} reviews)</Text>
               </View>
               <View style={styles.metricDivider} />
@@ -248,13 +251,13 @@ export default function CourseDetailScreen({ route, navigation }: any) {
             <Text style={styles.sectionHeading}>About This Course</Text>
             <Text style={styles.descriptionText}>{course.description}</Text>
 
-            {/* What You'll Learn */}
+            {/* Learning Outcomes */}
             <Text style={styles.sectionHeading}>What You'll Learn</Text>
             <View style={styles.outcomeList}>
-              <Text style={styles.outcomeItem}>✓ Build cross-platform mobile apps</Text>
-              <Text style={styles.outcomeItem}>✓ Master React Native components</Text>
-              <Text style={styles.outcomeItem}>✓ Implement navigation and state management</Text>
-              <Text style={styles.outcomeItem}>✓ Deploy to App Store and Google Play</Text>
+              <Text style={styles.outcomeItem}>✔ Build cross-platform mobile apps with React Native</Text>
+              <Text style={styles.outcomeItem}>✔ Master component hierarchy, JSX & dynamic state</Text>
+              <Text style={styles.outcomeItem}>✔ Implement declarative stack & tab navigation</Text>
+              <Text style={styles.outcomeItem}>✔ Integrate REST API backends & persistent storage</Text>
             </View>
 
             {/* Course Content / Syllabus */}
@@ -304,7 +307,7 @@ export default function CourseDetailScreen({ route, navigation }: any) {
       {/* Sticky Bottom Bar */}
       <View style={styles.bottomBar}>
         {actionLoading ? (
-          <ActivityIndicator color="#064E3B" />
+          <ActivityIndicator color={COLORS.primary} />
         ) : isEnrolled ? (
           <View style={styles.enrolledActionRow}>
             {progressPct >= 100 ? (
@@ -313,12 +316,12 @@ export default function CourseDetailScreen({ route, navigation }: any) {
                 onPress={() =>
                   Alert.alert(
                     'Completion Request Sent! 🎓',
-                    'Your course completion request has been submitted to your instructor. Once verified, your course certificate will be available under the Certificates tab!',
+                    'Your course completion request has been submitted to your instructor. Once verified, your course certificate will be available under My Learning!',
                     [{ text: 'View My Dashboard', onPress: () => navigation?.navigate('MyLearningTab') }]
                   )
                 }
               >
-                <Text style={styles.actionBtnText}>Send Completion Request 🎓</Text>
+                <Text style={styles.actionBtnText}>Request Certificate 🎓</Text>
               </TouchableOpacity>
             ) : (
               <TouchableOpacity
@@ -349,12 +352,12 @@ export default function CourseDetailScreen({ route, navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAF9F6' },
+  container: { flex: 1, backgroundColor: COLORS.bgWarm },
   topHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 18,
     paddingTop: 12,
     paddingBottom: 8,
   },
@@ -362,113 +365,117 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.white,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: COLORS.borderWarm,
   },
-  circleBtnText: { fontSize: 16, color: '#0F172A' },
-  rightIcons: { flexDirection: 'row', gap: 10 },
+  circleBtnText: { fontSize: 16, color: COLORS.neutralDark },
+  headerTitle: { fontSize: 16, fontWeight: '800', color: COLORS.neutralDark, flex: 1, textAlign: 'center' },
+  rightIcons: { flexDirection: 'row', gap: 8 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { marginTop: 10, color: '#64748B' },
+  loadingText: { marginTop: 10, color: COLORS.neutralMedium },
   scrollContent: { flex: 1 },
-  contentPadding: { paddingHorizontal: 20, paddingTop: 12 },
+  contentPadding: { paddingHorizontal: 18, paddingTop: 10 },
   heroImage: { width: '100%', height: 200, borderRadius: 20, marginBottom: 14 },
   enrolledBadgeTag: {
     alignSelf: 'flex-start',
-    backgroundColor: '#DCFCE7',
+    backgroundColor: COLORS.badgeOrangeBg,
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
     marginBottom: 8,
   },
-  enrolledBadgeText: { color: '#15803D', fontSize: 12, fontWeight: '700' },
-  courseTitle: { fontSize: 24, fontWeight: '800', color: '#0F172A', lineHeight: 30, marginBottom: 14 },
+  enrolledBadgeText: { color: COLORS.primary, fontSize: 12, fontWeight: '800' },
+  courseTitle: { fontSize: 22, fontWeight: '800', color: COLORS.neutralDark, lineHeight: 28, marginBottom: 14 },
   instructorCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.white,
     padding: 12,
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: COLORS.borderWarm,
     marginBottom: 16,
   },
   instructorAvatar: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#0F766E',
+    backgroundColor: COLORS.primaryDark,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  avatarText: { color: '#FFFFFF', fontSize: 18, fontWeight: 'bold' },
+  avatarText: { color: COLORS.white, fontSize: 18, fontWeight: 'bold' },
   nameBadgeRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  instructorName: { fontSize: 15, fontWeight: '700', color: '#0F172A' },
-  verifiedPill: { backgroundColor: '#DCFCE7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
-  verifiedPillText: { fontSize: 11, fontWeight: '700', color: '#15803D' },
-  viewProfileLink: { fontSize: 13, fontWeight: '700', color: '#15803D' },
+  instructorName: { fontSize: 15, fontWeight: '800', color: COLORS.neutralDark },
+  instructorSub: { fontSize: 11, color: COLORS.neutralMedium, marginTop: 1 },
+  verifiedPill: { backgroundColor: COLORS.primary, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+  verifiedPillText: { fontSize: 10, fontWeight: '800', color: COLORS.white },
+  viewProfileLink: { fontSize: 12, fontWeight: '700', color: COLORS.primary },
   metricsGrid: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.white,
     paddingVertical: 14,
     paddingHorizontal: 10,
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: COLORS.borderWarm,
     justifyContent: 'space-around',
     alignItems: 'center',
     marginBottom: 20,
   },
   metricCol: { alignItems: 'center' },
-  metricValue: { fontSize: 14, fontWeight: '800', color: '#0F172A' },
-  metricSub: { fontSize: 11, color: '#94A3B8', marginTop: 2 },
-  metricDivider: { width: 1, height: 24, backgroundColor: '#E2E8F0' },
+  metricValue: { fontSize: 14, fontWeight: '800', color: COLORS.neutralDark },
+  metricSub: { fontSize: 10, color: COLORS.neutralLight, marginTop: 2 },
+  metricDivider: { width: 1, height: 24, backgroundColor: COLORS.borderWarm },
   progressCardContainer: {
-    backgroundColor: '#DCFCE7',
+    backgroundColor: COLORS.cardBgSoft,
     padding: 14,
-    borderRadius: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: COLORS.borderWarm,
     marginBottom: 16,
   },
   progressHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  progressCardTitle: { fontSize: 13, fontWeight: '700', color: '#166534' },
-  progressCardPct: { fontSize: 13, fontWeight: '700', color: '#166534' },
-  progressBarTrack: { height: 8, backgroundColor: '#BBF7D0', borderRadius: 4, overflow: 'hidden' },
-  progressBarFill: { height: '100%', backgroundColor: '#15803D', borderRadius: 4 },
-  sectionHeading: { fontSize: 18, fontWeight: '800', color: '#0F172A', marginTop: 12, marginBottom: 8 },
-  descriptionText: { fontSize: 14, color: '#475569', lineHeight: 22, marginBottom: 12 },
+  progressCardTitle: { fontSize: 13, fontWeight: '700', color: COLORS.neutralDark },
+  progressCardPct: { fontSize: 13, fontWeight: '800', color: COLORS.primary },
+  progressBarTrack: { height: 8, backgroundColor: '#F3E5DC', borderRadius: 4, overflow: 'hidden' },
+  progressBarFill: { height: '100%', backgroundColor: COLORS.primaryDark, borderRadius: 4 },
+  sectionHeading: { fontSize: 17, fontWeight: '800', color: COLORS.neutralDark, marginTop: 12, marginBottom: 8 },
+  descriptionText: { fontSize: 14, color: COLORS.neutralMedium, lineHeight: 22, marginBottom: 12 },
   outcomeList: { gap: 8, marginBottom: 16 },
-  outcomeItem: { fontSize: 14, color: '#166534', fontWeight: '600' },
+  outcomeItem: { fontSize: 13, color: COLORS.neutralDark, fontWeight: '600' },
   moduleCard: {
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderRadius: 16,
+    backgroundColor: COLORS.white,
+    padding: 14,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: COLORS.borderWarm,
     marginBottom: 12,
   },
   moduleHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  moduleTitle: { fontSize: 15, fontWeight: '700', color: '#0F172A' },
-  moduleMetaText: { fontSize: 12, color: '#94A3B8' },
+  moduleTitle: { fontSize: 14, fontWeight: '800', color: COLORS.neutralDark },
+  moduleMetaText: { fontSize: 11, color: COLORS.neutralLight },
   lessonRowWrapper: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8 },
   checkboxBtn: { marginRight: 10 },
   checkboxIcon: { fontSize: 18 },
   lessonRow: { flex: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  lessonItem: { fontSize: 14, color: '#334155', flex: 1 },
-  lessonItemDone: { textDecorationLine: 'line-through', color: '#15803D', fontWeight: '600' },
-  playTag: { fontSize: 12, color: '#15803D', fontWeight: '700' },
+  lessonItem: { fontSize: 13, color: COLORS.neutralDark, flex: 1 },
+  lessonItemDone: { textDecorationLine: 'line-through', color: COLORS.primary, fontWeight: '600' },
+  playTag: { fontSize: 11, color: COLORS.primary, fontWeight: '800' },
   bottomBar: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 18,
     paddingVertical: 14,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.white,
     borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
+    borderTopColor: COLORS.borderWarm,
   },
-  enrollBtn: { backgroundColor: '#064E3B', paddingVertical: 14, borderRadius: 14, alignItems: 'center' },
+  enrollBtn: { backgroundColor: COLORS.primaryDark, paddingVertical: 14, borderRadius: 18, alignItems: 'center' },
   enrolledActionRow: { flexDirection: 'row', gap: 10 },
-  continueBtn: { flex: 1, backgroundColor: '#064E3B', paddingVertical: 14, borderRadius: 14, alignItems: 'center' },
-  cancelBtn: { backgroundColor: '#EF4444', paddingVertical: 14, paddingHorizontal: 20, borderRadius: 14, alignItems: 'center' },
-  cancelBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
-  actionBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
+  continueBtn: { flex: 1, backgroundColor: COLORS.primaryDark, paddingVertical: 14, borderRadius: 18, alignItems: 'center' },
+  cancelBtn: { backgroundColor: '#EF4444', paddingVertical: 14, paddingHorizontal: 18, borderRadius: 18, alignItems: 'center' },
+  cancelBtnText: { color: COLORS.white, fontWeight: '800', fontSize: 14 },
+  actionBtnText: { color: COLORS.white, fontSize: 15, fontWeight: '800' },
 });

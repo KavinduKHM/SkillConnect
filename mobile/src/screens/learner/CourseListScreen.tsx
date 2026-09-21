@@ -15,6 +15,7 @@ import {
   Modal,
 } from 'react-native';
 import { fetchCourses, fetchCategories } from '../../api/learner.service';
+import { COLORS } from '../../theme/colors';
 
 const DEMO_COURSES = [
   {
@@ -25,6 +26,7 @@ const DEMO_COURSES = [
     difficulty: 'BEGINNER',
     duration: '5 weeks',
     rating: 4.8,
+    reviewCount: 142,
     enrolledCount: '154',
     creator: { id: 's1', name: 'John Perera', verifiedBadge: true },
     thumbnail: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=600&q=80',
@@ -34,31 +36,47 @@ const DEMO_COURSES = [
     title: 'Full-Stack Web Development with React & Node.js',
     description: 'Fullstack web development with React, Node.js, Express, PostgreSQL, and Prisma.',
     category: { name: 'Web Development' },
-    difficulty: 'BEGINNER',
+    difficulty: 'INTERMEDIATE',
     duration: '8 weeks',
     rating: 4.9,
+    reviewCount: 98,
     enrolledCount: '99',
-    creator: { id: 's2', name: 'John Perera', verifiedBadge: true },
+    creator: { id: 's2', name: 'Shehan Sankalana', verifiedBadge: true },
     thumbnail: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=600&q=80',
   },
   {
     id: 'c3',
     title: 'UI/UX Design Masterclass: Figma to Mobile UI',
     description: 'Learn design systems, wireframing, mobile UI components, and Figma prototypes.',
-    category: { name: 'Software Engineering' },
+    category: { name: 'Arts & Design' },
     difficulty: 'BEGINNER',
     duration: '4 weeks',
     rating: 4.7,
+    reviewCount: 215,
     enrolledCount: '210',
-    creator: { id: 's3', name: 'Dr. Sarah Jenkins', verifiedBadge: true },
+    creator: { id: 's3', name: 'Elena Rostova', verifiedBadge: true },
     thumbnail: 'https://images.unsplash.com/photo-1542038784456-1ea8e935640e?auto=format&fit=crop&w=600&q=80',
+  },
+  {
+    id: 'c4',
+    title: 'Spring Boot Mastery & Microservices',
+    description: 'Build enterprise Java applications with Spring Boot, Spring Cloud, and Docker.',
+    category: { name: 'Technology' },
+    difficulty: 'INTERMEDIATE',
+    duration: '6 weeks',
+    rating: 4.8,
+    reviewCount: 88,
+    enrolledCount: '340',
+    creator: { id: 's4', name: 'Shehan Sankalana', verifiedBadge: true },
+    thumbnail: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=600&q=80',
   },
 ];
 
-export default function CourseListScreen({ navigation }: any) {
+export default function CourseListScreen({ navigation, route }: any) {
+  const initialSearch = route.params?.search || '';
   const [courses, setCourses] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedDifficulty, setSelectedDifficulty] = useState('All');
   const [selectedDuration, setSelectedDuration] = useState('All');
@@ -96,10 +114,6 @@ export default function CourseListScreen({ navigation }: any) {
   useEffect(() => {
     loadData();
   }, [selectedCategory, selectedDifficulty]);
-
-  const handleSearchSubmit = () => {
-    loadData();
-  };
 
   const filteredCourses = courses.filter((course) => {
     const matchesSearch =
@@ -148,40 +162,55 @@ export default function CourseListScreen({ navigation }: any) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FAF9F6" />
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.bgWarm} />
 
       {/* Main Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Explore</Text>
+        <Text style={styles.headerTitle}>Explore Courses</Text>
+        <Text style={styles.headerSubtitle}>Discover skills, categories & expert Skill Sharers</Text>
       </View>
 
-      {/* Search Input Bar */}
+      {/* Search Bar */}
       <View style={styles.searchSection}>
         <View style={styles.searchBox}>
           <Text style={styles.searchIcon}>🔍</Text>
           <TextInput
             style={styles.searchInput}
-            placeholder="Search for courses, skills..."
-            placeholderTextColor="#94A3B8"
+            placeholder="Search for courses, skills, instructors..."
+            placeholderTextColor={COLORS.neutralLight}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            onSubmitEditing={handleSearchSubmit}
+            onSubmitEditing={loadData}
           />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Text style={styles.clearSearchIcon}>✕</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
-      {/* Dropdown Filters & Active Tags */}
+      {/* Category Chips Bar */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryChipsScroll}>
+        {['All', 'Technology', 'Web Development', 'Mobile Development', 'Arts & Design', 'Business'].map((cat) => {
+          const isActive = selectedCategory === cat;
+          return (
+            <TouchableOpacity
+              key={cat}
+              style={[styles.categoryChip, isActive && styles.categoryChipActive]}
+              onPress={() => setSelectedCategory(cat)}
+            >
+              <Text style={[styles.categoryChipText, isActive && styles.categoryChipTextActive]}>
+                {cat}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
+      {/* Dropdown Filters & Active Filter Tags */}
       <View style={styles.filterSection}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dropdownScroll}>
-          <TouchableOpacity
-            style={[styles.dropdownPill, selectedCategory !== 'All' && styles.dropdownPillActive]}
-            onPress={() => setActiveModal('CATEGORY')}
-          >
-            <Text style={[styles.dropdownText, selectedCategory !== 'All' && styles.dropdownTextActive]}>
-              Category: {selectedCategory === 'All' ? 'All' : selectedCategory} ▾
-            </Text>
-          </TouchableOpacity>
-
           <TouchableOpacity
             style={[styles.dropdownPill, selectedDifficulty !== 'All' && styles.dropdownPillActive]}
             onPress={() => setActiveModal('DIFFICULTY')}
@@ -210,27 +239,27 @@ export default function CourseListScreen({ navigation }: any) {
           </TouchableOpacity>
         </ScrollView>
 
-        {/* Active Filter Tags */}
+        {/* Active Filter Tags Row */}
         {(selectedCategory !== 'All' || selectedDifficulty !== 'All' || selectedDuration !== 'All' || selectedRating !== 'All') && (
           <View style={styles.activeTagsRow}>
             {selectedCategory !== 'All' && (
               <TouchableOpacity style={styles.activeTag} onPress={() => setSelectedCategory('All')}>
-                <Text style={styles.activeTagText}>{selectedCategory} ⊗</Text>
+                <Text style={styles.activeTagText}>{selectedCategory} ✕</Text>
               </TouchableOpacity>
             )}
             {selectedDifficulty !== 'All' && (
               <TouchableOpacity style={styles.activeTag} onPress={() => setSelectedDifficulty('All')}>
-                <Text style={styles.activeTagText}>{selectedDifficulty} ⊗</Text>
+                <Text style={styles.activeTagText}>{selectedDifficulty} ✕</Text>
               </TouchableOpacity>
             )}
             {selectedDuration !== 'All' && (
               <TouchableOpacity style={styles.activeTag} onPress={() => setSelectedDuration('All')}>
-                <Text style={styles.activeTagText}>{selectedDuration} ⊗</Text>
+                <Text style={styles.activeTagText}>{selectedDuration} ✕</Text>
               </TouchableOpacity>
             )}
             {selectedRating !== 'All' && (
               <TouchableOpacity style={styles.activeTag} onPress={() => setSelectedRating('All')}>
-                <Text style={styles.activeTagText}>{selectedRating} ⭐ ⊗</Text>
+                <Text style={styles.activeTagText}>{selectedRating} ★ ✕</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity onPress={clearAllFilters}>
@@ -243,7 +272,7 @@ export default function CourseListScreen({ navigation }: any) {
       {/* Course Cards Grid */}
       {loading && !refreshing ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#064E3B" />
+          <ActivityIndicator size="large" color={COLORS.primary} />
           <Text style={styles.loadingText}>Loading courses...</Text>
         </View>
       ) : (
@@ -254,7 +283,7 @@ export default function CourseListScreen({ navigation }: any) {
           columnWrapperStyle={styles.columnWrapper}
           contentContainerStyle={styles.gridContainer}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData(); }} />
+            <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData(); }} tintColor={COLORS.primary} />
           }
           renderItem={({ item }) => (
             <TouchableOpacity
@@ -262,7 +291,6 @@ export default function CourseListScreen({ navigation }: any) {
               activeOpacity={0.9}
               onPress={() => navigation?.navigate('CourseDetail', { courseId: item.id, course: item })}
             >
-              {/* Image Banner */}
               <Image
                 source={{ uri: item.thumbnail || 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=600&q=80' }}
                 style={styles.cardImage}
@@ -284,18 +312,18 @@ export default function CourseListScreen({ navigation }: any) {
                   }
                 >
                   <Text style={styles.instructorName} numberOfLines={1}>
-                    {item.creator?.name || item.creatorName || 'Instructor'}
+                    {item.creator?.name || item.creatorName || 'Skill Sharer'}
                   </Text>
                   {(item.creator?.verifiedBadge || item.verified) && (
                     <View style={styles.verifiedBadge}>
-                      <Text style={styles.verifiedText}>✓ Verified</Text>
+                      <Text style={styles.verifiedText}>✔</Text>
                     </View>
                   )}
                 </TouchableOpacity>
 
-                {/* Rating & Level Row */}
+                {/* Rating & Level */}
                 <View style={styles.metaRow}>
-                  <Text style={styles.ratingText}>⭐ {item.rating || 4.8}</Text>
+                  <Text style={styles.ratingText}>★ {item.rating || 4.8}</Text>
                   <View style={styles.difficultyBadge}>
                     <Text style={styles.difficultyText}>{item.difficulty || 'BEGINNER'}</Text>
                   </View>
@@ -316,31 +344,8 @@ export default function CourseListScreen({ navigation }: any) {
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setActiveModal(null)}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>
-              Select {activeModal === 'CATEGORY' ? 'Category' : activeModal === 'DIFFICULTY' ? 'Difficulty' : activeModal === 'DURATION' ? 'Duration' : 'Rating'}
+              Select {activeModal === 'DIFFICULTY' ? 'Difficulty' : activeModal === 'DURATION' ? 'Duration' : 'Rating'}
             </Text>
-
-            {activeModal === 'CATEGORY' && (
-              <View style={styles.optionList}>
-                {(categories.length > 0
-                  ? ['All', ...Array.from(new Set(categories.map((c) => (typeof c === 'string' ? c : c.name))))]
-                  : ['All', 'Web Development', 'Mobile Development', 'Software Engineering', 'Arts & Design', 'Business']
-                ).map((cat) => (
-                  <TouchableOpacity
-                    key={cat}
-                    style={styles.optionItem}
-                    onPress={() => {
-                      setSelectedCategory(cat);
-                      setActiveModal(null);
-                    }}
-                  >
-                    <Text style={[styles.optionText, selectedCategory === cat && styles.optionTextActive]}>
-                      {cat}
-                    </Text>
-                    {selectedCategory === cat && <Text style={styles.checkmark}>✓</Text>}
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
 
             {activeModal === 'DIFFICULTY' && (
               <View style={styles.optionList}>
@@ -356,7 +361,7 @@ export default function CourseListScreen({ navigation }: any) {
                     <Text style={[styles.optionText, selectedDifficulty === diff && styles.optionTextActive]}>
                       {diff}
                     </Text>
-                    {selectedDifficulty === diff && <Text style={styles.checkmark}>✓</Text>}
+                    {selectedDifficulty === diff && <Text style={styles.checkmark}>✔</Text>}
                   </TouchableOpacity>
                 ))}
               </View>
@@ -376,7 +381,7 @@ export default function CourseListScreen({ navigation }: any) {
                     <Text style={[styles.optionText, selectedDuration === dur && styles.optionTextActive]}>
                       {dur}
                     </Text>
-                    {selectedDuration === dur && <Text style={styles.checkmark}>✓</Text>}
+                    {selectedDuration === dur && <Text style={styles.checkmark}>✔</Text>}
                   </TouchableOpacity>
                 ))}
               </View>
@@ -394,9 +399,9 @@ export default function CourseListScreen({ navigation }: any) {
                     }}
                   >
                     <Text style={[styles.optionText, selectedRating === rat && styles.optionTextActive]}>
-                      {rat === 'All' ? 'All Ratings' : `${rat} ⭐ Stars`}
+                      {rat === 'All' ? 'All Ratings' : `${rat} ★ Stars`}
                     </Text>
-                    {selectedRating === rat && <Text style={styles.checkmark}>✓</Text>}
+                    {selectedRating === rat && <Text style={styles.checkmark}>✔</Text>}
                   </TouchableOpacity>
                 ))}
               </View>
@@ -413,94 +418,109 @@ export default function CourseListScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAF9F6' },
-  header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
-  headerTitle: { fontSize: 28, fontWeight: '800', color: '#0F172A', letterSpacing: -0.5 },
-  searchSection: { paddingHorizontal: 20, marginBottom: 12 },
+  container: { flex: 1, backgroundColor: COLORS.bgWarm },
+  header: { paddingHorizontal: 18, paddingTop: 12, paddingBottom: 6 },
+  headerTitle: { fontSize: 24, fontWeight: '800', color: COLORS.neutralDark, letterSpacing: -0.3 },
+  headerSubtitle: { fontSize: 13, color: COLORS.neutralMedium, marginTop: 2 },
+  searchSection: { paddingHorizontal: 18, marginVertical: 10 },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    backgroundColor: COLORS.white,
+    borderRadius: 24,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: COLORS.borderWarm,
   },
-  searchIcon: { fontSize: 16, marginRight: 10 },
-  searchInput: { flex: 1, fontSize: 14, color: '#0F172A' },
-  filterSection: { paddingBottom: 12 },
-  dropdownScroll: { paddingHorizontal: 20, gap: 8 },
+  searchIcon: { fontSize: 16, marginRight: 8 },
+  searchInput: { flex: 1, fontSize: 14, color: COLORS.neutralDark },
+  clearSearchIcon: { fontSize: 14, color: COLORS.neutralMedium, padding: 4 },
+  categoryChipsScroll: { paddingHorizontal: 18, marginBottom: 10 },
+  categoryChip: {
+    backgroundColor: COLORS.white,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: COLORS.borderWarm,
+    marginRight: 8,
+  },
+  categoryChipActive: { backgroundColor: COLORS.primaryDark, borderColor: COLORS.primaryDark },
+  categoryChipText: { fontSize: 13, fontWeight: '700', color: COLORS.neutralDark },
+  categoryChipTextActive: { color: COLORS.white },
+  filterSection: { paddingBottom: 10 },
+  dropdownScroll: { paddingHorizontal: 18, gap: 8 },
   dropdownPill: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.white,
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: COLORS.borderWarm,
   },
-  dropdownPillActive: { backgroundColor: '#DCFCE7', borderColor: '#86EFAC' },
-  dropdownText: { fontSize: 13, fontWeight: '600', color: '#475569' },
-  dropdownTextActive: { color: '#166534' },
+  dropdownPillActive: { backgroundColor: COLORS.badgeOrangeBg, borderColor: COLORS.primary },
+  dropdownText: { fontSize: 12, fontWeight: '700', color: COLORS.neutralDark },
+  dropdownTextActive: { color: COLORS.primary },
   activeTagsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    marginTop: 10,
+    paddingHorizontal: 18,
+    marginTop: 8,
     gap: 8,
   },
   activeTag: {
-    backgroundColor: '#DCFCE7',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    backgroundColor: COLORS.badgeOrangeBg,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 14,
   },
-  activeTagText: { fontSize: 12, fontWeight: '700', color: '#15803D' },
-  clearAllText: { fontSize: 12, color: '#64748B', fontWeight: '600', marginLeft: 4 },
+  activeTagText: { fontSize: 11, fontWeight: '700', color: COLORS.primary },
+  clearAllText: { fontSize: 12, color: COLORS.neutralMedium, fontWeight: '700', marginLeft: 4 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { marginTop: 10, color: '#64748B' },
-  gridContainer: { paddingHorizontal: 16, paddingBottom: 40 },
-  columnWrapper: { justifyContent: 'space-between', marginBottom: 16 },
+  loadingText: { marginTop: 10, color: COLORS.neutralMedium },
+  gridContainer: { paddingHorizontal: 14, paddingBottom: 40 },
+  columnWrapper: { justifyContent: 'space-between', marginBottom: 14 },
   courseCard: {
     width: '48%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    backgroundColor: COLORS.white,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: COLORS.borderWarm,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
     elevation: 2,
+    shadowColor: COLORS.neutralDark,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
   },
-  cardImage: { width: '100%', height: 120, borderTopLeftRadius: 16, borderTopRightRadius: 16 },
-  cardBody: { padding: 12 },
-  courseTitle: { fontSize: 14, fontWeight: '700', color: '#0F172A', lineHeight: 18, marginBottom: 6 },
-  instructorRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
-  instructorName: { fontSize: 12, color: '#64748B', flexShrink: 1 },
-  verifiedBadge: { backgroundColor: '#DCFCE7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
-  verifiedText: { fontSize: 10, fontWeight: '700', color: '#15803D' },
-  metaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
-  ratingText: { fontSize: 12, fontWeight: '700', color: '#0F172A' },
-  difficultyBadge: { backgroundColor: '#F1F5F9', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
-  difficultyText: { fontSize: 10, color: '#475569', fontWeight: '600' },
-  statsText: { fontSize: 11, color: '#94A3B8' },
+  cardImage: { width: '100%', height: 115 },
+  cardBody: { padding: 10 },
+  courseTitle: { fontSize: 13, fontWeight: '800', color: COLORS.neutralDark, lineHeight: 17, marginBottom: 4 },
+  instructorRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 6 },
+  instructorName: { fontSize: 11, color: COLORS.neutralMedium, flexShrink: 1 },
+  verifiedBadge: { backgroundColor: COLORS.primary, width: 13, height: 13, borderRadius: 6.5, justifyContent: 'center', alignItems: 'center' },
+  verifiedText: { fontSize: 8, fontWeight: '900', color: COLORS.white },
+  metaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  ratingText: { fontSize: 11, fontWeight: '800', color: COLORS.neutralDark },
+  difficultyBadge: { backgroundColor: COLORS.badgeOrangeBg, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+  difficultyText: { fontSize: 9, color: COLORS.primary, fontWeight: '700' },
+  statsText: { fontSize: 10, color: COLORS.neutralLight },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.4)',
+    backgroundColor: 'rgba(43, 33, 30, 0.4)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
   modalContent: {
     width: '100%',
-    maxWidth: 340,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    maxWidth: 320,
+    backgroundColor: COLORS.white,
+    borderRadius: 24,
     padding: 20,
   },
-  modalTitle: { fontSize: 18, fontWeight: '800', color: '#0F172A', marginBottom: 16 },
+  modalTitle: { fontSize: 18, fontWeight: '800', color: COLORS.neutralDark, marginBottom: 16 },
   optionList: { gap: 4, marginBottom: 16 },
   optionItem: {
     flexDirection: 'row',
@@ -509,11 +529,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: COLORS.borderWarm,
   },
-  optionText: { fontSize: 14, color: '#334155', fontWeight: '500' },
-  optionTextActive: { color: '#064E3B', fontWeight: '700' },
-  checkmark: { fontSize: 16, color: '#15803D', fontWeight: '700' },
-  closeBtn: { backgroundColor: '#064E3B', paddingVertical: 12, borderRadius: 12, alignItems: 'center' },
-  closeBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
+  optionText: { fontSize: 14, color: COLORS.neutralDark, fontWeight: '500' },
+  optionTextActive: { color: COLORS.primary, fontWeight: '800' },
+  checkmark: { fontSize: 14, color: COLORS.primary, fontWeight: '800' },
+  closeBtn: { backgroundColor: COLORS.primaryDark, paddingVertical: 12, borderRadius: 14, alignItems: 'center' },
+  closeBtnText: { color: COLORS.white, fontWeight: '800', fontSize: 14 },
 });
