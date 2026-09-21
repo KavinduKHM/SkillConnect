@@ -15,9 +15,9 @@ export default function App() {
     <SafeAreaProvider>
       <NavigationContainer>
         <StatusBar style="light" backgroundColor="#4F46E5" />
-        <RootStack.Navigator initialRouteName="Learner" screenOptions={{ headerShown: false }}>
-          <RootStack.Screen name="Learner" component={LearnerNavigator} />
+        <RootStack.Navigator initialRouteName="Auth" screenOptions={{ headerShown: false }}>
           <RootStack.Screen name="Auth" component={AuthNavigator} />
+          <RootStack.Screen name="Learner" component={LearnerNavigator} />
           <RootStack.Screen name="Admin" component={AdminNavigator} />
           <RootStack.Screen name="SkillSharer" component={SkillSharerNavigator} />
         </RootStack.Navigator>
