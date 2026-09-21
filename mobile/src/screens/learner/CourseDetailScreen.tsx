@@ -437,7 +437,17 @@ export default function CourseDetailScreen({ route, navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bgWarm },
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.bgWarm,
+    ...Platform.select({
+      web: {
+        height: '100vh',
+        maxHeight: '100vh',
+        overflow: 'hidden',
+      },
+    }),
+  },
   topHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -465,7 +475,8 @@ const styles = StyleSheet.create({
     flex: 1,
     ...Platform.select({
       web: {
-        overflowY: 'scroll',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
       },
     }),
   },
