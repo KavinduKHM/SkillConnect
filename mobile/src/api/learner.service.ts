@@ -142,6 +142,11 @@ export const deleteLearnerSubmission = async (assignmentId: string, versionNumbe
 // CERTIFICATES & COMPLETIONS
 // ============================================================
 
+export const checkCertificateEligibility = async (courseId: string) => {
+  const response = await client.get(`/certificates/check-eligibility/${courseId}`);
+  return response.data;
+};
+
 export const requestCourseCompletion = async (courseId: string) => {
   const response = await client.post(`/certificates/request/${courseId}`);
   return response.data;

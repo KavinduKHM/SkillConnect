@@ -3,6 +3,8 @@ import type { LearningMaterial } from '@prisma/client';
 import cloudinary from '../config/cloudinary.js';
 import type { CreateMaterialInput, UpdateMaterialInput } from '../types/index.js';
 import { Readable } from 'stream';
+import fs from 'fs';
+import path from 'path';
 
 const prisma = new PrismaClient();
 
@@ -41,10 +43,23 @@ async createMaterial(
   }
 
   // ✅ Ensure order is a number
-  const order = typeof data.order === 'string' ? parseInt(data.order, 10) : data.order;
+  let order = typeof data.order === 'string' ? parseInt(data.order, 10) : data.order;
 
   if (isNaN(order)) {
-    throw new Error('Order must be a valid number');
+    order = 1;
+  }
+
+  // ✅ Prevent unique constraint check failures by auto-resolving collisions
+  const existingMaterialCollision = await prisma.learningMaterial.findFirst({
+    where: { lessonId, order },
+  });
+
+  if (existingMaterialCollision) {
+    const agg = await prisma.learningMaterial.aggregate({
+      where: { lessonId },
+      _max: { order: true },
+    });
+    order = (agg._max.order ?? 0) + 1;
   }
 
   return prisma.learningMaterial.create({
@@ -63,21 +78,42 @@ async createMaterial(
 
   // Upload to Cloudinary
   private async uploadToCloudinary(file: UploadFile): Promise<any> {
-    return new Promise((resolve, reject) => {
-      const uploadStream = cloudinary.uploader.upload_stream(
-        {
-          folder: 'skillconnect',
-          resource_type: 'auto',
-          allowed_formats: ['mp4', 'webm', 'pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'ppt', 'pptx', 'doc', 'docx'],
-        },
-        (error, result) => {
-          if (error) reject(error);
-          else resolve(result);
-        }
-      );
+    const tempDir = path.resolve('uploads/tmp');
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+    const tempFilePath = path.join(tempDir, `${Date.now()}-${file.originalname}`);
+    fs.writeFileSync(tempFilePath, file.buffer);
 
-      Readable.from(file.buffer).pipe(uploadStream);
-    });
+    try {
+      const fileExtension = path.extname(file.originalname).toLowerCase();
+      const isVideo = file.mimetype.startsWith('video/') || ['.mp4', '.mov', '.avi', '.mkv', '.webm'].includes(fileExtension);
+      const result = await new Promise((resolve, reject) => {
+        cloudinary.uploader.upload_large(
+          tempFilePath,
+          {
+            folder: 'skillconnect',
+            resource_type: isVideo ? 'video' : 'auto',
+            chunk_size: 6 * 1024 * 1024, // 6MB chunks
+            timeout: 120000, // 120 seconds timeout
+          },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        );
+      });
+      return result;
+    } finally {
+      // Clean up temp file
+      if (fs.existsSync(tempFilePath)) {
+        try {
+          fs.unlinkSync(tempFilePath);
+        } catch (err) {
+          console.error('Error cleaning up temp upload file:', err);
+        }
+      }
+    }
   }
 
   // Get all materials for a lesson

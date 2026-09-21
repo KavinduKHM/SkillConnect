@@ -6,6 +6,35 @@ import type { ApiResponse } from '../types/index.js';
 const recommendationService = new RecommendationService();
 
 export class RecommendationController {
+  // Get all completed learners for a course
+  async getCompletedLearnersForCourse(req: Request, res: Response) {
+    try {
+      const instructorId = (req as any).user.id;
+      const { courseId } = req.params;
+
+      if (!courseId) {
+        return res.status(400).json({
+          success: false,
+          error: 'Course ID is required',
+        } as ApiResponse<null>);
+      }
+
+      const learners = await recommendationService.getCompletedLearnersForCourse(instructorId, courseId);
+
+      return res.status(200).json({
+        success: true,
+        data: learners,
+        learners,
+      } as ApiResponse<any>);
+    } catch (error) {
+      console.error('Error getting completed learners:', error);
+      return res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Internal server error',
+      } as ApiResponse<null>);
+    }
+  }
+
   // Create recommendation (Skill Sharer -> Learner)
   async createRecommendation(req: Request, res: Response) {
     try {
@@ -54,15 +83,8 @@ export class RecommendationController {
         } as ApiResponse<null>);
       }
 
-      // Only the learner or admin can view these
-      if (userId !== learnerId && (req as any).user.role !== 'ADMIN') {
-        return res.status(403).json({
-          success: false,
-          error: 'You can only view your own recommendations',
-        } as ApiResponse<null>);
-      }
-
-      const recommendations = await recommendationService.getRecommendationsForLearner(learnerId);
+      const onlyPublic = userId !== learnerId && (req as any).user.role !== 'ADMIN';
+      const recommendations = await recommendationService.getRecommendationsForLearner(learnerId, onlyPublic);
 
       return res.status(200).json({
         success: true,
@@ -81,7 +103,7 @@ export class RecommendationController {
   async getMyRecommendations(req: Request, res: Response) {
     try {
       const userId = (req as any).user.id;
-      const recommendations = await recommendationService.getRecommendationsForLearner(userId);
+      const recommendations = await recommendationService.getRecommendationsForLearner(userId, false);
 
       return res.status(200).json({
         success: true,

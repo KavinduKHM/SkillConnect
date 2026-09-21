@@ -20,6 +20,9 @@ import {
   uploadAssessmentFiles,
   deleteAssignmentSubmission,
 } from '../../api/learner.service';
+import Toast from 'react-native-toast-message';
+import { ConfirmModal } from '../../components/common/ConfirmModal';
+import { Header } from '../../components/common/Header';
 
 interface LocalFile {
   name: string;
@@ -42,6 +45,18 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<string>('');
   const [isEditing, setIsEditing] = useState(false);
+
+  const [confirmConfig, setConfirmConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   useEffect(() => {
     if (assignmentId) {
@@ -73,12 +88,12 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
     }
   };
 
-  const showNotification = (title: string, message: string) => {
-    if (Platform.OS === 'web') {
-      window.alert(`${title}: ${message}`);
-    } else {
-      Alert.alert(title, message);
-    }
+  const showNotification = (title: string, message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    Toast.show({
+      type,
+      text1: title,
+      text2: message,
+    });
   };
 
   const formatFileSize = (bytes?: number) => {
@@ -92,6 +107,28 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
     if (!url) return '';
     if (url.startsWith('http://') || url.startsWith('https://')) return url;
     return `http://localhost:5000${url.startsWith('/') ? '' : '/'}${url}`;
+  };
+
+  const handleDownloadFile = (url: string, filename?: string) => {
+    if (!url) return;
+    const fullUrl = getFileUrl(url);
+    if (Platform.OS === 'web') {
+      try {
+        const link = document.createElement('a');
+        link.href = fullUrl;
+        link.download = filename || 'attachment.pdf';
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (err) {
+        window.open(fullUrl, '_blank');
+      }
+    } else {
+      Linking.openURL(fullUrl).catch(() => {
+        Alert.alert('Error', 'Could not open or download document');
+      });
+    }
   };
 
   const handlePickDocument = async () => {
@@ -196,16 +233,15 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
   };
 
   const handleDelete = () => {
-    if (Platform.OS === 'web') {
-      if (window.confirm('Are you sure you want to delete this submission?')) {
+    setConfirmConfig({
+      visible: true,
+      title: 'Delete Submission',
+      message: 'Are you sure you want to delete this submission?',
+      onConfirm: async () => {
+        setConfirmConfig((prev) => ({ ...prev, visible: false }));
         performDelete();
-      }
-    } else {
-      Alert.alert('Delete Submission', 'Are you sure you want to delete this submission?', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: performDelete },
-      ]);
-    }
+      },
+    });
   };
 
   const performDelete = async () => {
@@ -254,15 +290,11 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation?.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#111827" />
-        </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle} numberOfLines={1}>{assignment.title}</Text>
-          <Text style={styles.headerSubtitle}>Assignment Details</Text>
-        </View>
-      </View>
+      <Header
+        title={assignment.title}
+        showBack={true}
+        onBackPress={() => navigation?.goBack()}
+      />
 
       <ScrollView style={styles.content} contentContainerStyle={{ padding: 20 }}>
         {/* Instructions */}
@@ -333,7 +365,7 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
                       <TouchableOpacity
                         key={idx}
                         style={styles.attachedFileItem}
-                        onPress={() => Linking.openURL(fullUrl)}
+                        onPress={() => handleDownloadFile(url, fileName)}
                       >
                         <Ionicons name="document-attach-outline" size={18} color="#4F46E5" />
                         <Text style={styles.attachedFileText} numberOfLines={1}>
@@ -442,6 +474,16 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
           </View>
         )}
       </ScrollView>
+
+      <ConfirmModal
+        visible={confirmConfig.visible}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        confirmText="Delete"
+        confirmType="danger"
+        onConfirm={confirmConfig.onConfirm}
+        onCancel={() => setConfirmConfig((prev) => ({ ...prev, visible: false }))}
+      />
     </View>
   );
 }

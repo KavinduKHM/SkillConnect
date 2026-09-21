@@ -8,10 +8,14 @@ import {
   Alert,
   TextInput,
   Modal,
+  Platform,
   RefreshControl,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminService, Skill, Category } from '../../api/admin.service';
+import { Header } from '../../components/common/Header';
+import { ConfirmModal } from '../../components/common/ConfirmModal';
 
 export const SkillsScreen = () => {
   const queryClient = useQueryClient();
@@ -22,6 +26,18 @@ export const SkillsScreen = () => {
     description: '',
     categoryId: '',
     aliases: '',
+  });
+
+  const [confirmConfig, setConfirmConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
   });
 
   const { data: skillsData, isLoading, refetch } = useQuery({
@@ -42,7 +58,7 @@ export const SkillsScreen = () => {
 
   const handleSave = async () => {
     if (!formData.name) {
-      Alert.alert('Error', 'Skill name is required');
+      Toast.show({ type: 'error', text1: 'Error', text2: 'Skill name is required' });
       return;
     }
 
@@ -56,10 +72,10 @@ export const SkillsScreen = () => {
 
       if (editingSkill) {
         await adminService.updateSkill(editingSkill.id, payload);
-        Alert.alert('Success', 'Skill updated');
+        Toast.show({ type: 'success', text1: 'Success', text2: 'Skill updated' });
       } else {
         await adminService.createSkill(payload);
-        Alert.alert('Success', 'Skill created');
+        Toast.show({ type: 'success', text1: 'Success', text2: 'Skill created' });
       }
       setModalVisible(false);
       setEditingSkill(null);
@@ -67,32 +83,30 @@ export const SkillsScreen = () => {
       queryClient.invalidateQueries({ queryKey: ['skills'] });
       refetch();
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to save');
+      Toast.show({ type: 'error', text1: 'Error', text2: error.response?.data?.error || 'Failed to save' });
     }
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    Alert.alert(
-      'Delete Skill',
-      `Are you sure you want to delete "${name}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await adminService.deleteSkill(id);
-              Alert.alert('Success', 'Skill deleted');
-              queryClient.invalidateQueries({ queryKey: ['skills'] });
-              refetch();
-            } catch (error: any) {
-              Alert.alert('Error', error.response?.data?.error || 'Failed to delete');
-            }
-          },
-        },
-      ]
-    );
+  const handleDelete = (id: string, name: string) => {
+    setConfirmConfig({
+      visible: true,
+      title: 'Delete Skill',
+      message: `Are you sure you want to delete "${name}"?`,
+      onConfirm: async () => {
+        setConfirmConfig((prev) => ({ ...prev, visible: false }));
+        queryClient.setQueryData(['skills'], (old: any) => 
+          Array.isArray(old) ? old.filter((s: any) => s.id !== id) : old
+        );
+        try {
+          await adminService.deleteSkill(id);
+          Toast.show({ type: 'success', text1: 'Success', text2: 'Skill deleted' });
+          queryClient.invalidateQueries({ queryKey: ['skills'] });
+          refetch();
+        } catch (error: any) {
+          Toast.show({ type: 'error', text1: 'Error', text2: error.response?.data?.error || 'Failed to delete' });
+        }
+      },
+    });
   };
 
   const openEditModal = (skill: Skill) => {
@@ -116,15 +130,20 @@ export const SkillsScreen = () => {
   const categories: Category[] = categoriesData || [];
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Skills</Text>
-        <TouchableOpacity style={styles.addButton} onPress={openCreateModal}>
-          <Text style={styles.addButtonText}>+ Add</Text>
-        </TouchableOpacity>
-      </View>
+    <View style={{ flex: 1 }}>
+      <Header
+        title="Skills"
+        rightComponent={
+          <TouchableOpacity style={styles.addButton} onPress={openCreateModal}>
+            <Text style={styles.addButtonText}>+ Add</Text>
+          </TouchableOpacity>
+        }
+      />
+      <View style={styles.container}>
 
       <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
         refreshControl={
           <RefreshControl refreshing={isLoading} onRefresh={refetch} />
         }
@@ -262,6 +281,17 @@ export const SkillsScreen = () => {
           </View>
         </View>
       </Modal>
+
+      <ConfirmModal
+        visible={confirmConfig.visible}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        confirmText="Delete"
+        confirmType="danger"
+        onConfirm={confirmConfig.onConfirm}
+        onCancel={() => setConfirmConfig((prev) => ({ ...prev, visible: false }))}
+      />
+    </View>
     </View>
   );
 };

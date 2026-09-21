@@ -31,6 +31,18 @@ router.post(
   recommendationController.createRecommendation
 );
 
+// Get completed learners for a course (Skill Sharer only)
+router.get(
+  '/course/:courseId/learners',
+  isSkillSharer,
+  recommendationController.getCompletedLearnersForCourse
+);
+router.get(
+  '/course/:courseId/completed-learners',
+  isSkillSharer,
+  recommendationController.getCompletedLearnersForCourse
+);
+
 // Get my recommendations
 router.get('/me', recommendationController.getMyRecommendations);
 

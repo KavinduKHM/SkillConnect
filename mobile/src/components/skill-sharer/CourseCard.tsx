@@ -10,6 +10,7 @@ interface CourseCardProps {
   onEdit?: () => void;
   onDelete?: () => void;
   onSubmit?: () => void;
+  onViewReviews?: () => void;
 }
 
 const getStatusColor = (status: string) => {
@@ -60,9 +61,15 @@ export const CourseCard: React.FC<CourseCardProps> = ({
   onEdit,
   onDelete,
   onSubmit,
+  onViewReviews,
 }) => {
-  const isDraft = course.status === 'DRAFT';
-  const isSubmitted = course.status === 'SUBMITTED' || course.status === 'UNDER_REVIEW';
+  const isDraft = course?.status === 'DRAFT';
+  const isSubmitted = course?.status === 'SUBMITTED' || course?.status === 'UNDER_REVIEW';
+
+  const ratingNum = Number(course?.rating) || 0;
+  const enrolledNum = Number(course?.enrolledCount) || 0;
+  const rawDate = course?.createdAt ? new Date(course.createdAt) : new Date();
+  const dateStr = !isNaN(rawDate.getTime()) ? rawDate.toLocaleDateString() : 'N/A';
 
   return (
     <Card variant="elevated" style={styles.card}>
@@ -70,43 +77,41 @@ export const CourseCard: React.FC<CourseCardProps> = ({
         <View style={styles.header}>
           <View style={styles.titleContainer}>
             <Text style={styles.title} numberOfLines={1}>
-              {course.title}
+              {course?.title || 'Untitled Course'}
             </Text>
-            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(course.status) }]}>
-              <Text style={styles.statusText}>{getStatusLabel(course.status)}</Text>
+            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(course?.status || 'DRAFT') }]}>
+              <Text style={styles.statusText}>{getStatusLabel(course?.status || 'DRAFT')}</Text>
             </View>
           </View>
-          <Text style={styles.difficulty}>{course.difficulty}</Text>
+          <Text style={styles.difficulty}>{course?.difficulty || 'Beginner'}</Text>
         </View>
 
         <Text style={styles.description} numberOfLines={2}>
-          {course.description}
+          {course?.description || 'No description provided.'}
         </Text>
 
         <View style={styles.footer}>
           <View style={styles.metaContainer}>
             <View style={styles.metaItem}>
               <Ionicons name="time-outline" size={16} color="#6B7280" />
-              <Text style={styles.metaText}>{course.duration || 'N/A'}</Text>
+              <Text style={styles.metaText}>{course?.duration || 'N/A'}</Text>
             </View>
             <View style={styles.metaItem}>
               <Ionicons name="people-outline" size={16} color="#6B7280" />
-              <Text style={styles.metaText}>{course.enrolledCount || 0} enrolled</Text>
+              <Text style={styles.metaText}>{enrolledNum} enrolled</Text>
             </View>
-            {course.rating > 0 && (
+            {ratingNum > 0 && (
               <View style={styles.metaItem}>
                 <Ionicons name="star" size={16} color="#F59E0B" />
-                <Text style={styles.metaText}>{course.rating.toFixed(1)}</Text>
+                <Text style={styles.metaText}>{ratingNum.toFixed(1)}</Text>
               </View>
             )}
           </View>
-          <Text style={styles.date}>
-            {new Date(course.createdAt).toLocaleDateString()}
-          </Text>
+          <Text style={styles.date}>{dateStr}</Text>
         </View>
       </TouchableOpacity>
 
-      {(isDraft || isSubmitted) && (
+      {(isDraft || isSubmitted) ? (
         <View style={styles.actions}>
           {isDraft && (
             <>
@@ -129,6 +134,15 @@ export const CourseCard: React.FC<CourseCardProps> = ({
           {isSubmitted && (
             <Text style={styles.pendingText}>Waiting for admin review...</Text>
           )}
+        </View>
+      ) : (
+        <View style={styles.actions}>
+          <TouchableOpacity style={styles.actionButton} onPress={onViewReviews}>
+            <Ionicons name="star" size={16} color="#F59E0B" />
+            <Text style={[styles.actionText, { color: '#B45309', fontWeight: '600' }]}>
+              {ratingNum > 0 ? `Learner Reviews (${ratingNum.toFixed(1)} ⭐)` : 'Learner Reviews ⭐'}
+            </Text>
+          </TouchableOpacity>
         </View>
       )}
     </Card>

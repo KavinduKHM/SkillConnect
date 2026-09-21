@@ -13,8 +13,12 @@ import {
   Switch,
   Platform,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { courseApi, quizApi } from '../../api/skill-sharer.service';
+import { Header } from '../../components/common/Header';
+
+import { ConfirmModal } from '../../components/common/ConfirmModal';
 
 interface Quiz {
   id: string;
@@ -41,10 +45,28 @@ export const AssessmentsScreen = ({ navigation }: any) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  const [confirmConfig, setConfirmConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
+
   // Modal State
   const [modalVisible, setModalVisible] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [currentQuizId, setCurrentQuizId] = useState<string | null>(null);
+
+  // Completions State
+  const [completionsModalVisible, setCompletionsModalVisible] = useState(false);
+  const [selectedQuizForCompletions, setSelectedQuizForCompletions] = useState<Quiz | null>(null);
+  const [completions, setCompletions] = useState<any[]>([]);
+  const [completionsLoading, setCompletionsLoading] = useState(false);
 
   // Form Fields
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
@@ -56,6 +78,22 @@ export const AssessmentsScreen = ({ navigation }: any) => {
   const [dueDays, setDueDays] = useState('7');
   const [isSaving, setIsSaving] = useState(false);
 
+  const handleViewCompletions = async (quiz: Quiz) => {
+    setSelectedQuizForCompletions(quiz);
+    setCompletionsModalVisible(true);
+    setCompletionsLoading(true);
+    try {
+      const res: any = await quizApi.getQuizCompletions(quiz.id);
+      const data = res?.completions || res?.data?.completions || (Array.isArray(res) ? res : []);
+      setCompletions(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Error fetching quiz completions:', error);
+      setCompletions([]);
+    } finally {
+      setCompletionsLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchCoursesAndAssessments();
   }, []);
@@ -64,14 +102,23 @@ export const AssessmentsScreen = ({ navigation }: any) => {
     try {
       setLoading(true);
       const res: any = await courseApi.getMyCourses();
-      const myCourses = res?.data || (Array.isArray(res) ? res : []);
+      let myCourses = [];
+      // Axios wraps response — actual ApiResponse is at res.data, courses array at res.data.data or res.data
+      if (res?.data?.data && Array.isArray(res.data.data)) {
+        myCourses = res.data.data;
+      } else if (res?.data && Array.isArray(res.data)) {
+        myCourses = res.data;
+      } else if (Array.isArray(res)) {
+        myCourses = res;
+      }
 
       if (Array.isArray(myCourses)) {
         const enrichedCourses: CourseWithQuizzes[] = await Promise.all(
           myCourses.map(async (c: any) => {
             try {
               const quizRes: any = await quizApi.getCourseQuizzes(c.id);
-              const quizzes = quizRes?.quizzes || quizRes?.data || [];
+              // Backend returns { success: true, quizzes: [...] }; axios wraps at .data
+              const quizzes: any[] = quizRes?.data?.quizzes || (Array.isArray(quizRes?.data) ? quizRes.data : []);
               return {
                 id: c.id,
                 title: c.title,
@@ -92,14 +139,14 @@ export const AssessmentsScreen = ({ navigation }: any) => {
         );
         setCourses(enrichedCourses);
         if (enrichedCourses.length > 0 && !selectedCourseId) {
-          setSelectedCourseId(enrichedCourses[0].id);
+          setSelectedCourseId(enrichedCourses[0]?.id || '');
         }
       } else {
         setCourses([]);
       }
     } catch (error) {
       console.error('Error fetching courses and assessments:', error);
-      Alert.alert('Error', 'Failed to load courses.');
+      Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to load courses.' });
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -109,7 +156,7 @@ export const AssessmentsScreen = ({ navigation }: any) => {
   const handleOpenCreateModal = (targetCourseId?: string) => {
     setIsEditing(false);
     setCurrentQuizId(null);
-    const chosenCourseId = targetCourseId || (courses.length > 0 ? courses[0].id : '');
+    const chosenCourseId = targetCourseId || (courses.length > 0 ? courses[0]?.id || '' : '');
     setSelectedCourseId(chosenCourseId);
     
     const matchedCourse = courses.find((c) => c.id === chosenCourseId);
@@ -138,41 +185,41 @@ export const AssessmentsScreen = ({ navigation }: any) => {
   };
 
   const handleDeleteQuiz = (quiz: Quiz) => {
-    Alert.alert(
-      'Delete Assessment',
-      `Are you sure you want to delete "${quiz.title}"? This cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await quizApi.deleteQuizLink(quiz.id);
-              Alert.alert('Deleted', 'Assessment removed successfully.');
-              fetchCoursesAndAssessments();
-            } catch (error: any) {
-              Alert.alert('Error', error?.response?.data?.error || 'Failed to delete assessment.');
-            }
-          },
-        },
-      ]
-    );
+    setConfirmConfig({
+      visible: true,
+      title: 'Delete Assessment',
+      message: `Are you sure you want to delete "${quiz.title}"? This cannot be undone.`,
+      onConfirm: async () => {
+        setConfirmConfig((prev) => ({ ...prev, visible: false }));
+        setCourses(prev => prev.map(c => ({
+          ...c,
+          assessments: c.assessments.filter(q => q.id !== quiz.id)
+        })));
+
+        try {
+          await quizApi.deleteQuizLink(quiz.id);
+          Toast.show({ type: 'success', text1: 'Deleted', text2: 'Assessment removed successfully.' });
+        } catch (error: any) {
+          Toast.show({ type: 'error', text1: 'Error', text2: error?.response?.data?.error || 'Failed to delete assessment.' });
+          fetchCoursesAndAssessments(); // Revert on failure
+        }
+      },
+    });
   };
 
   const handleSave = async () => {
     if (!selectedCourseId) {
-      Alert.alert('Validation Error', 'Please select a course for this assessment.');
+      Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Please select a course for this assessment.' });
       return;
     }
 
     if (!formLink.trim()) {
-      Alert.alert('Validation Error', 'Google Form link is required.');
+      Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Google Form link is required.' });
       return;
     }
 
     if (!formLink.startsWith('http://') && !formLink.startsWith('https://')) {
-      Alert.alert('Validation Error', 'Google Form link must start with https:// or http://');
+      Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Google Form link must start with https:// or http://' });
       return;
     }
 
@@ -194,17 +241,17 @@ export const AssessmentsScreen = ({ navigation }: any) => {
 
       if (isEditing && currentQuizId) {
         await quizApi.updateQuizLink(currentQuizId, payload);
-        Alert.alert('Success', 'Assessment updated successfully!');
+        Toast.show({ type: 'success', text1: 'Success', text2: 'Assessment updated successfully!' });
       } else {
         await quizApi.createQuizLink(payload);
-        Alert.alert('Success', 'New assessment created successfully!');
+        Toast.show({ type: 'success', text1: 'Success', text2: 'New assessment created successfully!' });
       }
 
       setModalVisible(false);
       fetchCoursesAndAssessments();
     } catch (error: any) {
       console.error('Error saving assessment:', error);
-      Alert.alert('Error', error?.response?.data?.error || error?.message || 'Failed to save assessment');
+      Toast.show({ type: 'error', text1: 'Error', text2: error?.response?.data?.error || error?.message || 'Failed to save assessment' });
     } finally {
       setIsSaving(false);
     }
@@ -280,6 +327,17 @@ export const AssessmentsScreen = ({ navigation }: any) => {
                   "{quiz.instructions}"
                 </Text>
               ) : null}
+
+              {/* View Submissions & Scores Button */}
+              <TouchableOpacity
+                style={styles.viewSubmissionsBtn}
+                onPress={() => handleViewCompletions(quiz)}
+              >
+                <Ionicons name="people-outline" size={16} color="#4F46E5" style={{ marginRight: 6 }} />
+                <Text style={styles.viewSubmissionsBtnText}>
+                  View Learner Submissions ({quiz.completionCount || 0}) →
+                </Text>
+              </TouchableOpacity>
             </View>
           ))}
         </View>
@@ -298,21 +356,21 @@ export const AssessmentsScreen = ({ navigation }: any) => {
   );
 
   return (
-    <View style={styles.container}>
-      {/* Top Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#111827" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Course Assessments</Text>
-        <TouchableOpacity
-          style={styles.headerCreateBtn}
-          onPress={() => handleOpenCreateModal()}
-        >
-          <Ionicons name="add" size={20} color="#FFF" />
-          <Text style={styles.headerCreateBtnText}>Create</Text>
-        </TouchableOpacity>
-      </View>
+    <View style={{ flex: 1 }}>
+      <Header
+        title="Course Assessments"
+        showBack={true}
+        rightComponent={
+          <TouchableOpacity
+            style={styles.headerCreateBtn}
+            onPress={() => handleOpenCreateModal()}
+          >
+            <Ionicons name="add" size={20} color="#FFF" />
+            <Text style={styles.headerCreateBtnText}>Create</Text>
+          </TouchableOpacity>
+        }
+      />
+      <View style={styles.container}>
 
       {/* Main List */}
       {loading && !refreshing ? (
@@ -488,6 +546,95 @@ export const AssessmentsScreen = ({ navigation }: any) => {
           </View>
         </View>
       </Modal>
+
+      {/* Completions Modal */}
+      <Modal
+        visible={completionsModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setCompletionsModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { maxHeight: '80%' }]}>
+            <View style={styles.modalHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.modalTitle}>Learner Submissions</Text>
+                <Text style={styles.modalSubtitle} numberOfLines={1}>
+                  {selectedQuizForCompletions?.title || 'Assessment'}
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setCompletionsModalVisible(false)} style={styles.closeBtn}>
+                <Ionicons name="close" size={24} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+
+            {completionsLoading ? (
+              <View style={{ padding: 40, alignItems: 'center' }}>
+                <ActivityIndicator size="large" color="#4F46E5" />
+                <Text style={{ marginTop: 10, color: '#6B7280' }}>Loading submissions...</Text>
+              </View>
+            ) : completions.length === 0 ? (
+              <View style={{ padding: 40, alignItems: 'center' }}>
+                <Ionicons name="people-outline" size={48} color="#D1D5DB" />
+                <Text style={{ fontSize: 16, fontWeight: '700', color: '#374151', marginTop: 12 }}>
+                  No Submissions Yet
+                </Text>
+                <Text style={{ fontSize: 13, color: '#6B7280', textAlign: 'center', marginTop: 6 }}>
+                  Learners who finish this assessment will appear here with their scores and completion dates.
+                </Text>
+              </View>
+            ) : (
+              <FlatList
+                data={completions}
+                keyExtractor={(item) => item.id}
+                contentContainerStyle={{ padding: 16, gap: 12 }}
+                renderItem={({ item }) => {
+                  const passed = item.passed ?? (item.score !== null ? item.score >= (selectedQuizForCompletions?.passingScore || 80) : true);
+                  return (
+                    <View style={styles.completionCard}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                          <View style={styles.learnerAvatar}>
+                            <Text style={styles.learnerAvatarText}>{(item.learner?.name || 'L')[0]}</Text>
+                          </View>
+                          <View>
+                            <Text style={styles.completionLearnerName}>{item.learner?.name || 'Learner'}</Text>
+                            <Text style={styles.completionLearnerEmail}>{item.learner?.email || ''}</Text>
+                          </View>
+                        </View>
+                        <View style={[styles.passBadge, { backgroundColor: passed ? '#DEF7EC' : '#FDE8E8' }]}>
+                          <Text style={[styles.passBadgeText, { color: passed ? '#03543F' : '#9B1C1C' }]}>
+                            {passed ? 'PASSED ✓' : 'FAILED'}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.completionMetaRow}>
+                        <Text style={styles.completionMetaText}>
+                          Score: {item.score !== null ? `${item.score}%` : 'Recorded'}
+                        </Text>
+                        <Text style={styles.completionMetaText}>
+                          Date: {new Date(item.completedAt).toLocaleDateString()}
+                        </Text>
+                      </View>
+                    </View>
+                  );
+                }}
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
+      <ConfirmModal
+        visible={confirmConfig.visible}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        confirmText="Delete"
+        confirmType="danger"
+        onConfirm={confirmConfig.onConfirm}
+        onCancel={() => setConfirmConfig((prev) => ({ ...prev, visible: false }))}
+      />
+    </View>
     </View>
   );
 };
@@ -864,5 +1011,83 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  viewSubmissionsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EEF2FF',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+  },
+  viewSubmissionsBtnText: {
+    color: '#4F46E5',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  completionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  learnerAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#EEF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  learnerAvatarText: {
+    color: '#4F46E5',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  completionLearnerName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  completionLearnerEmail: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  passBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  passBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  completionMetaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  completionMetaText: {
+    fontSize: 12,
+    color: '#4B5563',
+    fontWeight: '500',
   },
 });
