@@ -10,10 +10,8 @@ import {
   TextInput,
   Alert,
 } from 'react-native';
-import Toast from 'react-native-toast-message';
 import { useNavigation } from '@react-navigation/native';
 import { courseApi, certificateApi } from '../../api/skill-sharer.service';
-import { Header } from '../../components/common/Header';
 
 export const CompletionRequestsScreen: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -39,21 +37,12 @@ export const CompletionRequestsScreen: React.FC = () => {
 
   const loadCourses = async () => {
     try {
-      const res: any = await courseApi.getMyCourses();
-      let myCourses = [];
-      if (res && res.success && Array.isArray(res.data)) {
-        myCourses = res.data;
-      } else if (res && res.data && res.data.success && Array.isArray(res.data.data)) {
-        myCourses = res.data.data;
-      } else if (Array.isArray(res)) {
-        myCourses = res;
-      } else if (res && Array.isArray(res.data)) {
-        myCourses = res.data;
-      }
-
-      setCourses(myCourses);
-      if (myCourses && myCourses.length > 0) {
-        setSelectedCourse(myCourses[0]?.id || '');
+      const res = await courseApi.getMyCourses();
+      if (res.success && res.data) {
+        setCourses(res.data);
+        if (res.data.length > 0) {
+          setSelectedCourse(res.data[0].id);
+        }
       }
     } catch (err) {
       console.log('Error loading courses:', err);
@@ -64,11 +53,8 @@ export const CompletionRequestsScreen: React.FC = () => {
     setLoading(true);
     try {
       const res: any = await certificateApi.getCourseCompletionRequests(courseId);
-      const data = res?.data || res;
-      if (data && (data.success || data.requests)) {
-        setRequests(data.requests || []);
-      } else if (Array.isArray(data)) {
-        setRequests(data);
+      if (res.success) {
+        setRequests(res.requests || []);
       }
     } catch (err) {
       console.log('Error loading requests:', err);
@@ -80,32 +66,30 @@ export const CompletionRequestsScreen: React.FC = () => {
   const handleApprove = async (requestId: string) => {
     try {
       const res: any = await certificateApi.approveCompletionRequest(requestId);
-      const data = res?.data || res;
-      if (data && data.success) {
-        Toast.show({ type: 'success', text1: 'Success', text2: 'Completion request approved and certificate issued.' });
+      if (res.success) {
+        Alert.alert('Success', 'Completion request approved and certificate issued.');
         if (selectedCourse) loadRequests(selectedCourse);
       }
     } catch (err: any) {
-      Toast.show({ type: 'error', text1: 'Error', text2: err.response?.data?.error || err.message || 'Failed to approve' });
+      Alert.alert('Error', err.response?.data?.error || err.message || 'Failed to approve');
     }
   };
 
   const handleReject = async (requestId: string) => {
     if (!rejectReason.trim()) {
-      Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Please enter a reason for rejection.' });
+      Alert.alert('Validation Error', 'Please enter a reason for rejection.');
       return;
     }
     try {
       const res: any = await certificateApi.rejectCompletionRequest(requestId, rejectReason);
-      const data = res?.data || res;
-      if (data && data.success) {
-        Toast.show({ type: 'success', text1: 'Rejected', text2: 'Completion request rejected successfully.' });
+      if (res.success) {
+        Alert.alert('Rejected', 'Completion request rejected successfully.');
         setRejectingId(null);
         setRejectReason('');
         if (selectedCourse) loadRequests(selectedCourse);
       }
     } catch (err: any) {
-      Toast.show({ type: 'error', text1: 'Error', text2: err.response?.data?.error || err.message || 'Failed to reject' });
+      Alert.alert('Error', err.response?.data?.error || err.message || 'Failed to reject');
     }
   };
 
@@ -161,8 +145,13 @@ export const CompletionRequestsScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
-      <Header title="Completion Requests" showBack={true} />
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <Text style={styles.backBtnText}>← Back</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Completion Requests</Text>
+      </View>
 
       <View style={styles.courseSelector}>
         <Text style={styles.selectorLabel}>Select Course:</Text>

@@ -5,17 +5,10 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  Image,
-  ActivityIndicator,
-  Alert,
-  Platform,
 } from 'react-native';
 import { Input } from '../common/Input';
 import { Button } from '../common/Button';
 import { CreateCourseInput } from '../../types';
-import * as DocumentPicker from 'expo-document-picker';
-import Toast from 'react-native-toast-message';
-import { courseApi } from '../../api/skill-sharer.service';
 
 interface CourseFormProps {
   onSubmit: (data: CreateCourseInput) => void;
@@ -38,67 +31,6 @@ export const CourseForm: React.FC<CourseFormProps> = ({
   const [prerequisites, setPrerequisites] = useState('');
   const [learningOutcomes, setLearningOutcomes] = useState('');
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
-  const [thumbnail, setThumbnail] = useState('');
-  const [uploadingImage, setUploadingImage] = useState(false);
-
-  const handlePickThumbnail = async () => {
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: ['image/*'],
-        copyToCacheDirectory: true,
-      });
-
-      if (result.canceled) return;
-
-      const file = result.assets?.[0];
-      if (!file) {
-        Alert.alert('Error', 'No file selected');
-        return;
-      }
-
-      const formData = new FormData();
-      if (Platform.OS === 'web') {
-        const webFile = (file as any).file as File | undefined;
-        if (webFile) {
-          formData.append('file', webFile);
-        } else if (file.uri) {
-          const fileBlob = await fetch(file.uri).then((res) => res.blob());
-          formData.append('file', fileBlob, file.name || 'file');
-        }
-      } else if (file.uri) {
-        formData.append('file', {
-          uri: file.uri,
-          type: file.mimeType || 'image/jpeg',
-          name: file.name || 'file.jpg',
-        } as any);
-      }
-
-      if (!formData.get('file')) {
-        Alert.alert('Error', 'Could not attach the selected image. Please try again.');
-        return;
-      }
-
-      setUploadingImage(true);
-      const res = await courseApi.uploadThumbnail(formData);
-      const resData = (res as any).data ?? res;
-      if (resData && (resData.url || resData.data?.url)) {
-        const url = resData.url || resData.data?.url;
-        if (url) {
-          setThumbnail(url);
-          Alert.alert('Success', 'Course cover photo uploaded successfully');
-        } else {
-          Alert.alert('Error', 'Failed to retrieve uploaded image URL');
-        }
-      } else {
-        Alert.alert('Error', 'Failed to upload image');
-      }
-    } catch (error: any) {
-      console.error('Image upload error:', error);
-      Alert.alert('Error', error.error || 'Failed to upload course image');
-    } finally {
-      setUploadingImage(false);
-    }
-  };
 
   const difficulties = [
     { label: 'Beginner', value: 'BEGINNER' },
@@ -109,73 +41,32 @@ export const CourseForm: React.FC<CourseFormProps> = ({
   const languages = ['English', 'Sinhala', 'Tamil', 'Other'];
 
   const handleSubmit = () => {
-    if (!title.trim()) {
-      Toast.show({ type: 'error', text1: 'Required', text2: 'Please enter a course title.' });
-      return;
-    }
-    if (!description.trim()) {
-      Toast.show({ type: 'error', text1: 'Required', text2: 'Please enter a course description.' });
-      return;
-    }
+  const parsedEstimatedHours =
+    estimatedHours.trim() !== '' ? parseInt(estimatedHours, 10) : undefined;
 
-    const parsedEstimatedHours =
-      estimatedHours.trim() !== '' ? parseInt(estimatedHours, 10) : undefined;
-
-    const data: CreateCourseInput = {
-      title: title.trim(),
-      description: description.trim(),
-      categoryId,
-      difficulty: difficulty as CreateCourseInput['difficulty'],
-      duration,
-      language,
-      prerequisites,
-      learningOutcomes: learningOutcomes
-        .split('\n')
-        .map((o) => o.trim())
-        .filter(Boolean),
-      thumbnail: thumbnail || undefined,
-      ...(parsedEstimatedHours !== undefined
-        ? { estimatedHours: parsedEstimatedHours }
-        : {}),
-    };
-
-    onSubmit(data);
+  const data: CreateCourseInput = {
+    title,
+    description,
+    categoryId,
+    difficulty: difficulty as CreateCourseInput['difficulty'],
+    duration,
+    language,
+    prerequisites,
+    learningOutcomes: learningOutcomes
+      .split('\n')
+      .map((o) => o.trim())
+      .filter(Boolean),
+    ...(parsedEstimatedHours !== undefined
+      ? { estimatedHours: parsedEstimatedHours }
+      : {}),
   };
 
-  return (
-    <View style={styles.contentContainer}>
-      <Text style={styles.sectionTitle}>Course Information</Text>
+  onSubmit(data);
+};
 
-      {/* Image Upload Component */}
-      <View style={styles.fieldContainer}>
-        <Text style={styles.label}>Course Cover Photo</Text>
-        <View style={styles.imagePickerWrapper}>
-          {thumbnail ? (
-            <Image
-              source={{ uri: thumbnail.startsWith('http') ? thumbnail : `http://localhost:5000${thumbnail}` }}
-              style={styles.imagePreview}
-            />
-          ) : (
-            <View style={styles.imagePlaceholder}>
-              <Text style={{ fontSize: 24, marginBottom: 4 }}>🖼️</Text>
-              <Text style={{ fontSize: 13, color: '#6B7280' }}>No Cover Photo Selected</Text>
-            </View>
-          )}
-          <TouchableOpacity
-            style={styles.uploadButton}
-            onPress={handlePickThumbnail}
-            disabled={uploadingImage}
-          >
-            {uploadingImage ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
-            ) : (
-              <Text style={styles.uploadButtonText}>
-                {thumbnail ? 'Change Cover Photo' : 'Select Cover Photo'}
-              </Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
+  return (
+    <ScrollView style={styles.container}>
+      <Text style={styles.sectionTitle}>Course Information</Text>
 
       <Input
         label="Course Title"
@@ -300,18 +191,15 @@ export const CourseForm: React.FC<CourseFormProps> = ({
         loading={loading}
         style={styles.submitButton}
       />
-    </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-  scrollView: {
+  container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
-  },
-  contentContainer: {
     padding: 16,
-    paddingBottom: 40,
+    backgroundColor: '#F9FAFB',
   },
   sectionTitle: {
     fontSize: 18,
@@ -336,46 +224,6 @@ const styles = StyleSheet.create({
     color: '#374151',
     marginBottom: 6,
   },
-  imagePickerWrapper: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    padding: 12,
-    alignItems: 'center',
-    gap: 12,
-  },
-  imagePlaceholder: {
-    width: '100%',
-    height: 150,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 6,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderStyle: 'dashed',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-  },
-  imagePreview: {
-    width: '100%',
-    height: 150,
-    borderRadius: 6,
-    resizeMode: 'cover',
-  },
-  uploadButton: {
-    backgroundColor: '#2563EB',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 6,
-    width: '100%',
-    alignItems: 'center',
-  },
-  uploadButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-
   pickerButton: {
     borderWidth: 1,
     borderColor: '#D1D5DB',

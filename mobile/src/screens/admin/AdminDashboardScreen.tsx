@@ -6,12 +6,10 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-  Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery } from '@tanstack/react-query';
 import { adminService } from '../../api/admin.service';
-import { Header } from '../../components/common/Header';
 
 const StatCard = ({ label, value, icon, color }: any) => (
   <View style={[styles.statCard, { borderLeftColor: color }]}>
@@ -28,67 +26,43 @@ export const AdminDashboardScreen = ({ navigation }: any) => {
 
   const { data: pendingCoursesData } = useQuery({
     queryKey: ['pending-courses'],
-    queryFn: async () => {
-      const response = await adminService.getPendingCourses();
-      return response.data;
-    },
+    queryFn: () => adminService.getPendingCourses(),
   });
 
   const { data: pendingQualificationsData } = useQuery({
     queryKey: ['pending-qualifications'],
-    queryFn: async () => {
-      const response = await adminService.getPendingQualifications();
-      return response.data;
-    },
+    queryFn: () => adminService.getPendingQualifications(),
   });
 
   const totalUsers = usersData?.data?.pagination?.total || 0;
-  const pendingCourses = pendingCoursesData?.length || 0;
-  const pendingQualifications = pendingQualificationsData?.length || 0;
+  const pendingCourses = pendingCoursesData?.data?.length || 0;
+  const pendingQualifications = pendingQualificationsData?.data?.length || 0;
 
   const handleLogout = async () => {
-    const doLogout = async () => {
-      await AsyncStorage.removeItem('token');
-      await AsyncStorage.removeItem('user');
-      if (Platform.OS === 'web') {
-        window.location.replace('/');
-      } else {
-        try {
-          if (typeof (navigation as any).replace === 'function') {
-            (navigation as any).replace('Auth');
-          } else {
-            (navigation as any).navigate('Auth');
-          }
-        } catch (e) {
-          (navigation as any).navigate('Auth');
-        }
-      }
-    };
-
-    if (Platform.OS === 'web') {
-      if (window.confirm('Are you sure you want to logout?')) {
-        doLogout();
-      }
-    } else {
-      Alert.alert(
-        'Logout',
-        'Are you sure you want to logout?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Logout',
-            style: 'destructive',
-            onPress: doLogout,
-          },
-        ]
-      );
-    }
-  };
+  Alert.alert(
+    'Logout',
+    'Are you sure you want to logout?',
+    [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Logout',
+        style: 'destructive',
+        onPress: async () => {
+          await AsyncStorage.removeItem('token');
+          await AsyncStorage.removeItem('user');
+          navigation.replace('Login');
+        },
+      },
+    ]
+  );
+};
 
   return (
-    <View style={{ flex: 1 }}>
-      <Header title="Admin Dashboard" />
-      <ScrollView style={styles.container} contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Dashboard</Text>
+        <Text style={styles.subtitle}>Platform overview</Text>
+      </View>
 
       <View style={styles.statsGrid}>
         <StatCard
@@ -203,16 +177,15 @@ export const AdminDashboardScreen = ({ navigation }: any) => {
         </TouchableOpacity>
       </View>
     </ScrollView>
-    </View>
+    
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAF9F5',
+    backgroundColor: '#f3f4f6',
     paddingHorizontal: 16,
-    paddingTop: 12,
   },
   header: {
     paddingTop: 20,
@@ -220,13 +193,12 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: '800',
-    color: '#0F172A',
-    letterSpacing: -0.5,
+    fontWeight: 'bold',
+    color: '#1f2937',
   },
   subtitle: {
     fontSize: 14,
-    color: '#64748B',
+    color: '#6b7280',
     marginTop: 4,
   },
   statsGrid: {
@@ -238,28 +210,25 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     minWidth: '30%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#fff',
     padding: 16,
-    borderRadius: 18,
+    borderRadius: 12,
     borderLeftWidth: 4,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
     elevation: 2,
   },
   statValue: {
     fontSize: 24,
-    fontWeight: '800',
-    color: '#0F172A',
+    fontWeight: 'bold',
+    color: '#1f2937',
   },
   statLabel: {
     fontSize: 12,
-    color: '#64748B',
+    color: '#6b7280',
     marginTop: 4,
-    fontWeight: '500',
   },
   actionsContainer: {
     marginBottom: 24,
@@ -269,58 +238,55 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '800',
-    color: '#0F172A',
+    fontWeight: '600',
+    color: '#1f2937',
     marginBottom: 12,
   },
   actionCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
+    backgroundColor: '#fff',
+    borderRadius: 12,
     padding: 16,
     marginBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
     elevation: 2,
   },
   logoutCard: {
-    backgroundColor: '#FEF2F2',
-    borderRadius: 18,
+    backgroundColor: '#fef2f2',
+    borderRadius: 12,
     padding: 16,
     marginBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
     elevation: 2,
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: '#fecaca',
   },
   actionContent: {
     flex: 1,
   },
   actionTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#0F172A',
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1f2937',
   },
   actionDescription: {
     fontSize: 13,
-    color: '#64748B',
+    color: '#6b7280',
     marginTop: 2,
   },
   actionArrow: {
-    fontSize: 18,
-    color: '#94A3B8',
-    fontWeight: 'bold',
+    fontSize: 20,
+    color: '#9ca3af',
   },
 });
