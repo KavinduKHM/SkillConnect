@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,10 +11,12 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as skillSharerService from '../../api/skill-sharer.service';
 import { authService } from '../../api/auth.service';
 
 const profileService = skillSharerService as any;
+const PROFILE_CACHE_KEY = 'skill_sharer_profile';
 
 interface ProfileData {
   bio: string;
@@ -48,23 +50,44 @@ export default function ProfileScreen({ navigation }: any) {
   const normalizeUrl = (value?: string): string | undefined => {
     const trimmed = value?.trim();
     if (!trimmed) return undefined;
-    if (/^https?:\/\//i.test(trimmed)) return trimmed;
-    return `https://${trimmed}`;
+    const url = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+    try {
+      const parsed = new URL(url);
+      return parsed.hostname.includes('.') ? url : undefined;
+    } catch {
+      return undefined;
+    }
   };
+
+  const getProfileData = (response: any): any => {
+    const data = response?.data?.data ?? response?.data ?? {};
+    return data?.profile ?? data;
+  };
+
+  const mapProfile = (data: any): ProfileData => ({
+    bio: data?.bio || '',
+    skills: Array.isArray(data?.skills) ? data.skills : [],
+    experience: data?.experience || '',
+    portfolio: Array.isArray(data?.portfolio) ? data.portfolio : [],
+    location: data?.location || '',
+    website: data?.website || '',
+    socialLinks: data?.socialLinks || {},
+  });
 
   const loadProfile = async () => {
     try {
+      const cachedProfile = await AsyncStorage.getItem(PROFILE_CACHE_KEY);
+      if (cachedProfile) {
+        setProfile(mapProfile(JSON.parse(cachedProfile)));
+      }
+
       const response = await profileService.getMyProfile();
-      const data = response?.data?.data?.profile ?? response?.data?.profile ?? response?.data?.data ?? response?.data ?? {};
-      setProfile({
-        bio: data.bio || '',
-        skills: Array.isArray(data.skills) ? data.skills : [],
-        experience: data.experience || '',
-        portfolio: Array.isArray(data.portfolio) ? data.portfolio : [],
-        location: data.location || '',
-        website: data.website || '',
-        socialLinks: data.socialLinks || {},
-      });
+      const data = getProfileData(response);
+      const loadedProfile = mapProfile(data);
+      const hasSavedDetails = loadedProfile.bio || loadedProfile.skills.length || loadedProfile.experience || loadedProfile.location || loadedProfile.website || Object.keys(loadedProfile.socialLinks).length;
+      if (hasSavedDetails || !cachedProfile) {
+        setProfile(loadedProfile);
+      }
 
       // Get user name
       const userResponse = await authService.getMe();
@@ -101,16 +124,19 @@ export default function ProfileScreen({ navigation }: any) {
       };
 
       const hasSocialLinks = Object.values(payload.socialLinks).some(Boolean);
-      await profileService.updateProfile({
+      await AsyncStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(payload));
+      const response = await profileService.updateProfile({
         ...payload,
         socialLinks: hasSocialLinks ? payload.socialLinks : undefined,
       });
-      navigation.navigate('Dashboard');
+      setProfile(mapProfile(getProfileData(response) || payload));
     } catch (error: any) {
       const firstValidationError = error?.errors?.[0]?.msg;
-      Alert.alert('Error', firstValidationError || error.message || error.error || 'Failed to update profile');
+      const responseError = error?.data?.errors?.[0]?.msg || error?.data?.error;
+      Alert.alert('Unable to save profile', firstValidationError || responseError || error.message || error.error || 'Failed to update profile');
     } finally {
       setSaving(false);
+      navigation.navigate('Dashboard');
     }
   };
 
