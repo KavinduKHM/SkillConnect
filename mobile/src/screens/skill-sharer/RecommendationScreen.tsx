@@ -20,26 +20,51 @@ export function RecommendationScreen({ navigation }: any) {
   const [isPublic, setIsPublic] = useState(true);
   const [loadingCourses, setLoadingCourses] = useState(true);
   const [loadingLearners, setLoadingLearners] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [activeTab, setActiveTab] = useState<'write' | 'history'>('write');
+  const [showForm, setShowForm] = useState(false);
+  const [courseDropdownOpen, setCourseDropdownOpen] = useState(false);
+  const [learnerDropdownOpen, setLearnerDropdownOpen] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
   const [editingRec, setEditingRec] = useState<any | null>(null);
 
   useFocusEffect(useCallback(() => {
     loadMyCourses();
+    loadHistory();
   }, []));
 
   const loadMyCourses = async () => {
     try {
       setLoadingCourses(true);
       const res: any = await courseApi.getMyCourses();
-      const courses = res?.data || res?.courses || (Array.isArray(res) ? res : []);
-      const published = courses.filter((c: any) => c.status === 'PUBLISHED' || c.status === 'APPROVED');
-      setMyCourses(published);
+      const courses =
+        res?.data?.data ??
+        res?.data?.courses ??
+        res?.courses ??
+        (Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : []);
+      setMyCourses(Array.isArray(courses) ? courses : []);
     } catch (err) {
       console.log('Failed to load courses', err);
     } finally {
       setLoadingCourses(false);
+    }
+  };
+
+  const loadHistory = async () => {
+    try {
+      setLoadingHistory(true);
+      const res: any = await recommendationApi.getCreated();
+      const recommendations =
+        res?.data?.data ??
+        res?.data?.recommendations ??
+        res?.recommendations ??
+        (Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : []);
+      setHistory(Array.isArray(recommendations) ? recommendations : []);
+    } catch (err) {
+      console.log('Failed to load recommendation history', err);
+      setHistory([]);
+    } finally {
+      setLoadingHistory(false);
     }
   };
 
@@ -48,7 +73,11 @@ export function RecommendationScreen({ navigation }: any) {
       setLoadingLearners(true);
       setCompletedLearners([]);
       const res: any = await recommendationApi.getMyCourseLearners(courseId);
-      const learners = res?.data || res?.learners || (Array.isArray(res) ? res : []);
+      const learners =
+        res?.data?.data ??
+        res?.data?.learners ??
+        res?.learners ??
+        (Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : []);
       if (Array.isArray(learners) && learners.length > 0) {
         setCompletedLearners(learners);
       } else {
@@ -74,7 +103,16 @@ export function RecommendationScreen({ navigation }: any) {
   const handleSelectCourse = (course: any) => {
     setSelectedCourse(course);
     setSelectedLearner(null);
+    setCourseDropdownOpen(false);
+    setLearnerDropdownOpen(false);
     loadCourseLearners(course.id);
+  };
+
+  const handleSelectLearner = (item: any) => {
+    const learner = item.learner || item;
+    const learnerId = item.learnerId || learner.id || item.id;
+    setSelectedLearner({ ...item, learnerId, learner });
+    setLearnerDropdownOpen(false);
   };
 
   const handleSubmit = async () => {
@@ -113,6 +151,8 @@ export function RecommendationScreen({ navigation }: any) {
       setContent('');
       setSelectedLearner(null);
       setEditingRec(null);
+      await loadHistory();
+      setShowForm(false);
     } catch (err: any) {
       Toast.show({ type: 'error', text1: 'Error', text2: err?.error || err?.message || 'Failed to submit recommendation.' });
     } finally {
@@ -138,9 +178,34 @@ export function RecommendationScreen({ navigation }: any) {
     ]);
   };
 
+  const handleEdit = (recommendation: any) => {
+    const course = myCourses.find((item) => item.id === recommendation.course?.id) || recommendation.course;
+    const learner = recommendation.learner || {};
+
+    setEditingRec(recommendation);
+    setSelectedCourse(course);
+    setSelectedLearner({ learnerId: learner.id, learner });
+    setTitle(recommendation.title || recommendation.skillDemonstrated || '');
+    setContent(recommendation.content || recommendation.message || '');
+    setIsPublic(recommendation.isPublic !== false);
+    setShowForm(true);
+  };
+
+  const handleCreateNew = () => {
+    setEditingRec(null);
+    setSelectedCourse(null);
+    setSelectedLearner(null);
+    setCourseDropdownOpen(false);
+    setLearnerDropdownOpen(false);
+    setTitle('');
+    setContent('');
+    setIsPublic(true);
+    setShowForm(true);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#4F46E5" />
+      <StatusBar barStyle="light-content" backgroundColor="#B3310D" />
 
       {/* Header */}
       <View style={styles.header}>
@@ -153,7 +218,16 @@ export function RecommendationScreen({ navigation }: any) {
         </View>
       </View>
 
+      {!showForm && (
+        <TouchableOpacity style={styles.createButton} onPress={handleCreateNew}>
+          <Ionicons name="add-circle-outline" size={19} color="#FFFFFF" />
+          <Text style={styles.createButtonText}>Create New Recommendation</Text>
+        </TouchableOpacity>
+      )}
+
       <ScrollView contentContainerStyle={[styles.content, { flexGrow: 1 }]}>
+        {showForm ? (
+          <>
         {/* Info Banner */}
         <View style={styles.infoBanner}>
           <Ionicons name="information-circle" size={20} color="#3B82F6" />
@@ -166,28 +240,46 @@ export function RecommendationScreen({ navigation }: any) {
         <View style={styles.card}>
           <Text style={styles.stepLabel}>Step 1: Select a Course</Text>
           {loadingCourses ? (
-            <ActivityIndicator color="#4F46E5" />
+            <ActivityIndicator color="#B3310D" />
           ) : myCourses.length === 0 ? (
-            <Text style={styles.noDataText}>No published courses found.</Text>
+            <Text style={styles.noDataText}>No courses found for your account.</Text>
           ) : (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingVertical: 4 }}>
-              {myCourses.map((course: any) => (
-                <TouchableOpacity
-                  key={course.id}
-                  style={[styles.courseChip, selectedCourse?.id === course.id && styles.courseChipActive]}
-                  onPress={() => handleSelectCourse(course)}
-                >
-                  <Ionicons
-                    name="book-outline"
-                    size={14}
-                    color={selectedCourse?.id === course.id ? '#fff' : '#4F46E5'}
-                  />
-                  <Text style={[styles.courseChipText, selectedCourse?.id === course.id && styles.courseChipTextActive]}>
-                    {course.title}
+            <View>
+              <TouchableOpacity
+                style={styles.dropdownButton}
+                onPress={() => {
+                  setCourseDropdownOpen((current) => !current);
+                  setLearnerDropdownOpen(false);
+                }}
+              >
+                <View style={styles.dropdownButtonContent}>
+                  <Ionicons name="book-outline" size={18} color="#B3310D" />
+                  <Text style={selectedCourse ? styles.dropdownValue : styles.dropdownPlaceholder} numberOfLines={1}>
+                    {selectedCourse?.title || 'Select a course'}
                   </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+                </View>
+                <Ionicons name={courseDropdownOpen ? 'chevron-up' : 'chevron-down'} size={18} color="#6B7280" />
+              </TouchableOpacity>
+              {courseDropdownOpen && (
+                <View style={styles.dropdownMenu}>
+                  {myCourses.map((course: any) => (
+                    <TouchableOpacity
+                      key={course.id}
+                      style={styles.dropdownOption}
+                      onPress={() => handleSelectCourse(course)}
+                    >
+                      <View style={styles.dropdownOptionText}>
+                        <Text style={styles.dropdownOptionTitle}>{course.title}</Text>
+                        <Text style={styles.dropdownOptionMeta}>{course.status || 'Course'}</Text>
+                      </View>
+                      {selectedCourse?.id === course.id && (
+                        <Ionicons name="checkmark-circle" size={19} color="#B3310D" />
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
           )}
         </View>
 
@@ -195,48 +287,59 @@ export function RecommendationScreen({ navigation }: any) {
         {selectedCourse && (
           <View style={styles.card}>
             <Text style={styles.stepLabel}>Step 2: Select Learner</Text>
-            <Text style={styles.stepSub}>Only learners who completed "{selectedCourse.title}" are shown.</Text>
+            <Text style={styles.stepSub}>Learners enrolled in "{selectedCourse.title}" are shown.</Text>
             {loadingLearners ? (
-              <ActivityIndicator color="#4F46E5" style={{ marginTop: 8 }} />
+              <ActivityIndicator color="#B3310D" style={{ marginTop: 8 }} />
             ) : completedLearners.length === 0 ? (
               <View style={styles.emptyBox}>
                 <Ionicons name="people-outline" size={32} color="#D1D5DB" />
-                <Text style={styles.noDataText}>No completed learners yet for this course.</Text>
+                <Text style={styles.noDataText}>No enrolled learners found for this course.</Text>
               </View>
             ) : (
-              <View style={{ gap: 8, marginTop: 8 }}>
-                {completedLearners.map((item: any) => {
-                  const learner = item.learner || item;
-                  const itemLearnerId = item.learnerId || item.learner?.id || item.id;
-                  const selectedId = selectedLearner?.learnerId || selectedLearner?.learner?.id || selectedLearner?.id;
-                  const isSelected = selectedId === itemLearnerId;
-                  const progress = item.progressPercentage ?? 100;
-                  return (
+              <View>
+                <TouchableOpacity
+                  style={styles.dropdownButton}
+                  onPress={() => {
+                    setLearnerDropdownOpen((current) => !current);
+                    setCourseDropdownOpen(false);
+                  }}
+                >
+                  <View style={styles.dropdownButtonContent}>
+                    <Ionicons name="person-outline" size={18} color="#B3310D" />
+                    <Text style={selectedLearner ? styles.dropdownValue : styles.dropdownPlaceholder} numberOfLines={1}>
+                      {selectedLearner?.learner?.name || 'Select an enrolled learner'}
+                    </Text>
+                  </View>
+                  <Ionicons name={learnerDropdownOpen ? 'chevron-up' : 'chevron-down'} size={18} color="#6B7280" />
+                </TouchableOpacity>
+                {learnerDropdownOpen && (
+                  <View style={styles.dropdownMenu}>
+                    {completedLearners.map((item: any) => {
+                      const learner = item.learner || item;
+                      const itemLearnerId = item.learnerId || learner.id || item.id;
+                      const selectedId = selectedLearner?.learnerId || selectedLearner?.learner?.id;
+                      const isSelected = selectedId === itemLearnerId;
+                      const progress = item.progressPercentage;
+                      return (
                     <TouchableOpacity
                       key={item.id || itemLearnerId}
-                      style={[styles.learnerRow, isSelected && styles.learnerRowActive]}
-                      onPress={() => setSelectedLearner({ ...item, learnerId: itemLearnerId, learner })}
+                      style={styles.dropdownOption}
+                      onPress={() => handleSelectLearner(item)}
                     >
-                      <View style={[styles.learnerAvatar, isSelected && { backgroundColor: '#4F46E5' }]}>
-                        <Text style={[styles.learnerAvatarText, isSelected && { color: '#fff' }]}>
-                          {(learner?.name || learner?.email || '?')[0].toUpperCase()}
-                        </Text>
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[styles.learnerName, isSelected && { color: '#4F46E5' }]}>
-                          {learner?.name || 'Learner'}
-                        </Text>
-                        <Text style={styles.learnerEmail}>{learner?.email || ''}</Text>
-                        <Text style={{ fontSize: 11, color: '#059669', fontWeight: '600', marginTop: 2 }}>
-                          ✓ Completed ({Math.round(progress)}%)
+                      <View style={styles.dropdownOptionText}>
+                        <Text style={styles.dropdownOptionTitle}>{learner?.name || 'Learner'}</Text>
+                        <Text style={styles.dropdownOptionMeta}>
+                          {learner?.email || 'Enrolled'}{progress != null ? ` · ${Math.round(progress)}% progress` : ''}
                         </Text>
                       </View>
                       {isSelected && (
-                        <Ionicons name="checkmark-circle" size={20} color="#4F46E5" />
+                        <Ionicons name="checkmark-circle" size={20} color="#B3310D" />
                       )}
                     </TouchableOpacity>
-                  );
-                })}
+                      );
+                    })}
+                  </View>
+                )}
               </View>
             )}
           </View>
@@ -247,7 +350,7 @@ export function RecommendationScreen({ navigation }: any) {
           <View style={styles.card}>
             <Text style={styles.stepLabel}>Step 3: Write Recommendation</Text>
             <Text style={styles.stepSub}>
-              Writing for: <Text style={{ fontWeight: '700', color: '#4F46E5' }}>{selectedLearner.learner?.name || 'Learner'}</Text>
+              Writing for: <Text style={{ fontWeight: '700', color: '#B3310D' }}>{selectedLearner.learner?.name || 'Learner'}</Text>
             </Text>
 
             <TextInput
@@ -262,7 +365,7 @@ export function RecommendationScreen({ navigation }: any) {
 
             <TextInput
               style={styles.contentInput}
-              placeholder='Share what made this learner stand out. Be specific about their achievements, attitude, and skills demonstrated throughout the course...'
+              placeholder="Share what made this learner stand out. Be specific about their achievements, attitude, and skills demonstrated throughout the course..."
               placeholderTextColor="#9CA3AF"
               value={content}
               onChangeText={setContent}
@@ -272,7 +375,6 @@ export function RecommendationScreen({ navigation }: any) {
             />
             <Text style={styles.charCount}>{content.length} characters (min 20)</Text>
 
-            {/* Preview Card */}
             {Boolean(title.trim() && content.trim()) && (
               <View style={styles.previewCard}>
                 <Text style={styles.previewLabel}>Preview</Text>
@@ -289,7 +391,6 @@ export function RecommendationScreen({ navigation }: any) {
               </View>
             )}
 
-            {/* Public toggle */}
             <TouchableOpacity style={styles.toggleRow} onPress={() => setIsPublic(prev => !prev)}>
               <View style={[styles.toggle, isPublic && styles.toggleOn]}>
                 <View style={[styles.toggleThumb, isPublic && styles.toggleThumbOn]} />
@@ -323,16 +424,76 @@ export function RecommendationScreen({ navigation }: any) {
             </TouchableOpacity>
           </View>
         )}
+          </>
+        ) : (
+          <View style={styles.historySection}>
+            {loadingHistory ? (
+              <View style={styles.historyLoading}>
+                <ActivityIndicator color="#B3310D" />
+                <Text style={styles.noDataText}>Loading created recommendations...</Text>
+              </View>
+            ) : history.length === 0 ? (
+              <View style={styles.emptyBox}>
+                <Ionicons name="ribbon-outline" size={42} color="#D1D5DB" />
+                <Text style={styles.emptyHistoryTitle}>No recommendations created yet</Text>
+                <Text style={styles.noDataText}>Your saved recommendations will appear here.</Text>
+              </View>
+            ) : (
+              history.map((recommendation: any) => {
+                const learnerName = recommendation.learner?.name || 'Learner';
+                const courseName = recommendation.course?.title || 'Course';
+                const date = recommendation.updatedAt || recommendation.createdAt;
+
+                return (
+                  <View key={recommendation.id} style={styles.historyCard}>
+                    <View style={styles.historyCardHeader}>
+                      <View style={styles.historyIcon}>
+                        <Ionicons name="ribbon-outline" size={19} color="#B3310D" />
+                      </View>
+                      <View style={styles.historyTitleWrap}>
+                        <Text style={styles.historyTitle}>{recommendation.title || 'Recommendation'}</Text>
+                        <Text style={styles.historyMeta}>{learnerName} · {courseName}</Text>
+                      </View>
+                      <View style={recommendation.isPublic !== false ? styles.publicBadge : styles.privateBadge}>
+                        <Text style={recommendation.isPublic !== false ? styles.publicText : styles.privateText}>
+                          {recommendation.isPublic !== false ? 'Public' : 'Private'}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={styles.historyContent} numberOfLines={4}>
+                      {recommendation.content || recommendation.message || 'No content provided.'}
+                    </Text>
+                    <View style={styles.historyFooter}>
+                      <Text style={styles.historyDate}>
+                        {date ? new Date(date).toLocaleDateString() : ''}
+                      </Text>
+                      <View style={styles.historyActions}>
+                        <TouchableOpacity style={styles.historyAction} onPress={() => handleEdit(recommendation)}>
+                          <Ionicons name="create-outline" size={16} color="#B3310D" />
+                          <Text style={styles.historyActionText}>Edit</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.historyAction} onPress={() => handleDelete(recommendation.id)}>
+                          <Ionicons name="trash-outline" size={16} color="#B91C1C" />
+                          <Text style={styles.deleteActionText}>Delete</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </View>
+                );
+              })
+            )}
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
+  container: { flex: 1, backgroundColor: '#FFF9F7' },
   header: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#4F46E5', paddingHorizontal: 16, paddingVertical: 16,
+    backgroundColor: '#B3310D', paddingHorizontal: 16, paddingVertical: 16,
   },
   backBtn: {
     width: 36, height: 36, borderRadius: 18,
@@ -340,89 +501,148 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   headerTitle: { fontSize: 17, fontWeight: '700', color: '#fff' },
-  headerSub: { fontSize: 12, color: '#C7D2FE', marginTop: 2 },
+  headerSub: { fontSize: 12, color: '#FFE5DE', marginTop: 2 },
+
+  createButton: {
+    marginHorizontal: 16, marginTop: 14, backgroundColor: '#B3310D',
+    borderRadius: 12, paddingVertical: 13, flexDirection: 'row',
+    alignItems: 'center', justifyContent: 'center', gap: 8,
+  },
+  createButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
 
   content: { padding: 16, gap: 16, paddingBottom: 40 },
 
+  historySection: { gap: 12 },
+  historyLoading: { alignItems: 'center', paddingVertical: 30, gap: 10 },
+  historyCard: {
+    backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16,
+    borderWidth: 1, borderColor: '#F1C6B9',
+    shadowColor: '#8B3F2B', shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
+  },
+  historyCardHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  historyIcon: {
+    width: 38, height: 38, borderRadius: 19, backgroundColor: '#FFF0EC',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  historyTitleWrap: { flex: 1 },
+  historyTitle: { fontSize: 15, fontWeight: '700', color: '#1D1412' },
+  historyMeta: { fontSize: 12, color: '#6B7280', marginTop: 4 },
+  publicBadge: { backgroundColor: '#D1FAE5', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 4 },
+  privateBadge: { backgroundColor: '#F3F4F6', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 4 },
+  publicText: { fontSize: 10, fontWeight: '700', color: '#047857' },
+  privateText: { fontSize: 10, fontWeight: '700', color: '#6B7280' },
+  historyContent: { fontSize: 14, lineHeight: 21, color: '#374151', marginTop: 14 },
+  historyFooter: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    borderTopWidth: 1, borderTopColor: '#F3F4F6', marginTop: 14, paddingTop: 12,
+  },
+  historyDate: { fontSize: 11, color: '#9CA3AF' },
+  historyActions: { flexDirection: 'row', gap: 14 },
+  historyAction: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  historyActionText: { fontSize: 12, fontWeight: '700', color: '#B3310D' },
+  deleteActionText: { fontSize: 12, fontWeight: '700', color: '#B91C1C' },
+  emptyHistoryTitle: { fontSize: 16, fontWeight: '700', color: '#374151', marginTop: 8 },
+
   infoBanner: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 10,
-    backgroundColor: '#EFF6FF', borderRadius: 12, padding: 14,
-    borderWidth: 1, borderColor: '#BFDBFE',
+    backgroundColor: '#FFF0EC', borderRadius: 12, padding: 14,
+    borderWidth: 1, borderColor: '#F1C6B9',
   },
-  infoText: { flex: 1, fontSize: 13, color: '#1D4ED8', lineHeight: 19 },
+  infoText: { flex: 1, fontSize: 13, color: '#5D2B1E', lineHeight: 19 },
 
   card: {
     backgroundColor: '#fff', borderRadius: 16, padding: 18,
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3,
   },
-  stepLabel: { fontSize: 15, fontWeight: '700', color: '#111827', marginBottom: 4 },
+  stepLabel: { fontSize: 15, fontWeight: '700', color: '#1D1412', marginBottom: 4 },
   stepSub: { fontSize: 12, color: '#6B7280', marginBottom: 12 },
+
+  dropdownButton: {
+    minHeight: 50, borderWidth: 1.5, borderColor: '#D1D5DB', borderRadius: 11,
+    backgroundColor: '#FFFFFF', paddingHorizontal: 13, flexDirection: 'row',
+    alignItems: 'center', justifyContent: 'space-between', marginTop: 8,
+  },
+  dropdownButtonContent: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 9 },
+  dropdownValue: { flex: 1, fontSize: 14, fontWeight: '600', color: '#1D1412' },
+  dropdownPlaceholder: { flex: 1, fontSize: 14, color: '#9CA3AF' },
+  dropdownMenu: {
+    marginTop: 6, borderWidth: 1, borderColor: '#F1C6B9', borderRadius: 11,
+    backgroundColor: '#FFFFFF', overflow: 'hidden',
+  },
+  dropdownOption: {
+    minHeight: 56, paddingHorizontal: 13, paddingVertical: 10,
+    flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  dropdownOptionText: { flex: 1 },
+  dropdownOptionTitle: { fontSize: 14, fontWeight: '600', color: '#1D1412' },
+  dropdownOptionMeta: { fontSize: 11, color: '#6B7280', marginTop: 3 },
 
   courseChip: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingHorizontal: 14, paddingVertical: 8,
-    borderRadius: 20, borderWidth: 1.5, borderColor: '#4F46E5',
-    backgroundColor: '#EEF2FF',
+    borderRadius: 20, borderWidth: 1.5, borderColor: '#B3310D',
+    backgroundColor: '#FFF0EC',
   },
-  courseChipActive: { backgroundColor: '#4F46E5' },
-  courseChipText: { fontSize: 13, fontWeight: '600', color: '#4F46E5' },
+  courseChipActive: { backgroundColor: '#B3310D' },
+  courseChipText: { fontSize: 13, fontWeight: '600', color: '#B3310D' },
   courseChipTextActive: { color: '#fff' },
 
   learnerRow: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    padding: 12, borderRadius: 12, borderWidth: 1.5, borderColor: '#E5E7EB',
-    backgroundColor: '#F9FAFB',
+    padding: 12, borderRadius: 12, borderWidth: 1.5, borderColor: '#F1C6B9',
+    backgroundColor: '#FFF9F7',
   },
-  learnerRowActive: { borderColor: '#4F46E5', backgroundColor: '#EEF2FF' },
+  learnerRowActive: { borderColor: '#B3310D', backgroundColor: '#FFF0EC' },
   learnerAvatar: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: '#E0E7FF', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#FFE5DE', alignItems: 'center', justifyContent: 'center',
   },
-  learnerAvatarText: { fontSize: 16, fontWeight: '700', color: '#4F46E5' },
-  learnerName: { fontSize: 14, fontWeight: '600', color: '#111827' },
+  learnerAvatarText: { fontSize: 16, fontWeight: '700', color: '#B3310D' },
+  learnerName: { fontSize: 14, fontWeight: '600', color: '#1D1412' },
   learnerEmail: { fontSize: 12, color: '#6B7280', marginTop: 1 },
 
   titleInput: {
-    borderWidth: 1.5, borderColor: '#E5E7EB', borderRadius: 10,
-    paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, color: '#111827',
+    borderWidth: 1.5, borderColor: '#F1C6B9', borderRadius: 10,
+    paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, color: '#1D1412',
     marginBottom: 2, marginTop: 12,
   },
   contentInput: {
-    borderWidth: 1.5, borderColor: '#E5E7EB', borderRadius: 10,
-    padding: 14, fontSize: 14, color: '#111827',
+    borderWidth: 1.5, borderColor: '#F1C6B9', borderRadius: 10,
+    padding: 14, fontSize: 14, color: '#1D1412',
     minHeight: 130, marginBottom: 2, marginTop: 12,
   },
   charCount: { fontSize: 11, color: '#9CA3AF', textAlign: 'right', marginBottom: 12 },
 
   previewCard: {
     borderRadius: 12, overflow: 'hidden', marginBottom: 16,
-    borderWidth: 1, borderColor: '#E0E7FF',
+    borderWidth: 1, borderColor: '#F1C6B9',
   },
   previewLabel: {
-    backgroundColor: '#EEF2FF', paddingHorizontal: 12, paddingVertical: 6,
-    fontSize: 11, fontWeight: '700', color: '#6366F1',
+    backgroundColor: '#FFF0EC', paddingHorizontal: 12, paddingVertical: 6,
+    fontSize: 11, fontWeight: '700', color: '#B3310D',
     textTransform: 'uppercase', letterSpacing: 1,
   },
-  previewInner: { padding: 14, backgroundColor: '#fff', borderLeftWidth: 4, borderLeftColor: '#4F46E5' },
-  previewTitle: { fontSize: 14, fontWeight: '700', color: '#111827', marginBottom: 6 },
+  previewInner: { padding: 14, backgroundColor: '#fff', borderLeftWidth: 4, borderLeftColor: '#B3310D' },
+  previewTitle: { fontSize: 14, fontWeight: '700', color: '#1D1412', marginBottom: 6 },
   previewContent: { fontSize: 13, color: '#374151', fontStyle: 'italic', lineHeight: 20, marginBottom: 12 },
   previewFooter: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   previewAvatar: {
     width: 28, height: 28, borderRadius: 14,
-    backgroundColor: '#4F46E5', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#B3310D', alignItems: 'center', justifyContent: 'center',
   },
   previewAvatarText: { fontSize: 13, fontWeight: '700', color: '#fff' },
   previewAuthor: { fontSize: 12, color: '#6B7280' },
 
   toggleRow: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#F9FAFB', borderRadius: 12,
+    backgroundColor: '#FFF9F7', borderRadius: 12,
     padding: 12, marginBottom: 16,
-    borderWidth: 1, borderColor: '#E5E7EB',
+    borderWidth: 1, borderColor: '#F1C6B9',
   },
   toggle: {
     width: 44, height: 24, borderRadius: 12,
-    backgroundColor: '#E5E7EB', padding: 2,
+    backgroundColor: '#F1C6B9', padding: 2,
   },
   toggleOn: { backgroundColor: '#059669' },
   toggleThumb: {
@@ -430,12 +650,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   toggleThumbOn: { transform: [{ translateX: 20 }] },
-  toggleLabel: { fontSize: 14, fontWeight: '600', color: '#111827' },
+  toggleLabel: { fontSize: 14, fontWeight: '600', color: '#1D1412' },
   toggleSub: { fontSize: 11, color: '#6B7280', marginTop: 2 },
 
   submitBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: '#4F46E5', paddingVertical: 14, borderRadius: 12,
+    backgroundColor: '#B3310D', paddingVertical: 14, borderRadius: 12,
   },
   submitBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
 

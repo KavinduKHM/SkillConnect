@@ -16,6 +16,7 @@ import CourseDetailScreen from '../screens/learner/CourseDetailScreen';
 import SkillSharerProfileScreen from '../screens/learner/SkillSharerProfileScreen';
 import CourseAnalyticsScreen from '../screens/skill-sharer/CourseAnalyticsScreen';
 import CourseContentScreen from '../screens/skill-sharer/CourseContentScreen';
+import LessonEditorScreen from '../screens/skill-sharer/LessonEditorScreen';
 import QualificationsScreen from '../screens/skill-sharer/QualificationsScreen';
 
 const Stack = createStackNavigator();
@@ -41,6 +42,7 @@ export const SkillSharerNavigator = () => {
       <Stack.Screen name="CourseDetail" component={CourseDetailScreen} />
       <Stack.Screen name="CourseAnalytics" component={CourseAnalyticsScreen} />
       <Stack.Screen name="CourseContent" component={CourseContentScreen} />
+      <Stack.Screen name="LessonEditor" component={LessonEditorScreen} />
       <Stack.Screen name="Qualifications" component={QualificationsScreen} />
       <Stack.Screen name="SkillSharerProfile" component={SkillSharerProfileScreen} />
     </Stack.Navigator>
