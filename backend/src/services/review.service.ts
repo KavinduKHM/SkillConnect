@@ -110,6 +110,36 @@ export const updateReview = async (learnerId: string, reviewId: string, data: { 
   return { ...updatedReview, comment: updatedReview.review };
 };
 
+export const replyToReview = async (instructorId: string, reviewId: string, data: { reply: string }) => {
+  const replyText = data.reply?.trim();
+
+  if (!replyText) {
+    throw new Error('Reply cannot be empty');
+  }
+
+  const existingReview = await prisma.courseReview.findUnique({
+    where: { id: reviewId },
+    include: { course: { select: { creatorId: true } } },
+  });
+
+  if (!existingReview) throw new Error('Review not found');
+  if (existingReview.course.creatorId !== instructorId) throw new Error('Unauthorized');
+
+  const updatedReview = await prisma.courseReview.update({
+    where: { id: reviewId },
+    data: {
+      reply: replyText,
+      isEdited: true,
+      editedAt: new Date(),
+    },
+    include: {
+      learner: { select: { id: true, name: true, profilePicture: true } },
+    },
+  });
+
+  return { ...updatedReview, comment: updatedReview.review };
+};
+
 export const deleteReview = async (learnerId: string, reviewId: string) => {
   const existingReview = await prisma.courseReview.findUnique({ where: { id: reviewId } });
   if (!existingReview) throw new Error('Review not found');

@@ -19,6 +19,11 @@ export const updateReviewValidator = [
   body('comment').optional().trim(),
 ];
 
+export const replyToReviewValidator = [
+  param('id').isUUID().withMessage('Valid review ID is required'),
+  body('reply').trim().notEmpty().withMessage('Reply is required'),
+];
+
 export const createRecommendationValidator = [
   body('learnerId').isUUID().withMessage('Valid learnerId is required'),
   body('courseId').isUUID().withMessage('Valid courseId is required'),

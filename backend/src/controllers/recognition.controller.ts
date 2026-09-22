@@ -1,7 +1,9 @@
 import type { Request, Response } from 'express';
 import { logger } from '../utils/logger.js';
 import * as reviewService from '../services/review.service.js';
-import * as recommendationService from '../services/recommendation.service.js';
+import { RecommendationService } from '../services/recommendation.service.js';
+
+const recommendationService = new RecommendationService();
 
 // -------------------------------------------------------------
 // COURSE REVIEWS
@@ -26,6 +28,18 @@ export const updateReview = async (req: any, res: Response): Promise<void> => {
     res.status(200).json({ success: true, review });
   } catch (error: any) {
     logger.error('Error in updateReview controller:', error);
+    res.status(400).json({ error: error.message });
+  }
+};
+
+export const replyToReview = async (req: any, res: Response): Promise<void> => {
+  try {
+    const instructorId = req.user.id;
+    const { id } = req.params;
+    const review = await reviewService.replyToReview(instructorId, id, req.body);
+    res.status(200).json({ success: true, review });
+  } catch (error: any) {
+    logger.error('Error in replyToReview controller:', error);
     res.status(400).json({ error: error.message });
   }
 };
@@ -59,7 +73,13 @@ export const getCourseReviews = async (req: Request, res: Response): Promise<voi
 export const createRecommendation = async (req: any, res: Response): Promise<void> => {
   try {
     const instructorId = req.user.id;
-    const recommendation = await recommendationService.createRecommendation(instructorId, req.body);
+    const { learnerId, courseId, ...data } = req.body;
+    const recommendation = await recommendationService.createRecommendation(
+      instructorId,
+      learnerId,
+      courseId,
+      data
+    );
     res.status(201).json({ success: true, recommendation });
   } catch (error: any) {
     logger.error('Error in createRecommendation controller:', error);
@@ -71,7 +91,7 @@ export const updateRecommendation = async (req: any, res: Response): Promise<voi
   try {
     const instructorId = req.user.id;
     const id = req.params.id as string;
-    const recommendation = await recommendationService.updateRecommendation(instructorId, id, req.body);
+    const recommendation = await recommendationService.updateRecommendation(id, instructorId, req.body);
     res.status(200).json({ success: true, recommendation });
   } catch (error: any) {
     logger.error('Error in updateRecommendation controller:', error);
@@ -83,7 +103,7 @@ export const deleteRecommendation = async (req: any, res: Response): Promise<voi
   try {
     const instructorId = req.user.id;
     const id = req.params.id as string;
-    await recommendationService.deleteRecommendation(instructorId, id);
+    await recommendationService.deleteRecommendation(id, instructorId);
     res.status(200).json({ success: true, message: 'Recommendation deleted successfully' });
   } catch (error: any) {
     logger.error('Error in deleteRecommendation controller:', error);
@@ -94,7 +114,7 @@ export const deleteRecommendation = async (req: any, res: Response): Promise<voi
 export const getLearnerRecommendations = async (req: Request, res: Response): Promise<void> => {
   try {
     const learnerId = req.params.learnerId as string;
-    const recommendations = await recommendationService.getLearnerRecommendations(learnerId);
+    const recommendations = await recommendationService.getRecommendationsForLearner(learnerId);
     res.status(200).json({ success: true, recommendations });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
