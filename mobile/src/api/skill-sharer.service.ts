@@ -112,6 +112,11 @@ export const courseApi = {
   deleteCourse: (id: string): Promise<ApiResponse<null>> => {
     return apiClient.delete(`/courses/${id}`);
   },
+
+  // Upload thumbnail
+  uploadThumbnail: (formData: FormData): Promise<ApiResponse<{ url: string }>> => {
+    return apiClient.post('/courses/upload', formData);
+  },
 };
 
 // ============================================================
@@ -212,20 +217,8 @@ export const recommendationApi = {
   },
 };
 import api from './client';
-const apiClient = api;
 
-import {
-  Profile,
-  CreateProfileInput,
-  UpdateProfileInput,
-  Qualification,
-  CreateQualificationInput,
-  UpdateQualificationInput,
-  Course,
-  CreateCourseInput,
-  UpdateCourseInput,
-  ApiResponse,
-} from '../types';
+
 
 // ============================================================
 // PROFILE APIs (Service version)
@@ -497,187 +490,6 @@ export const recommendationService = {
   }) => api.put(`/recommendations/${id}`, data),
 
   deleteRecommendation: (id: string) => api.delete(`/recommendations/${id}`),
-};
-
-// ============================================================
-// Profile APIs (Api version)
-// ============================================================
-
-export const profileApi = {
-  createProfile: (data: CreateProfileInput): Promise<ApiResponse<Profile>> => {
-    return apiClient.post('/profiles', data);
-  },
-
-  getMyProfile: (): Promise<ApiResponse<Profile>> => {
-    return apiClient.get('/profiles/me');
-  },
-
-  updateProfile: (data: UpdateProfileInput): Promise<ApiResponse<Profile>> => {
-    return apiClient.put('/profiles/me', data);
-  },
-
-  getPublicProfile: (userId: string): Promise<ApiResponse<Profile>> => {
-    return apiClient.get(`/profiles/public/${userId}`);
-  },
-};
-
-// ============================================================
-// Qualification APIs (Api version)
-// ============================================================
-
-export const qualificationApi = {
-  createQualification: (
-    profileId: string,
-    data: CreateQualificationInput
-  ): Promise<ApiResponse<Qualification>> => {
-    return apiClient.post('/qualifications', { ...data, profileId });
-  },
-
-  getQualifications: (): Promise<ApiResponse<Qualification[]>> => {
-    return apiClient.get('/qualifications');
-  },
-
-  getQualification: (id: string): Promise<ApiResponse<Qualification>> => {
-    return apiClient.get(`/qualifications/${id}`);
-  },
-
-  updateQualification: (
-    id: string,
-    data: UpdateQualificationInput
-  ): Promise<ApiResponse<Qualification>> => {
-    return apiClient.put(`/qualifications/${id}`, data);
-  },
-
-  deleteQualification: (id: string): Promise<ApiResponse<null>> => {
-    return apiClient.delete(`/qualifications/${id}`);
-  },
-};
-
-// ============================================================
-// Course APIs (Api version)
-// ============================================================
-
-export const courseApi = {
-  createCourse: (data: CreateCourseInput): Promise<ApiResponse<Course>> => {
-    return apiClient.post('/courses', data);
-  },
-
-  getMyCourses: (): Promise<ApiResponse<Course[]>> => {
-    return apiClient.get('/courses');
-  },
-
-  getCourse: (id: string): Promise<ApiResponse<Course>> => {
-    return apiClient.get(`/courses/${id}`);
-  },
-
-  updateCourse: (
-    id: string,
-    data: UpdateCourseInput
-  ): Promise<ApiResponse<Course>> => {
-    return apiClient.put(`/courses/${id}`, data);
-  },
-
-  submitCourse: (id: string): Promise<ApiResponse<Course>> => {
-    return apiClient.post(`/courses/${id}/submit`);
-  },
-
-  deleteCourse: (id: string): Promise<ApiResponse<null>> => {
-    return apiClient.delete(`/courses/${id}`);
-  },
-
-  uploadThumbnail: (formData: FormData): Promise<ApiResponse<{ url: string }>> => {
-    return apiClient.post('/courses/upload', formData);
-  },
-};
-
-// ============================================================
-// Quiz / Assessment APIs (Api version)
-// ============================================================
-
-export const quizApi = {
-  createQuizLink: (data: any): Promise<ApiResponse<any>> => {
-    return apiClient.post('/assessments/quizzes', data);
-  },
-  
-  updateQuizLink: (id: string, data: any): Promise<ApiResponse<any>> => {
-    return apiClient.put(`/assessments/quizzes/${id}`, data);
-  },
-
-  deleteQuizLink: (id: string): Promise<ApiResponse<null>> => {
-    return apiClient.delete(`/assessments/quizzes/${id}`);
-  },
-
-  getCourseQuizzes: (courseId: string): Promise<ApiResponse<any[]>> => {
-    return apiClient.get(`/assessments/quizzes/course/${courseId}`);
-  }
-};
-
-// ============================================================
-// Assignment APIs (Api version)
-// ============================================================
-
-export const assignmentApi = {
-  createAssignment: (data: any): Promise<ApiResponse<any>> => {
-    return apiClient.post('/assignments', data);
-  },
-  
-  updateAssignment: (id: string, data: any): Promise<ApiResponse<any>> => {
-    return apiClient.put(`/assignments/${id}`, data);
-  },
-
-  deleteAssignment: (id: string): Promise<ApiResponse<null>> => {
-    return apiClient.delete(`/assignments/${id}`);
-  },
-
-  getCourseAssignments: (courseId: string): Promise<ApiResponse<any[]>> => {
-    return apiClient.get(`/assignments/course/${courseId}`);
-  },
-
-  getAssignmentSubmissions: (id: string): Promise<ApiResponse<any[]>> => {
-    return apiClient.get(`/assignments/${id}/submissions`);
-  },
-
-  gradeSubmission: (submissionId: string, data: { grade: number; feedback?: string; feedbackAttachments?: string[] }): Promise<ApiResponse<any>> => {
-    return apiClient.post(`/assignments/submissions/${submissionId}/grade`, data);
-  }
-};
-
-// ============================================================
-// Certificate / Completion APIs (Api version)
-// ============================================================
-
-export const certificateApi = {
-  getCourseCompletionRequests: (courseId: string): Promise<ApiResponse<any[]>> => {
-    return apiClient.get(`/certificates/course/${courseId}/requests`);
-  },
-  approveCompletionRequest: (requestId: string): Promise<ApiResponse<any>> => {
-    return apiClient.post(`/certificates/requests/${requestId}/approve`);
-  },
-  rejectCompletionRequest: (requestId: string, reason: string): Promise<ApiResponse<any>> => {
-    return apiClient.post(`/certificates/requests/${requestId}/reject`, { reason });
-  }
-};
-
-// ============================================================
-// Recommendation APIs (Skill Sharer -> Learner) (Api version)
-// ============================================================
-
-export const recommendationApi = {
-  create: (data: { learnerId: string; courseId: string; title: string; content: string; isPublic?: boolean }): Promise<ApiResponse<any>> => {
-    return apiClient.post('/recommendations', data);
-  },
-
-  getMyCourseLearners: (courseId: string): Promise<ApiResponse<any>> => {
-    return apiClient.get(`/recommendations/course/${courseId}/learners`);
-  },
-
-  update: (id: string, data: { title?: string; content?: string; isPublic?: boolean }): Promise<ApiResponse<any>> => {
-    return apiClient.put(`/recommendations/${id}`, data);
-  },
-
-  delete: (id: string): Promise<ApiResponse<null>> => {
-    return apiClient.delete(`/recommendations/${id}`);
-  },
 };
 
 // Default export combining services
