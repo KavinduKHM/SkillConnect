@@ -1,0 +1,51 @@
+﻿prisma/seed.ts(459,18): error TS18048: 'lData' is possibly 'undefined'.
+prisma/seed.ts(460,24): error TS18048: 'lData' is possibly 'undefined'.
+prisma/seed.ts(461,20): error TS18048: 'lData' is possibly 'undefined'.
+prisma/seed.ts(464,29): error TS18048: 'lData' is possibly 'undefined'.
+prisma/seed.ts(470,27): error TS18048: 'lData' is possibly 'undefined'.
+prisma/seed.ts(471,21): error TS18048: 'lData' is possibly 'undefined'.
+prisma/seed.ts(475,20): error TS18048: 'mat' is possibly 'undefined'.
+prisma/seed.ts(476,19): error TS18048: 'mat' is possibly 'undefined'.
+prisma/seed.ts(477,22): error TS18048: 'mat' is possibly 'undefined'.
+prisma/seed.ts(478,26): error TS18048: 'mat' is possibly 'undefined'.
+prisma/seed.ts(478,30): error TS2339: Property 'externalUrl' does not exist on type '{ title: string; type: string; fileUrl: string; duration: number; fileSize?: never; } | { title: string; type: string; fileUrl: string; fileSize: number; duration?: never; } | { title: string; type: string; fileUrl: string; duration: number; } | { ...; } | { ...; } | { ...; }'.
+  Property 'externalUrl' does not exist on type '{ title: string; type: string; fileUrl: string; duration: number; fileSize?: never; }'.
+prisma/seed.ts(479,23): error TS18048: 'mat' is possibly 'undefined'.
+prisma/seed.ts(480,23): error TS18048: 'mat' is possibly 'undefined'.
+prisma/seed.ts(480,27): error TS2339: Property 'fileSize' does not exist on type '{ title: string; type: string; fileUrl: string; duration: number; fileSize?: never; } | { title: string; type: string; fileUrl: string; fileSize: number; duration?: never; } | { title: string; type: string; fileUrl: string; duration: number; } | { ...; } | { ...; } | { ...; }'.
+  Property 'fileSize' does not exist on type '{ title: string; type: string; fileUrl: string; duration: number; }'.
+prisma/seed.ts(548,7): error TS2375: Type '{ enrollmentId: string; lessonId: string | undefined; completed: boolean; completedAt: Date | null; }' is not assignable to type '(Without<LessonProgressCreateInput, LessonProgressUncheckedCreateInput> & LessonProgressUncheckedCreateInput) | (Without<...> & LessonProgressCreateInput)' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'lessonId' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+src/controllers/certificate.controller.ts(135,7): error TS2375: Type '{ id: string | undefined; }' is not assignable to type 'CertificateWhereUniqueInput' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Type '{ id: string | undefined; }' is not assignable to type '{ id: string; certificateId: string; completionRequestId: string; verificationCode: string; } & { id?: string; certificateId?: string; completionRequestId?: string; verificationCode?: string; ... 20 more ...; verifications?: CertificateVerificationListRelationFilter; }'.
+    Type '{ id: string | undefined; }' is missing the following properties from type '{ id: string; certificateId: string; completionRequestId: string; verificationCode: string; }': certificateId, completionRequestId, verificationCode
+src/controllers/certificate.controller.ts(177,37): error TS2551: Property 'learner' does not exist on type '{ id: string; status: string; createdAt: Date; updatedAt: Date; courseId: string; instructorId: string; learnerId: string; certificateId: string; completionRequestId: string; issueDate: Date; ... 6 more ...; verificationCount: number; }'. Did you mean 'learnerId'?
+src/controllers/certificate.controller.ts(177,67): error TS2551: Property 'learner' does not exist on type '{ id: string; status: string; createdAt: Date; updatedAt: Date; courseId: string; instructorId: string; learnerId: string; certificateId: string; completionRequestId: string; issueDate: Date; ... 6 more ...; verificationCount: number; }'. Did you mean 'learnerId'?
+src/controllers/certificate.controller.ts(185,36): error TS2551: Property 'course' does not exist on type '{ id: string; status: string; createdAt: Date; updatedAt: Date; courseId: string; instructorId: string; learnerId: string; certificateId: string; completionRequestId: string; issueDate: Date; ... 6 more ...; verificationCount: number; }'. Did you mean 'courseId'?
+src/controllers/certificate.controller.ts(203,83): error TS2551: Property 'instructor' does not exist on type '{ id: string; status: string; createdAt: Date; updatedAt: Date; courseId: string; instructorId: string; learnerId: string; certificateId: string; completionRequestId: string; issueDate: Date; ... 6 more ...; verificationCount: number; }'. Did you mean 'instructorId'?
+src/controllers/lesson.controller.ts(45,64): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/lesson.controller.ts(66,56): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/lesson.controller.ts(103,55): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/lesson.controller.ts(125,40): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/lesson.controller.ts(154,58): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/progress.controller.ts(14,77): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/progress.controller.ts(35,75): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/progress.controller.ts(56,74): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/progress.controller.ts(84,66): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/progress.controller.ts(105,73): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/controllers/recognition.controller.ts(62,56): error TS2339: Property 'createRecommendation' does not exist on type 'typeof import("C:/Users/User/Documents/GitHub/SkillConnect/backend/src/services/recommendation.service", { with: { "resolution-mode": "import" } })'.
+src/controllers/recognition.controller.ts(74,56): error TS2339: Property 'updateRecommendation' does not exist on type 'typeof import("C:/Users/User/Documents/GitHub/SkillConnect/backend/src/services/recommendation.service", { with: { "resolution-mode": "import" } })'.
+src/controllers/recognition.controller.ts(86,33): error TS2339: Property 'deleteRecommendation' does not exist on type 'typeof import("C:/Users/User/Documents/GitHub/SkillConnect/backend/src/services/recommendation.service", { with: { "resolution-mode": "import" } })'.
+src/controllers/recognition.controller.ts(97,57): error TS2339: Property 'getLearnerRecommendations' does not exist on type 'typeof import("C:/Users/User/Documents/GitHub/SkillConnect/backend/src/services/recommendation.service", { with: { "resolution-mode": "import" } })'.
