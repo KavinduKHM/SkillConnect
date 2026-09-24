@@ -17,9 +17,23 @@ export class MaterialController {
         } as ApiResponse<null>);
       }
 
-      const userId = (req as any).user.id;
-      const { lessonId, type, title, description, order, externalUrl } = req.body;
+      const userId = (req as any).user.id as string;
+      const { lessonId, type, title, description, order, externalUrl } = req.body as {
+        lessonId?: string;
+        type?: string;
+        title?: string;
+        description?: string;
+        order?: number;
+        externalUrl?: string;
+      };
       const file = req.file;
+
+      if (!lessonId) {
+        return res.status(400).json({
+          success: false,
+          error: 'Lesson ID is required',
+        } as ApiResponse<null>);
+      }
 
       // Validate: either file or externalUrl must be provided
       if (!file && !externalUrl) {
@@ -36,17 +50,19 @@ export class MaterialController {
         } as ApiResponse<null>);
       }
 
+      const materialPayload = {
+        title: title as string,
+        type: type as 'VIDEO' | 'PDF' | 'SLIDE' | 'EXTERNAL' | 'IMAGE',
+        ...(description !== undefined ? { description } : {}),
+        order: Number(order ?? 0),
+        ...(file ? { file } : {}),
+        ...(externalUrl ? { externalUrl } : {}),
+      };
+
       const material = await materialService.createMaterial(
         userId,
         lessonId,
-        {
-          title,
-          type,
-          description,
-          order,
-          file,
-          externalUrl,
-        }
+        materialPayload
       );
 
       return res.status(201).json({
@@ -58,7 +74,7 @@ export class MaterialController {
       console.error('Error uploading material:', error);
       return res.status(500).json({
         success: false,
-        error: error instanceof Error ? error.message : 'Internal server error',
+        error: error instanceof Error ? error.message : (error as any)?.message || (error as any)?.error || JSON.stringify(error),
       } as ApiResponse<null>);
     }
   }
@@ -66,8 +82,8 @@ export class MaterialController {
   // Get all materials for a lesson
   async getMaterials(req: Request, res: Response) {
     try {
-      const userId = (req as any).user.id;
-      const { lessonId } = req.params;
+      const userId = (req as any).user.id as string;
+      const lessonId = req.params.lessonId as string;
 
       const materials = await materialService.getMaterialsByLessonId(lessonId, userId);
 
@@ -87,8 +103,8 @@ export class MaterialController {
   // Get single material
   async getMaterial(req: Request, res: Response) {
     try {
-      const userId = (req as any).user.id;
-      const { id } = req.params;
+      const userId = (req as any).user.id as string;
+      const id = req.params.id as string;
 
       const material = await materialService.getMaterialById(id, userId);
 
@@ -123,8 +139,8 @@ export class MaterialController {
         } as ApiResponse<null>);
       }
 
-      const userId = (req as any).user.id;
-      const { id } = req.params;
+      const userId = (req as any).user.id as string;
+      const id = req.params.id as string;
       const data = req.body;
 
       const material = await materialService.updateMaterial(id, userId, data);
@@ -146,8 +162,8 @@ export class MaterialController {
   // Delete material
   async deleteMaterial(req: Request, res: Response) {
     try {
-      const userId = (req as any).user.id;
-      const { id } = req.params;
+      const userId = (req as any).user.id as string;
+      const id = req.params.id as string;
 
       await materialService.deleteMaterial(id, userId);
 
