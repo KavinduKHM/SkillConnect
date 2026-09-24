@@ -118,6 +118,25 @@ export class RecommendationController {
     }
   }
 
+  // Get recommendations created by the current Skill Sharer
+  async getMyCreatedRecommendations(req: Request, res: Response) {
+    try {
+      const instructorId = (req as any).user.id;
+      const recommendations = await recommendationService.getRecommendationsForInstructor(instructorId);
+
+      return res.status(200).json({
+        success: true,
+        data: recommendations,
+      } as ApiResponse<any>);
+    } catch (error) {
+      console.error('Error getting created recommendations:', error);
+      return res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Internal server error',
+      } as ApiResponse<null>);
+    }
+  }
+
   // Update recommendation
   async updateRecommendation(req: Request, res: Response) {
     try {

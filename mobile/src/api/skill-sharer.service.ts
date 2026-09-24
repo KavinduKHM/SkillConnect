@@ -236,6 +236,11 @@ export const recommendationApi = {
     return apiClient.get(`/recommendations/course/${courseId}/learners`);
   },
 
+  // Get recommendations already created by the current Skill Sharer
+  getCreated: (): Promise<ApiResponse<any>> => {
+    return apiClient.get('/recommendations/created');
+  },
+
   // Update a recommendation
   update: (id: string, data: { title?: string; content?: string; isPublic?: boolean }): Promise<ApiResponse<any>> => {
     return apiClient.put(`/recommendations/${id}`, data);

@@ -95,13 +95,30 @@ export class ModuleService {
 
   // Delete module
   async deleteModule(id: string, userId: string): Promise<CourseModule> {
-    return prisma.courseModule.delete({
+    const module = await prisma.courseModule.findFirst({
       where: {
         id,
         course: {
           creatorId: userId,
         },
       },
+    });
+
+    if (!module) {
+      throw new Error('Module not found or you do not own its course');
+    }
+
+    return prisma.$transaction(async (transaction) => {
+      await transaction.learningMaterial.deleteMany({
+        where: { lesson: { moduleId: id } },
+      });
+      await transaction.lessonProgress.deleteMany({
+        where: { lesson: { moduleId: id } },
+      });
+      await transaction.courseLesson.deleteMany({
+        where: { moduleId: id },
+      });
+      return transaction.courseModule.delete({ where: { id } });
     });
   }
 

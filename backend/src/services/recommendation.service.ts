@@ -203,6 +203,24 @@ export class RecommendationService {
     }));
   }
 
+  // Get recommendations created by a Skill Sharer
+  async getRecommendationsForInstructor(instructorId: string): Promise<any[]> {
+    const recommendations = await prisma.learnerRecommendation.findMany({
+      where: { instructorId },
+      include: {
+        learner: { select: { id: true, name: true, email: true, profilePicture: true } },
+        course: { select: { id: true, title: true } },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    return recommendations.map((recommendation) => ({
+      ...recommendation,
+      title: recommendation.skillDemonstrated || 'Recommendation',
+      content: recommendation.message,
+    }));
+  }
+
   // Update recommendation
   async updateRecommendation(
     id: string,

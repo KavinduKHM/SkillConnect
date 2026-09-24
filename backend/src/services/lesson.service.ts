@@ -100,7 +100,7 @@ export class LessonService {
 
   // Delete lesson
   async deleteLesson(id: string, userId: string): Promise<CourseLesson> {
-    return prisma.courseLesson.delete({
+    const lesson = await prisma.courseLesson.findFirst({
       where: {
         id,
         module: {
@@ -109,6 +109,20 @@ export class LessonService {
           },
         },
       },
+    });
+
+    if (!lesson) {
+      throw new Error('Lesson not found or you do not own its course');
+    }
+
+    return prisma.$transaction(async (transaction) => {
+      await transaction.learningMaterial.deleteMany({
+        where: { lessonId: id },
+      });
+      await transaction.lessonProgress.deleteMany({
+        where: { lessonId: id },
+      });
+      return transaction.courseLesson.delete({ where: { id } });
     });
   }
 
