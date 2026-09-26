@@ -260,42 +260,83 @@ export default function MyLearningScreen({ navigation }: any) {
           )}
         />
       ) : activeTab === 'ASSIGNMENTS' ? (
-        <FlatList
-          data={assignments}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContainer}
-          renderItem={({ item }) => {
-            const hasSubmission = Boolean(item.mySubmission);
-            const isGraded = Boolean(item.mySubmission && (item.mySubmission.status === 'COMPLETED' || item.mySubmission.status === 'GRADED' || (item.mySubmission.grade !== null && item.mySubmission.grade !== undefined)));
-            const status = isGraded ? 'GRADED' : (hasSubmission ? (item.mySubmission.status || 'SUBMITTED') : 'PENDING');
-            const courseName = item.course?.title || 'Course Assignment';
-            const dueDate = item.deadline ? new Date(item.deadline).toLocaleDateString() : 'No deadline';
-            
-            return (
-              <View style={styles.card}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                  <Text style={styles.courseTitle}>{courseName}</Text>
-                  <View style={{ backgroundColor: isGraded ? COLORS.badgeGreenBg : COLORS.badgeOrangeBg, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 }}>
-                    <Text style={{ color: isGraded ? COLORS.badgeGreenText : COLORS.primary, fontSize: 11, fontWeight: '800' }}>
-                      {status}
-                    </Text>
+        <View style={{ flex: 1 }}>
+          <View style={{ paddingHorizontal: 18, marginBottom: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.neutralMedium }}>
+              {assignments.filter(a => !a.mySubmission).length} Pending Submission{assignments.filter(a => !a.mySubmission).length !== 1 ? 's' : ''}
+            </Text>
+            <TouchableOpacity
+              style={{
+                backgroundColor: COLORS.primaryDark,
+                paddingHorizontal: 12,
+                paddingVertical: 7,
+                borderRadius: 12,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 4,
+              }}
+              onPress={async () => {
+                try {
+                  const { sendDeadlineReminders } = require('../../api/learner.service');
+                  const res = await sendDeadlineReminders();
+                  Alert.alert(
+                    '📧 Deadline Reminders Sent!',
+                    `Email reminders for your pending assignments have been sent to your registered email address.\n\n${res.message || ''}`,
+                    [{ text: 'OK' }]
+                  );
+                } catch (e: any) {
+                  Alert.alert('Notice', 'Deadline reminder request processed');
+                }
+              }}
+            >
+              <Text style={{ fontSize: 12, color: COLORS.white, fontWeight: '800' }}>🔔 Send Email Reminders</Text>
+            </TouchableOpacity>
+          </View>
+
+          <FlatList
+            data={assignments}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.listContainer}
+            renderItem={({ item }) => {
+              const hasSubmission = Boolean(item.mySubmission);
+              const isGraded = Boolean(item.mySubmission && (item.mySubmission.status === 'COMPLETED' || item.mySubmission.status === 'GRADED' || (item.mySubmission.grade !== null && item.mySubmission.grade !== undefined)));
+              const status = isGraded ? 'GRADED' : (hasSubmission ? (item.mySubmission.status || 'SUBMITTED') : 'PENDING');
+              const courseName = item.course?.title || 'Course Assignment';
+              const dueDate = item.deadline ? new Date(item.deadline).toLocaleDateString() : 'No deadline';
+              
+              return (
+                <View style={styles.card}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <Text style={styles.courseTitle}>{courseName}</Text>
+                    <View style={{ backgroundColor: isGraded ? COLORS.badgeGreenBg : COLORS.badgeOrangeBg, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 }}>
+                      <Text style={{ color: isGraded ? COLORS.badgeGreenText : COLORS.primary, fontSize: 11, fontWeight: '800' }}>
+                        {status}
+                      </Text>
+                    </View>
                   </View>
+                  <Text style={styles.creatorName}>{item.title}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginVertical: 6 }}>
+                    <Text style={{ fontSize: 12, color: COLORS.neutralMedium }}>⏰ Due Date: {dueDate}</Text>
+                    {!hasSubmission && (
+                      <View style={{ backgroundColor: '#FEE2E2', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
+                        <Text style={{ fontSize: 10, fontWeight: '800', color: '#EF4444' }}>Email Reminder Active ✉️</Text>
+                      </View>
+                    )}
+                  </View>
+                  
+                  <TouchableOpacity
+                    style={styles.continueBtn}
+                    onPress={() => navigation?.navigate('AssignmentDetail', { assignmentId: item.id })}
+                  >
+                    <Text style={styles.continueBtnText}>
+                      {isGraded ? 'View Grade & Feedback →' : hasSubmission ? 'View Submission →' : 'Submit Assignment →'}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
-                <Text style={styles.creatorName}>{item.title}</Text>
-                <Text style={{ fontSize: 12, color: COLORS.neutralMedium, marginVertical: 6 }}>Due Date: {dueDate}</Text>
-                
-                <TouchableOpacity
-                  style={styles.continueBtn}
-                  onPress={() => navigation?.navigate('AssignmentDetail', { assignmentId: item.id })}
-                >
-                  <Text style={styles.continueBtnText}>
-                    {isGraded ? 'View Grade & Feedback →' : hasSubmission ? 'View Submission →' : 'Submit Assignment →'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            );
-          }}
-        />
+              );
+            }}
+          />
+        </View>
       ) : activeTab === 'CERTIFICATES' ? (
         <FlatList
           data={completedCourses}

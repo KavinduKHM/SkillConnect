@@ -198,3 +198,17 @@ export const fetchLearningHistory = async () => {
   const response = await client.get('/learner/history');
   return response.data;
 };
+
+// ============================================================
+// DEADLINE NOTIFICATIONS & EMAIL REMINDERS
+// ============================================================
+
+export const sendDeadlineReminders = async () => {
+  const response = await client.post('/learner/notifications/send-deadline-reminders');
+  return response.data;
+};
+
+export const fetchPendingDeadlines = async () => {
+  const response = await client.get('/learner/notifications/pending-deadlines');
+  return response.data;
+};
