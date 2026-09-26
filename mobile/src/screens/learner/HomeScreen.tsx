@@ -65,58 +65,32 @@ export default function HomeScreen({ navigation }: any) {
     courseProgress: { completedLessons: 16, totalLessons: 20, progressPercentage: 80 },
   };
 
-  const recommendedCourses = [
-    {
-      id: 'r1',
-      title: 'Spring Boot Mastery',
-      creatorName: 'Shehan Sankalana',
-      sprintTime: '2m sprint',
-      rating: 4.8,
-      difficulty: 'Intermediate',
-      thumbnail: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=600&q=80',
-    },
-    {
-      id: 'r2',
-      title: 'Artisanal Flavors Masterclass',
-      creatorName: 'Shehan Malisha',
-      sprintTime: '5m sprint',
-      rating: 4.8,
-      difficulty: 'Beginner',
-      thumbnail: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80',
-    },
-    {
-      id: 'r3',
-      title: 'Full-Stack Node.js & React',
-      creatorName: 'John Perera',
-      sprintTime: '3m sprint',
-      rating: 4.9,
-      difficulty: 'Advanced',
-      thumbnail: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=600&q=80',
-    },
-  ];
+  const recommendedCourses = courses.length > 0
+    ? courses.map((c, idx) => ({
+        id: c.id,
+        title: c.title,
+        creatorName: c.creator?.name || 'Instructor',
+        sprintTime: `${(idx + 2) * 2}m sprint`,
+        rating: c.rating || 4.8,
+        difficulty: c.difficulty ? (c.difficulty.charAt(0) + c.difficulty.slice(1).toLowerCase()) : 'Beginner',
+        thumbnail: c.thumbnail || 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=600&q=80',
+        rawCourse: c,
+      }))
+    : [];
 
-  const popularCourses = courses.length > 0 ? courses.slice(0, 3) : [
-    {
-      id: 'p1',
-      badge: 'Bestseller',
-      badgeIcon: '🛡️',
-      title: 'UX Micro-interactions',
-      creatorName: 'Elena Rostova',
-      rating: 4.9,
-      learnersCount: '1.4k',
-      thumbnail: 'https://images.unsplash.com/photo-1581291518857-4e27b48ff24e?auto=format&fit=crop&w=600&q=80',
-    },
-    {
-      id: 'p2',
-      badge: 'Top Rated',
-      badgeIcon: '💡',
-      title: 'System Design Architecture',
-      creatorName: 'Anura Kumara',
-      rating: 4.9,
-      learnersCount: '2.1k',
-      thumbnail: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=600&q=80',
-    },
-  ];
+  const popularCourses = courses.length > 0
+    ? courses.map((c, idx) => ({
+        id: c.id,
+        badge: idx % 2 === 0 ? 'Bestseller' : 'Top Rated',
+        badgeIcon: idx % 2 === 0 ? '🛡️' : '💡',
+        title: c.title,
+        creatorName: c.creator?.name || 'Instructor',
+        rating: c.rating || 4.9,
+        learnersCount: `${c.enrolledCount || 99} learners`,
+        thumbnail: c.thumbnail || 'https://images.unsplash.com/photo-1581291518857-4e27b48ff24e?auto=format&fit=crop&w=600&q=80',
+        rawCourse: c,
+      }))
+    : [];
 
   const firstName = userInfo?.name ? userInfo.name.split(' ')[0] : 'Asheni';
 
@@ -284,7 +258,7 @@ export default function HomeScreen({ navigation }: any) {
                 key={c.id}
                 style={styles.recCard}
                 activeOpacity={0.9}
-                onPress={() => navigation?.navigate('CourseDetail', { courseId: c.id, course: c })}
+                onPress={() => navigation?.navigate('CourseDetail', { courseId: c.id, course: c.rawCourse || c })}
               >
                 <View style={styles.recThumbnailWrapper}>
                   <Image source={{ uri: c.thumbnail }} style={styles.recThumbnail} />
@@ -327,7 +301,7 @@ export default function HomeScreen({ navigation }: any) {
                 key={item.id}
                 style={styles.popularCard}
                 activeOpacity={0.9}
-                onPress={() => navigation?.navigate('CourseDetail', { courseId: item.id, course: item })}
+                onPress={() => navigation?.navigate('CourseDetail', { courseId: item.id, course: item.rawCourse || item })}
               >
                 <Image
                   source={{ uri: item.thumbnail || 'https://images.unsplash.com/photo-1581291518857-4e27b48ff24e?auto=format&fit=crop&w=600&q=80' }}
