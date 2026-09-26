@@ -567,7 +567,7 @@ export const getLearningHistory = async (learnerId: string) => {
 
   const lessonMap = new Map<string, string>();
   if (lessonIdsToFetch.size > 0) {
-    const lessons = await prisma.lesson.findMany({
+    const lessons = await prisma.courseLesson.findMany({
       where: { id: { in: Array.from(lessonIdsToFetch) } },
       select: { id: true, title: true },
     });

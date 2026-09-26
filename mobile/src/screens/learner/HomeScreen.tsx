@@ -11,7 +11,8 @@ import {
   Image,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { fetchCourses, fetchMyLearning } from '../../api/learner.service';
+import { fetchCourses, fetchMyLearning, fetchLearnerNotifications } from '../../api/learner.service';
+import { NotificationModal } from '../../components/common/NotificationModal';
 import { COLORS } from '../../theme/colors';
 
 export default function HomeScreen({ navigation }: any) {
@@ -20,6 +21,8 @@ export default function HomeScreen({ navigation }: any) {
   const [courses, setCourses] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Technology');
+  const [notiModalVisible, setNotiModalVisible] = useState(false);
+  const [unreadNotiCount, setUnreadNotiCount] = useState(0);
 
   const loadHomeData = async () => {
     try {
@@ -27,9 +30,10 @@ export default function HomeScreen({ navigation }: any) {
       if (userJson) {
         setUserInfo(JSON.parse(userJson));
       }
-      const [myLearningRes, coursesRes] = await Promise.all([
+      const [myLearningRes, coursesRes, notiRes] = await Promise.all([
         fetchMyLearning().catch(() => null),
         fetchCourses().catch(() => null),
+        fetchLearnerNotifications().catch(() => null),
       ]);
 
       if (myLearningRes?.inProgress) {
@@ -37,6 +41,9 @@ export default function HomeScreen({ navigation }: any) {
       }
       if (coursesRes?.courses) {
         setCourses(coursesRes.courses);
+      }
+      if (notiRes?.unreadCount !== undefined) {
+        setUnreadNotiCount(notiRes.unreadCount);
       }
     } catch (err) {
       console.log('Error loading home data:', err);
@@ -148,9 +155,21 @@ export default function HomeScreen({ navigation }: any) {
               </TouchableOpacity>
 
               {/* Notification Bell */}
-              <TouchableOpacity style={styles.bellIconBtn} activeOpacity={0.8}>
+              <TouchableOpacity
+                style={styles.bellIconBtn}
+                activeOpacity={0.8}
+                onPress={() => setNotiModalVisible(true)}
+              >
                 <Text style={styles.bellIcon}>🔔</Text>
-                <View style={styles.bellBadgeDot} />
+                {unreadNotiCount > 0 ? (
+                  <View style={[styles.bellBadgeDot, { width: 18, height: 18, borderRadius: 9, justifyContent: 'center', alignItems: 'center', right: -4, top: -4, backgroundColor: COLORS.primary }]}>
+                    <Text style={{ color: COLORS.white, fontSize: 9, fontWeight: '800' }}>
+                      {unreadNotiCount > 9 ? '9+' : unreadNotiCount}
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={styles.bellBadgeDot} />
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -337,6 +356,15 @@ export default function HomeScreen({ navigation }: any) {
           </View>
         </View>
       </ScrollView>
+
+      <NotificationModal
+        visible={notiModalVisible}
+        onClose={() => {
+          setNotiModalVisible(false);
+          loadHomeData();
+        }}
+        navigation={navigation}
+      />
     </SafeAreaView>
   );
 }

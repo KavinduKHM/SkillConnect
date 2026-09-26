@@ -209,3 +209,16 @@ export const getPendingDeadlinesController = async (req: any, res: Response): Pr
     res.status(500).json({ error: error.message });
   }
 };
+
+export const getNotificationsController = async (req: any, res: Response): Promise<void> => {
+  try {
+    const learnerId = req.user.id;
+    const { getAllNotificationsForLearner } = await import('../services/deadlineReminder.service.js');
+    const result = await getAllNotificationsForLearner(learnerId);
+    res.status(200).json(result);
+  } catch (error: any) {
+    logger.error('Error in getNotificationsController:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+

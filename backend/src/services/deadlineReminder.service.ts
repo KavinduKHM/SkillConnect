@@ -134,3 +134,48 @@ export const getPendingDeadlinesForLearner = async (learnerId: string) => {
 
   return pendingAssignments;
 };
+
+export const getAllNotificationsForLearner = async (learnerId: string) => {
+  // Fetch email reminder logs
+  const emailLogs = await prisma.learningHistory.findMany({
+    where: {
+      learnerId,
+      activityType: 'DEADLINE_REMINDER_SENT',
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 20,
+  });
+
+  // Fetch pending assignment deadlines
+  const pendingDeadlines = await getPendingDeadlinesForLearner(learnerId);
+
+  // Combine into formatted notifications list
+  const notifications = [
+    ...emailLogs.map((log) => ({
+      id: log.id,
+      type: 'EMAIL_SENT',
+      title: '📧 Assignment Email Reminder Sent',
+      message: log.description,
+      createdAt: log.createdAt,
+      read: false,
+      metadata: log.metadata,
+    })),
+    ...pendingDeadlines.map((p) => ({
+      id: `pending-${p.id}`,
+      type: 'DEADLINE_ALERT',
+      title: `⏰ Pending Deadline: ${p.title}`,
+      message: `Course "${p.courseTitle}" - Max Marks: ${p.maxMarks}. Please submit before deadline.`,
+      createdAt: p.deadline || new Date(),
+      read: false,
+      assignmentId: p.id,
+    })),
+  ];
+
+  return {
+    unreadCount: notifications.length,
+    notifications,
+    emailLogs,
+    pendingDeadlines,
+  };
+};
+

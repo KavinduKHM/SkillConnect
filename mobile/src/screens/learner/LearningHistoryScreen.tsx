@@ -12,6 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { fetchLearningHistory } from '../../api/learner.service';
+import { NotificationModal } from '../../components/common/NotificationModal';
 import { COLORS } from '../../theme/colors';
 
 export default function LearningHistoryScreen({ navigation }: any) {
@@ -19,6 +20,7 @@ export default function LearningHistoryScreen({ navigation }: any) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeFilter, setActiveFilter] = useState<'ALL' | 'LESSONS' | 'COURSES' | 'CERTIFICATES'>('ALL');
+  const [notiModalVisible, setNotiModalVisible] = useState(false);
 
   const loadData = async () => {
     try {
@@ -115,9 +117,14 @@ export default function LearningHistoryScreen({ navigation }: any) {
           <Text style={styles.circleBtnText}>←</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Learning History & Growth</Text>
-        <TouchableOpacity style={styles.circleBtn} onPress={loadData}>
-          <Text style={styles.circleBtnText}>🔄</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 6 }}>
+          <TouchableOpacity style={styles.circleBtn} onPress={() => setNotiModalVisible(true)}>
+            <Text style={styles.circleBtnText}>🔔</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.circleBtn} onPress={loadData}>
+            <Text style={styles.circleBtnText}>🔄</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {loading && !refreshing ? (
@@ -285,6 +292,15 @@ export default function LearningHistoryScreen({ navigation }: any) {
           </TouchableOpacity>
         </View>
       </View>
+
+      <NotificationModal
+        visible={notiModalVisible}
+        onClose={() => {
+          setNotiModalVisible(false);
+          loadData();
+        }}
+        navigation={navigation}
+      />
     </SafeAreaView>
   );
 }

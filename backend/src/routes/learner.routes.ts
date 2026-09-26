@@ -14,6 +14,7 @@ import {
   fetchLearningHistoryController,
   sendDeadlineRemindersController,
   getPendingDeadlinesController,
+  getNotificationsController,
 } from '../controllers/learner.controller.js';
 
 const router = express.Router();
@@ -39,6 +40,7 @@ router.get('/my-learning', getMyLearningDashboard);
 router.get('/history', fetchLearningHistoryController);
 
 // Deadline & Email Reminders
+router.get('/notifications', getNotificationsController);
 router.post('/notifications/send-deadline-reminders', sendDeadlineRemindersController);
 router.get('/notifications/pending-deadlines', getPendingDeadlinesController);
 

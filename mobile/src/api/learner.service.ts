@@ -212,3 +212,9 @@ export const fetchPendingDeadlines = async () => {
   const response = await client.get('/learner/notifications/pending-deadlines');
   return response.data;
 };
+
+export const fetchLearnerNotifications = async () => {
+  const response = await client.get('/learner/notifications');
+  return response.data;
+};
+

@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { fetchMyLearning, fetchMyQuizzes } from '../../api/learner.service';
+import { NotificationModal } from '../../components/common/NotificationModal';
 import { COLORS } from '../../theme/colors';
 
 export default function MyLearningScreen({ navigation }: any) {
@@ -28,6 +29,7 @@ export default function MyLearningScreen({ navigation }: any) {
   const [activeTab, setActiveTab] = useState<'IN_PROGRESS' | 'COMPLETED' | 'ASSESSMENTS' | 'ASSIGNMENTS' | 'CERTIFICATES'>('IN_PROGRESS');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [notiModalVisible, setNotiModalVisible] = useState(false);
 
   const loadMyLearning = async () => {
     try {
@@ -154,9 +156,27 @@ export default function MyLearningScreen({ navigation }: any) {
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.bgWarm} />
 
       {/* Main Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>My Learning Dashboard</Text>
-        <Text style={styles.headerSubtitle}>Track active courses, progress, assignments & certificates</Text>
+      <View style={[styles.header, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.headerTitle}>My Learning Dashboard</Text>
+          <Text style={styles.headerSubtitle}>Track active courses, progress, assignments & certificates</Text>
+        </View>
+        <TouchableOpacity
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            backgroundColor: COLORS.white,
+            justifyContent: 'center',
+            alignItems: 'center',
+            borderWidth: 1,
+            borderColor: COLORS.borderWarm,
+            marginLeft: 8,
+          }}
+          onPress={() => setNotiModalVisible(true)}
+        >
+          <Text style={{ fontSize: 18 }}>🔔</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Navigation Filter Tabs */}
@@ -429,6 +449,15 @@ export default function MyLearningScreen({ navigation }: any) {
           }}
         />
       )}
+
+      <NotificationModal
+        visible={notiModalVisible}
+        onClose={() => {
+          setNotiModalVisible(false);
+          loadMyLearning();
+        }}
+        navigation={navigation}
+      />
     </SafeAreaView>
   );
 }
