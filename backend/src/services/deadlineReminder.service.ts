@@ -1,3 +1,7 @@
+/**
+ * SKIL-64: Assignment Deadline Email Reminders Service
+ * SKIL-54: Learner Assignment Dashboard Tracking
+ */
 import { PrismaClient } from '@prisma/client';
 import { sendDeadlineReminderEmail } from './email.service.js';
 import { logger } from '../utils/logger.js';
