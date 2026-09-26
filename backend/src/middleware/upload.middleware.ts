@@ -8,8 +8,6 @@ type FileFilterCallback = (error: Error | null, acceptFile?: boolean) => void;
 export const ALLOWED_EXTENSIONS = [
   // Documents
   '.pdf',
-  '.ppt',
-  '.pptx',
   '.doc',
   '.docx',
   '.txt',
@@ -50,8 +48,8 @@ export const ALLOWED_EXTENSIONS = [
   '.wav',
 ];
 
-// Maximum allowed file size: 100MB (104,857,600 bytes)
-export const DEFAULT_MAX_FILE_SIZE = 100 * 1024 * 1024;
+// Maximum allowed file size: 10MB (10,485,760 bytes)
+export const DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 // Memory storage keeps file in memory buffer for streaming to Cloudinary or writing to disk
 const storage = multer.memoryStorage();
@@ -68,7 +66,7 @@ const fileFilter = (
   } else {
     cb(
       new Error(
-        `File type '${ext}' is not allowed. Allowed types: PDF, PPT, PPTX, DOC, DOCX, ZIP, Code files, Images, CSV, JSON.`
+        `File type '${ext}' is not allowed. Allowed types: PDF, DOC, DOCX, ZIP, Code files, Images, CSV, JSON.`
       )
     );
   }
@@ -104,7 +102,7 @@ export const uploadAssignmentFiles = (
       if (err instanceof multer.MulterError) {
         if (err.code === 'LIMIT_FILE_SIZE') {
           res.status(400).json({
-            error: `File size exceeds the 100MB limit`,
+            error: `File size exceeds the 10MB limit`,
           });
           return;
         }
@@ -136,7 +134,7 @@ export const uploadSingleFile = (fieldName: string = 'file') => {
         if (err instanceof multer.MulterError) {
           if (err.code === 'LIMIT_FILE_SIZE') {
             res.status(400).json({
-              error: `File size exceeds the 100MB limit`,
+              error: `File size exceeds the 10MB limit`,
             });
             return;
           }
@@ -166,7 +164,7 @@ export const uploadFeedbackFiles = (
       if (err instanceof multer.MulterError) {
         if (err.code === 'LIMIT_FILE_SIZE') {
           res.status(400).json({
-            error: `Attachment size exceeds the 100MB limit`,
+            error: `Attachment size exceeds the 10MB limit`,
           });
           return;
         }

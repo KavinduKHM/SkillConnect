@@ -11,7 +11,6 @@ import {
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
-import Toast from 'react-native-toast-message';
 import { authService } from '../../api/auth.service';
 
 export const RegisterScreen = ({ navigation }: any) => {
@@ -32,8 +31,9 @@ export const RegisterScreen = ({ navigation }: any) => {
     setLoading(true);
     try {
       await authService.register({ name, email, password, role });
-      Toast.show({ type: 'success', text1: 'Success', text2: 'Account created successfully! Please sign in.' });
-      setTimeout(() => navigation.navigate('Login'), 1500);
+      Alert.alert('Success', 'Account created successfully! Please sign in.', [
+        { text: 'OK', onPress: () => navigation.navigate('Login') },
+      ]);
     } catch (error: any) {
       setErrorMsg(error.error || 'Could not register');
     } finally {
@@ -136,23 +136,21 @@ export const RegisterScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAF9F5',
+    backgroundColor: '#f3f4f6',
   },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
-    padding: 24,
+    padding: 20,
   },
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 28,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
     elevation: 4,
   },
   logoContainer: {
@@ -160,27 +158,25 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   logoText: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#166534',
-    backgroundColor: '#DCFCE7',
-    width: 60,
-    height: 60,
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#3b82f6',
+    backgroundColor: '#eff6ff',
+    width: 56,
+    height: 56,
     textAlign: 'center',
-    lineHeight: 60,
-    borderRadius: 18,
-    overflow: 'hidden',
+    lineHeight: 56,
+    borderRadius: 12,
   },
   title: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: '#0F172A',
-    marginTop: 12,
-    letterSpacing: -0.5,
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    marginTop: 8,
   },
   subtitle: {
     fontSize: 14,
-    color: '#64748B',
+    color: '#6b7280',
     textAlign: 'center',
     marginBottom: 20,
   },
@@ -188,22 +184,20 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   inputGroup: {
-    gap: 6,
+    gap: 4,
   },
   label: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#334155',
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
   },
   input: {
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: '#0F172A',
-    backgroundColor: '#FFFFFF',
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
   },
   roleContainer: {
     flexDirection: 'row',
@@ -212,45 +206,43 @@ const styles = StyleSheet.create({
   },
   roleButton: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 14,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
   },
   roleButtonActive: {
-    backgroundColor: '#164E37',
-    borderColor: '#164E37',
+    backgroundColor: '#3b82f6',
+    borderColor: '#3b82f6',
   },
   roleText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#475569',
+    fontWeight: '500',
+    color: '#374151',
   },
   roleTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '700',
+    color: '#ffffff',
   },
   registerButton: {
-    backgroundColor: '#164E37',
-    borderRadius: 14,
+    backgroundColor: '#3b82f6',
+    borderRadius: 8,
     paddingVertical: 14,
     alignItems: 'center',
     marginTop: 8,
   },
   registerButtonText: {
-    color: '#FFFFFF',
+    color: '#fff',
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   linkButton: {
     alignItems: 'center',
     marginTop: 8,
   },
   linkText: {
-    color: '#166534',
+    color: '#3b82f6',
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '500',
   },
 });

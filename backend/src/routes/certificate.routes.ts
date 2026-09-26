@@ -4,7 +4,6 @@ import { isSkillSharer } from '../middleware/roles.middleware.js';
 
 import {
   requestCompletion,
-  checkEligibility,
   getLearnerRequests,
   getCourseRequests,
   approveCompletionRequest,
@@ -34,9 +33,6 @@ router.get('/:certId/download', downloadCertificatePdf);
 // LEARNER ROUTES
 // ============================================================
 router.use(isAuthenticated);
-
-// GET /api/certificates/check-eligibility/:courseId
-router.get('/check-eligibility/:courseId', checkEligibility);
 
 // POST /api/certificates/request/:courseId
 router.post('/request/:courseId', requestCompletion);

@@ -38,30 +38,17 @@ export const DashboardScreen: React.FC = ({ navigation }: any) => {
       }
 
       // Get courses
-      const coursesRes: any = await courseApi.getMyCourses();
-      let courseData: Course[] = [];
-      if (coursesRes && coursesRes.success && Array.isArray(coursesRes.data)) {
-        courseData = coursesRes.data;
-      } else if (coursesRes && Array.isArray(coursesRes.data?.data)) {
-        courseData = coursesRes.data.data;
-      } else if (Array.isArray(coursesRes)) {
-        courseData = coursesRes;
-      } else if (coursesRes && Array.isArray(coursesRes.data)) {
-        courseData = coursesRes.data;
-      }
-
-      const hasValidData = courseData.length > 0 || (coursesRes && (coursesRes.success || coursesRes.data?.success));
-
-      if (hasValidData) {
-        setCourses(courseData);
+      const coursesRes = await courseApi.getMyCourses();
+      if (coursesRes.success && coursesRes.data) {
+        setCourses(coursesRes.data);
         
         // Calculate stats
-        const draft = courseData.filter((c: Course) => c.status === 'DRAFT');
-        const published = courseData.filter((c: Course) => c.status === 'PUBLISHED');
-        const totalEnrollments = courseData.reduce((sum: number, c: Course) => sum + c.enrolledCount, 0);
+        const draft = coursesRes.data.filter((c: Course) => c.status === 'DRAFT');
+        const published = coursesRes.data.filter((c: Course) => c.status === 'PUBLISHED');
+        const totalEnrollments = coursesRes.data.reduce((sum: number, c: Course) => sum + c.enrolledCount, 0);
         
         setStats({
-          totalCourses: courseData.length,
+          totalCourses: coursesRes.data.length,
           draftCourses: draft.length,
           publishedCourses: published.length,
           totalEnrollments,

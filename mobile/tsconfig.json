@@ -16,7 +16,7 @@
     "declaration": true,
     "declarationMap": true,
     "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": false,
+    "exactOptionalPropertyTypes": true,
     "strict": true,
     "jsx": "react-jsx",
     "isolatedModules": true,

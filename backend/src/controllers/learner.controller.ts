@@ -10,6 +10,7 @@ import {
   getLessonContent,
   markLessonComplete,
   getCourseProgress,
+  getLearningHistory,
 } from '../services/learner.service.js';
 import { logger } from '../utils/logger.js';
 
@@ -170,3 +171,54 @@ export const fetchProgress = async (req: any, res: Response): Promise<void> => {
     res.status(404).json({ error: error.message });
   }
 };
+
+export const fetchLearningHistoryController = async (req: any, res: Response): Promise<void> => {
+  try {
+    const learnerId = req.user.id;
+    const result = await getLearningHistory(learnerId);
+    res.status(200).json(result);
+  } catch (error: any) {
+    logger.error('Error in fetchLearningHistoryController:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const sendDeadlineRemindersController = async (req: any, res: Response): Promise<void> => {
+  try {
+    const learnerId = req.user.id;
+    const { sendDeadlineRemindersForLearner } = await import('../services/deadlineReminder.service.js');
+    const result = await sendDeadlineRemindersForLearner(learnerId);
+    res.status(200).json({
+      message: `Deadline reminder emails processed for ${req.user.email}`,
+      ...result,
+    });
+  } catch (error: any) {
+    logger.error('Error in sendDeadlineRemindersController:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getPendingDeadlinesController = async (req: any, res: Response): Promise<void> => {
+  try {
+    const learnerId = req.user.id;
+    const { getPendingDeadlinesForLearner } = await import('../services/deadlineReminder.service.js');
+    const pending = await getPendingDeadlinesForLearner(learnerId);
+    res.status(200).json({ pending });
+  } catch (error: any) {
+    logger.error('Error in getPendingDeadlinesController:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getNotificationsController = async (req: any, res: Response): Promise<void> => {
+  try {
+    const learnerId = req.user.id;
+    const { getAllNotificationsForLearner } = await import('../services/deadlineReminder.service.js');
+    const result = await getAllNotificationsForLearner(learnerId);
+    res.status(200).json(result);
+  } catch (error: any) {
+    logger.error('Error in getNotificationsController:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+

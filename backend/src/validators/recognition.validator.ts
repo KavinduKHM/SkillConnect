@@ -6,7 +6,6 @@ export const createReviewValidator = [
     .isInt({ min: 1, max: 5 })
     .withMessage('Rating must be an integer between 1 and 5'),
   body('review').optional().trim(),
-  body('comment').optional().trim(),
 ];
 
 export const updateReviewValidator = [
@@ -16,7 +15,6 @@ export const updateReviewValidator = [
     .isInt({ min: 1, max: 5 })
     .withMessage('Rating must be an integer between 1 and 5'),
   body('review').optional().trim(),
-  body('comment').optional().trim(),
 ];
 
 export const createRecommendationValidator = [

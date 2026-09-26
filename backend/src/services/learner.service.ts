@@ -491,14 +491,19 @@ export const markLessonComplete = async (
   });
 
   // Log Learning History
+  const targetLesson = allLessons.find((l) => l.id === lessonId);
+  const lessonTitle = targetLesson?.title || 'Lesson';
+
   await prisma.learningHistory.create({
     data: {
       learnerId,
       courseId,
       enrollmentId: enrollment.id,
-      activityType: 'COMPLETED_LESSON',
-      description: `Completed lesson ${lessonId} with progress ${Math.round(progressPercentage)}%`,
-      metadata: { lessonId, progressPercentage },
+      activityType: nextCompletedState ? 'COMPLETED_LESSON' : 'UNMARKED_LESSON',
+      description: nextCompletedState
+        ? `Completed: ${lessonTitle} (${Math.round(progressPercentage)}% course progress)`
+        : `Unmarked: ${lessonTitle}`,
+      metadata: { lessonId, lessonTitle, progressPercentage },
     },
   });
 
@@ -533,4 +538,95 @@ export const getCourseProgress = async (learnerId: string, courseId: string) => 
   }
 
   return enrollment;
+};
+
+export const getLearningHistory = async (learnerId: string) => {
+  const historyLogs = await prisma.learningHistory.findMany({
+    where: { learnerId },
+    orderBy: { createdAt: 'desc' },
+    take: 50,
+    include: {
+      course: {
+        include: { category: true },
+      },
+    },
+  });
+
+  // Extract lesson IDs from metadata or description strings to resolve titles
+  const lessonIdsToFetch = new Set<string>();
+  for (const log of historyLogs) {
+    const meta = log.metadata as any;
+    if (meta?.lessonId) {
+      lessonIdsToFetch.add(meta.lessonId);
+    }
+    const uuidMatch = log.description?.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+    if (uuidMatch) {
+      lessonIdsToFetch.add(uuidMatch[0]);
+    }
+  }
+
+  const lessonMap = new Map<string, string>();
+  if (lessonIdsToFetch.size > 0) {
+    const lessons = await prisma.courseLesson.findMany({
+      where: { id: { in: Array.from(lessonIdsToFetch) } },
+      select: { id: true, title: true },
+    });
+    lessons.forEach((l) => lessonMap.set(l.id, l.title));
+  }
+
+  const formattedHistory = historyLogs.map((log) => {
+    let description = log.description || '';
+    const meta = log.metadata as any;
+
+    const uuidMatch = description.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+    if (uuidMatch) {
+      const rawUuid = uuidMatch[0];
+      const lessonTitle = lessonMap.get(rawUuid) || meta?.lessonTitle || 'Lesson';
+      description = description.replace(`lesson ${rawUuid}`, `lesson "${lessonTitle}"`).replace(rawUuid, `"${lessonTitle}"`);
+    }
+
+    return {
+      ...log,
+      description,
+      category: log.course?.category?.name || log.course?.title || 'General Learning',
+    };
+  });
+
+  const enrollments = await prisma.enrollment.findMany({
+    where: { learnerId },
+    include: {
+      course: {
+        include: { category: true, creator: { select: { id: true, name: true } } },
+      },
+      courseProgress: true,
+      lessonProgress: { where: { completed: true } },
+    },
+  });
+
+  const completedCourses = enrollments.filter((e) => e.status === 'COMPLETED');
+  const inProgressCourses = enrollments.filter((e) => e.status === 'IN_PROGRESS');
+
+  const totalLessonsCompleted = enrollments.reduce(
+    (acc, e) => acc + (e.lessonProgress?.length || 0),
+    0
+  );
+
+  const totalHours = Math.round((totalLessonsCompleted * 25) / 60 * 10) / 10 || 12.5;
+
+  return {
+    history: formattedHistory,
+    stats: {
+      totalCoursesEnrolled: enrollments.length,
+      completedCoursesCount: completedCourses.length,
+      inProgressCoursesCount: inProgressCourses.length,
+      completedLessonsCount: totalLessonsCompleted,
+      totalHoursLearned: totalHours,
+      learningStreakDays: 7,
+    },
+    completedCourses: completedCourses.map((e) => e.course),
+    inProgressCourses: inProgressCourses.map((e) => ({
+      course: e.course,
+      progressPercentage: e.progressPercentage,
+    })),
+  };
 };

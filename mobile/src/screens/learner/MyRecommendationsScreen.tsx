@@ -12,7 +12,6 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { fetchMyRecommendations } from '../../api/learner.service';
-import { Header } from '../../components/common/Header';
 
 export default function MyRecommendationsScreen({ navigation }: any) {
   const [recommendations, setRecommendations] = useState<any[]>([]);
@@ -34,20 +33,19 @@ export default function MyRecommendationsScreen({ navigation }: any) {
   useFocusEffect(useCallback(() => { loadRecommendations(); }, []));
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#4F46E5" />
 
-      <Header
-        title="My Recommendations"
-        showBack={true}
-        onBackPress={() => {
-          if (navigation?.canGoBack && navigation.canGoBack()) {
-            navigation.goBack();
-          } else {
-            navigation?.navigate('MyLearning');
-          }
-        }}
-      />
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backBtn}>
+          <Ionicons name="arrow-back" size={22} color="#fff" />
+        </TouchableOpacity>
+        <View style={{ flex: 1, marginLeft: 12 }}>
+          <Text style={styles.headerTitle}>My Recommendations</Text>
+          <Text style={styles.headerSub}>What your Skill Sharers say about you</Text>
+        </View>
+      </View>
 
       {loading ? (
         <View style={styles.loadingContainer}>
@@ -126,7 +124,7 @@ export default function MyRecommendationsScreen({ navigation }: any) {
           })}
         </ScrollView>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -154,7 +152,7 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 18, fontWeight: '700', color: '#374151' },
   emptyText: { fontSize: 14, color: '#9CA3AF', textAlign: 'center', lineHeight: 22 },
 
-  content: { flexGrow: 1, padding: 16, gap: 16, paddingBottom: 40 },
+  content: { padding: 16, gap: 16, paddingBottom: 40 },
 
   banner: {
     backgroundColor: '#FFFBEB', borderRadius: 14, padding: 16,
