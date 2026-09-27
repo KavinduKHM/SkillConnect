@@ -10,7 +10,6 @@ import adminRoutes from './routes/admin.routes.js';
 import profileRoutes from './routes/profile.routes.js';
 import qualificationRoutes from './routes/qualification.routes.js';
 import courseRoutes from './routes/course.routes.js';
-import categoryRoutes from './routes/category.routes.js';
 import learnerRoutes from './routes/learner.routes.js';
 import moduleRoutes from './routes/module.routes.js';
 import lessonRoutes from './routes/lesson.routes.js';
@@ -65,7 +64,6 @@ app.use('/api/materials', materialRoutes);
 app.use('/api/progress', progressRoutes);
 app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/courses', courseRoutes);
-app.use('/api/categories', categoryRoutes);
 app.use('/api/learner', learnerRoutes);
 app.use('/api/assessments', assessmentRoutes);
 app.use('/api/assessment', assessmentRoutes);
@@ -74,6 +72,20 @@ app.use('/api/assignment', assignmentRoutes);
 app.use('/api/certificates', certificateRoutes);
 app.use('/api/certificate', certificateRoutes);
 app.use('/api/recognition', recognitionRoutes);
+
+// Public Certificate Verification Direct Routes (e.g. http://localhost:5000/verify/:code)
+app.get('/verify/:code', (req, res) => {
+  res.redirect(`/api/certificates/verify/${encodeURIComponent(req.params.code)}`);
+});
+app.get('/verify', (req, res) => {
+  const code = req.query.code;
+  if (code) {
+    res.redirect(`/api/certificates/verify/${encodeURIComponent(code as string)}`);
+  } else {
+    res.redirect('/api/certificates/verify');
+  }
+});
+
 
 
 // Error handling

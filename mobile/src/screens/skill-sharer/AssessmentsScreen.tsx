@@ -12,10 +12,13 @@ import {
   ActivityIndicator,
   Switch,
   Platform,
+  SafeAreaView,
+  StatusBar,
+  Linking,
 } from 'react-native';
-import Toast from 'react-native-toast-message';
-import Ionicons from 'react-native-vector-icons/Ionicons';
+import { Ionicons } from '@expo/vector-icons';
 import { courseApi, quizApi } from '../../api/skill-sharer.service';
+import { COLORS } from '../../theme/colors';
 
 interface Quiz {
   id: string;
@@ -92,7 +95,7 @@ export const AssessmentsScreen = ({ navigation }: any) => {
           })
         );
         setCourses(enrichedCourses);
-        if (enrichedCourses.length > 0 && !selectedCourseId) {
+        if (enrichedCourses[0]?.id && !selectedCourseId) {
           setSelectedCourseId(enrichedCourses[0].id);
         }
       } else {
@@ -100,7 +103,7 @@ export const AssessmentsScreen = ({ navigation }: any) => {
       }
     } catch (error) {
       console.error('Error fetching courses and assessments:', error);
-      Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to load courses.' });
+      Alert.alert('Error', 'Failed to load courses.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -110,15 +113,15 @@ export const AssessmentsScreen = ({ navigation }: any) => {
   const handleOpenCreateModal = (targetCourseId?: string) => {
     setIsEditing(false);
     setCurrentQuizId(null);
-    const chosenCourseId = targetCourseId || (courses.length > 0 ? courses[0].id : '');
+    const chosenCourseId = targetCourseId || courses[0]?.id || '';
     setSelectedCourseId(chosenCourseId);
-    
+
     const matchedCourse = courses.find((c) => c.id === chosenCourseId);
-    const defaultTitle = matchedCourse ? `${matchedCourse.title} - Assessment` : 'Course Final Assessment';
-    
+    const defaultTitle = matchedCourse ? `${matchedCourse.title} - Final Assessment` : 'Course Final Assessment';
+
     setTitle(defaultTitle);
     setFormLink('');
-    setInstructions('Please answer all questions thoroughly. Ensure you submit before the deadline.');
+    setInstructions('Please answer all questions thoroughly. Ensure you submit the Google Form before the deadline to record your completion.');
     setPassingScore('80');
     setRequireForCompletion(true);
     setDueDays('7');
@@ -139,25 +142,28 @@ export const AssessmentsScreen = ({ navigation }: any) => {
   };
 
   const handleDeleteQuiz = (quiz: Quiz) => {
-    const doDelete = async () => {
-      // Optimistic Update
-      setCourses(prev => prev.map(c => ({
-        ...c,
-        assessments: c.assessments.filter(q => q.id !== quiz.id)
-      })));
-
+    const performDelete = async () => {
       try {
         await quizApi.deleteQuizLink(quiz.id);
-        Toast.show({ type: 'success', text1: 'Deleted', text2: 'Assessment removed successfully.' });
+        if (Platform.OS === 'web') {
+          window.alert('Assessment removed successfully.');
+        } else {
+          Alert.alert('Deleted', 'Assessment removed successfully.');
+        }
+        fetchCoursesAndAssessments();
       } catch (error: any) {
-        Toast.show({ type: 'error', text1: 'Error', text2: error?.response?.data?.error || 'Failed to delete assessment.' });
-        fetchCoursesAndAssessments(); // Revert on failure
+        const msg = error?.response?.data?.error || 'Failed to delete assessment.';
+        if (Platform.OS === 'web') {
+          window.alert('Error: ' + msg);
+        } else {
+          Alert.alert('Error', msg);
+        }
       }
     };
 
     if (Platform.OS === 'web') {
       if (window.confirm(`Are you sure you want to delete "${quiz.title}"? This cannot be undone.`)) {
-        doDelete();
+        performDelete();
       }
     } else {
       Alert.alert(
@@ -165,11 +171,7 @@ export const AssessmentsScreen = ({ navigation }: any) => {
         `Are you sure you want to delete "${quiz.title}"? This cannot be undone.`,
         [
           { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Delete',
-            style: 'destructive',
-            onPress: doDelete,
-          },
+          { text: 'Delete', style: 'destructive', onPress: performDelete },
         ]
       );
     }
@@ -177,17 +179,17 @@ export const AssessmentsScreen = ({ navigation }: any) => {
 
   const handleSave = async () => {
     if (!selectedCourseId) {
-      Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Please select a course for this assessment.' });
+      Alert.alert('Validation Error', 'Please select a course for this assessment.');
       return;
     }
 
     if (!formLink.trim()) {
-      Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Google Form link is required.' });
+      Alert.alert('Validation Error', 'Google Form link is required.');
       return;
     }
 
     if (!formLink.startsWith('http://') && !formLink.startsWith('https://')) {
-      Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Google Form link must start with https:// or http://' });
+      Alert.alert('Validation Error', 'Google Form link must start with https:// or http://');
       return;
     }
 
@@ -209,38 +211,76 @@ export const AssessmentsScreen = ({ navigation }: any) => {
 
       if (isEditing && currentQuizId) {
         await quizApi.updateQuizLink(currentQuizId, payload);
-        Toast.show({ type: 'success', text1: 'Success', text2: 'Assessment updated successfully!' });
+        if (Platform.OS === 'web') {
+          window.alert('Assessment updated successfully!');
+        } else {
+          Alert.alert('Success', 'Assessment updated successfully!');
+        }
       } else {
         await quizApi.createQuizLink(payload);
-        Toast.show({ type: 'success', text1: 'Success', text2: 'New assessment created successfully!' });
+        if (Platform.OS === 'web') {
+          window.alert('New assessment created successfully!');
+        } else {
+          Alert.alert('Success', 'New assessment created successfully!');
+        }
       }
 
       setModalVisible(false);
       fetchCoursesAndAssessments();
     } catch (error: any) {
       console.error('Error saving assessment:', error);
-      Toast.show({ type: 'error', text1: 'Error', text2: error?.response?.data?.error || error?.message || 'Failed to save assessment' });
+      const msg = error?.response?.data?.error || error?.message || 'Failed to save assessment';
+      if (Platform.OS === 'web') {
+        window.alert('Error: ' + msg);
+      } else {
+        Alert.alert('Error', msg);
+      }
     } finally {
       setIsSaving(false);
     }
   };
 
+  const handlePreviewLink = async (url: string) => {
+    try {
+      if (!url) return;
+      const canOpen = await Linking.canOpenURL(url);
+      if (canOpen) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert('Notice', 'Cannot open the form URL directly.');
+      }
+    } catch (e) {
+      Alert.alert('Notice', 'Could not open link.');
+    }
+  };
+
+  const totalAssessmentsCount = courses.reduce((acc, c) => acc + (c.assessments?.length || 0), 0);
+
   const renderCourseCard = ({ item }: { item: CourseWithQuizzes }) => (
     <View style={styles.courseCard}>
       {/* Course Header */}
       <View style={styles.courseCardHeader}>
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, paddingRight: 8 }}>
+          <View style={styles.courseBadgeRow}>
+            <View style={styles.coursePill}>
+              <Text style={styles.coursePillText}>COURSE</Text>
+            </View>
+            <View style={styles.countPill}>
+              <Text style={styles.countPillText}>
+                {item.assessments.length} {item.assessments.length === 1 ? 'Assessment' : 'Assessments'}
+              </Text>
+            </View>
+          </View>
           <Text style={styles.courseCardTitle}>{item.title}</Text>
-          <Text style={styles.courseCardCount}>
-            {item.assessments.length} {item.assessments.length === 1 ? 'Assessment' : 'Assessments'} attached
-          </Text>
         </View>
+
         <TouchableOpacity
-          style={styles.addAssessmentMiniBtn}
+          style={styles.addMiniBtn}
           onPress={() => handleOpenCreateModal(item.id)}
+          activeOpacity={0.8}
         >
-          <Ionicons name="add-circle" size={16} color="#4F46E5" />
-          <Text style={styles.addAssessmentMiniBtnText}>New</Text>
+          <Ionicons name="add" size={16} color={COLORS.primary} />
+          <Text style={styles.addMiniBtnText}>Add Form</Text>
         </TouchableOpacity>
       </View>
 
@@ -249,15 +289,35 @@ export const AssessmentsScreen = ({ navigation }: any) => {
         <View style={styles.quizList}>
           {item.assessments.map((quiz, index) => (
             <View key={quiz.id || String(index)} style={styles.quizItem}>
+              {/* Item Top Row */}
               <View style={styles.quizHeader}>
+                <View style={styles.quizIconBubble}>
+                  <Text style={{ fontSize: 16 }}>📋</Text>
+                </View>
+
                 <View style={{ flex: 1, marginRight: 8 }}>
                   <Text style={styles.quizTitle}>{quiz.title}</Text>
                   <View style={styles.badgeRow}>
-                    <View style={[styles.requirementBadge, { backgroundColor: quiz.requireForCompletion ? '#DEF7EC' : '#F3F4F6' }]}>
-                      <Text style={[styles.requirementBadgeText, { color: quiz.requireForCompletion ? '#03543F' : '#6B7280' }]}>
-                        {quiz.requireForCompletion ? 'Mandatory' : 'Optional'}
+                    <View
+                      style={[
+                        styles.requirementBadge,
+                        {
+                          backgroundColor: quiz.requireForCompletion ? COLORS.badgeGreenBg : COLORS.surfaceMuted,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.requirementBadgeText,
+                          {
+                            color: quiz.requireForCompletion ? COLORS.badgeGreenText : COLORS.neutralMedium,
+                          },
+                        ]}
+                      >
+                        {quiz.requireForCompletion ? '✓ Mandatory' : 'Optional Practice'}
                       </Text>
                     </View>
+
                     {quiz.passingScore !== null && quiz.passingScore !== undefined && (
                       <View style={styles.scoreBadge}>
                         <Text style={styles.scoreBadgeText}>Min {quiz.passingScore}%</Text>
@@ -271,41 +331,59 @@ export const AssessmentsScreen = ({ navigation }: any) => {
                   <TouchableOpacity
                     style={styles.iconBtn}
                     onPress={() => handleOpenEditModal(item.id, quiz)}
+                    activeOpacity={0.7}
                   >
-                    <Ionicons name="create-outline" size={18} color="#4F46E5" />
+                    <Ionicons name="pencil-outline" size={16} color={COLORS.primary} />
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.iconBtn, { marginLeft: 6 }]}
+                    style={[styles.iconBtn, styles.deleteBtn]}
                     onPress={() => handleDeleteQuiz(quiz)}
+                    activeOpacity={0.7}
                   >
-                    <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                    <Ionicons name="trash-outline" size={16} color={COLORS.error} />
                   </TouchableOpacity>
                 </View>
               </View>
 
-              {/* Form Link */}
-              <View style={styles.quizLinkBox}>
-                <Ionicons name="logo-google" size={14} color="#EA4335" style={{ marginRight: 6 }} />
-                <Text style={styles.quizLinkText} numberOfLines={1}>{quiz.url}</Text>
-              </View>
+              {/* Form Link Pill */}
+              <TouchableOpacity
+                style={styles.quizLinkBox}
+                onPress={() => handlePreviewLink(quiz.url)}
+                activeOpacity={0.8}
+              >
+                <View style={styles.googleIconWrapper}>
+                  <Ionicons name="logo-google" size={12} color="#EA4335" />
+                </View>
+                <Text style={styles.quizLinkText} numberOfLines={1}>
+                  {quiz.url}
+                </Text>
+                <Ionicons name="open-outline" size={14} color={COLORS.neutralMedium} style={{ marginLeft: 6 }} />
+              </TouchableOpacity>
 
               {/* Instructions preview */}
               {quiz.instructions ? (
-                <Text style={styles.quizInstructions} numberOfLines={2}>
-                  "{quiz.instructions}"
-                </Text>
+                <View style={styles.instructionsContainer}>
+                  <Text style={styles.instructionsLabel}>Instructions:</Text>
+                  <Text style={styles.quizInstructions} numberOfLines={2}>
+                    {quiz.instructions}
+                  </Text>
+                </View>
               ) : null}
             </View>
           ))}
         </View>
       ) : (
         <View style={styles.noQuizzesBox}>
-          <Text style={styles.noQuizzesText}>No assessments created for this course yet.</Text>
+          <Text style={styles.noQuizzesTitle}>No assessments added yet</Text>
+          <Text style={styles.noQuizzesText}>
+            Attach a Google Form assessment to evaluate learners for course completion.
+          </Text>
           <TouchableOpacity
             style={styles.createFirstBtn}
             onPress={() => handleOpenCreateModal(item.id)}
+            activeOpacity={0.85}
           >
-            <Text style={styles.createFirstBtnText}>+ Create Assessment</Text>
+            <Text style={styles.createFirstBtnText}>+ Attach Google Form</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -313,32 +391,53 @@ export const AssessmentsScreen = ({ navigation }: any) => {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.bgWarm} />
+
       {/* Top Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#111827" />
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation?.goBack()} activeOpacity={0.8}>
+          <Ionicons name="arrow-back" size={20} color={COLORS.neutralDark} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Course Assessments</Text>
+
+        <View style={{ flex: 1, marginLeft: 12 }}>
+          <Text style={styles.headerTitle}>Course Assessments</Text>
+          <Text style={styles.headerSubtitle}>Google Forms & Completion Rules</Text>
+        </View>
+
         <TouchableOpacity
           style={styles.headerCreateBtn}
           onPress={() => handleOpenCreateModal()}
+          activeOpacity={0.85}
         >
-          <Ionicons name="add" size={20} color="#FFF" />
+          <Ionicons name="add" size={18} color={COLORS.white} />
           <Text style={styles.headerCreateBtnText}>Create</Text>
         </TouchableOpacity>
+      </View>
+
+      {/* Quick Summary Pill Bar */}
+      <View style={styles.summaryBar}>
+        <View style={styles.summaryChip}>
+          <Text style={styles.summaryChipIcon}>📋</Text>
+          <Text style={styles.summaryChipText}>
+            <Text style={{ fontWeight: '800', color: COLORS.neutralDark }}>{totalAssessmentsCount}</Text> Forms Active
+          </Text>
+        </View>
       </View>
 
       {/* Main List */}
       {loading && !refreshing ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#4F46E5" />
-          <Text style={{ marginTop: 12, color: '#6B7280' }}>Loading assessments...</Text>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={{ marginTop: 12, color: COLORS.neutralMedium, fontWeight: '600', fontSize: 13 }}>
+            Loading course assessments...
+          </Text>
         </View>
       ) : (
         <FlatList
           data={courses}
           keyExtractor={(item) => item.id}
+          style={styles.flatList}
           contentContainerStyle={styles.listContainer}
           renderItem={renderCourseCard}
           refreshing={refreshing}
@@ -348,12 +447,17 @@ export const AssessmentsScreen = ({ navigation }: any) => {
           }}
           ListEmptyComponent={
             <View style={styles.emptyState}>
-              <Ionicons name="school-outline" size={54} color="#9CA3AF" />
+              <View style={styles.emptyIconCircle}>
+                <Ionicons name="document-text-outline" size={36} color={COLORS.primary} />
+              </View>
               <Text style={styles.emptyTitle}>No Courses Found</Text>
-              <Text style={styles.emptySub}>Create your first course to start attaching Google Forms assessments.</Text>
+              <Text style={styles.emptySub}>
+                Create your first course to attach Google Form assessments and establish completion requirements.
+              </Text>
               <TouchableOpacity
                 style={styles.createCourseBtn}
-                onPress={() => navigation.navigate('CourseCreator')}
+                onPress={() => navigation?.navigate('CourseCreator')}
+                activeOpacity={0.85}
               >
                 <Text style={styles.createCourseBtnText}>Create a Course</Text>
               </TouchableOpacity>
@@ -371,22 +475,29 @@ export const AssessmentsScreen = ({ navigation }: any) => {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
+            {/* Modal Pull Bar */}
+            <View style={styles.modalHandle} />
+
             {/* Modal Header */}
             <View style={styles.modalHeader}>
-              <View>
-                <Text style={styles.modalTitle}>{isEditing ? 'Edit Assessment' : 'Create New Assessment'}</Text>
-                <Text style={styles.modalSub}>Attach a Google Form quiz with completion requirements</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.modalTitle}>{isEditing ? 'Edit Assessment' : 'New Assessment'}</Text>
+                <Text style={styles.modalSub}>Link a Google Form quiz to evaluate learner completion</Text>
               </View>
-              <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeBtn}>
-                <Ionicons name="close" size={24} color="#374151" />
+              <TouchableOpacity
+                onPress={() => setModalVisible(false)}
+                style={styles.closeBtn}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="close" size={20} color={COLORS.neutralDark} />
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
-              {/* 1. Course Selector (if multiple courses exist) */}
+            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
+              {/* 1. Course Selector */}
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Select Course *</Text>
-                <View style={styles.courseSelectGrid}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.courseSelectRow}>
                   {courses.map((c) => {
                     const isSelected = selectedCourseId === c.id;
                     return (
@@ -394,14 +505,18 @@ export const AssessmentsScreen = ({ navigation }: any) => {
                         key={c.id}
                         style={[styles.courseChip, isSelected && styles.courseChipActive]}
                         onPress={() => setSelectedCourseId(c.id)}
+                        activeOpacity={0.8}
                       >
-                        <Text style={[styles.courseChipText, isSelected && styles.courseChipTextActive]} numberOfLines={1}>
+                        <Text
+                          style={[styles.courseChipText, isSelected && styles.courseChipTextActive]}
+                          numberOfLines={1}
+                        >
                           {c.title}
                         </Text>
                       </TouchableOpacity>
                     );
                   })}
-                </View>
+                </ScrollView>
               </View>
 
               {/* 2. Assessment Title */}
@@ -409,7 +524,8 @@ export const AssessmentsScreen = ({ navigation }: any) => {
                 <Text style={styles.label}>Assessment Title *</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="e.g. Module 1 Quiz / Final Assessment"
+                  placeholder="e.g. Full-Stack Bootcamp - Final Assessment"
+                  placeholderTextColor={COLORS.neutralLight}
                   value={title}
                   onChangeText={setTitle}
                 />
@@ -418,31 +534,37 @@ export const AssessmentsScreen = ({ navigation }: any) => {
               {/* 3. Google Form Link */}
               <View style={styles.inputGroup}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                  <Ionicons name="logo-google" size={16} color="#EA4335" style={{ marginRight: 6 }} />
-                  <Text style={styles.label}>Google Form Link *</Text>
+                  <View style={styles.googleMiniIcon}>
+                    <Ionicons name="logo-google" size={13} color="#EA4335" />
+                  </View>
+                  <Text style={styles.label}>Google Form URL *</Text>
                 </View>
                 <TextInput
                   style={styles.input}
                   placeholder="https://docs.google.com/forms/d/e/.../viewform"
+                  placeholderTextColor={COLORS.neutralLight}
                   value={formLink}
                   onChangeText={setFormLink}
                   autoCapitalize="none"
                   autoCorrect={false}
                 />
-                <Text style={styles.helperText}>Provide the public viewform link for your Google Form.</Text>
+                <Text style={styles.helperText}>
+                  💡 Paste the public "viewform" link created on Google Forms.
+                </Text>
               </View>
 
-              {/* 4. Assessment Requirements */}
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionHeaderTitle}>Requirements & Settings</Text>
+              {/* 4. Requirements & Settings */}
+              <View style={styles.sectionDivider}>
+                <Text style={styles.sectionDividerText}>Settings & Completion Criteria</Text>
               </View>
 
               <View style={styles.rowInputs}>
-                <View style={[styles.inputGroup, { flex: 1, marginRight: 12 }]}>
-                  <Text style={styles.label}>Min Passing Score (%)</Text>
+                <View style={[styles.inputGroup, { flex: 1, marginRight: 10 }]}>
+                  <Text style={styles.label}>Passing Score (%)</Text>
                   <TextInput
                     style={styles.input}
                     placeholder="80"
+                    placeholderTextColor={COLORS.neutralLight}
                     value={passingScore}
                     onChangeText={setPassingScore}
                     keyboardType="numeric"
@@ -454,6 +576,7 @@ export const AssessmentsScreen = ({ navigation }: any) => {
                   <TextInput
                     style={styles.input}
                     placeholder="7"
+                    placeholderTextColor={COLORS.neutralLight}
                     value={dueDays}
                     onChangeText={setDueDays}
                     keyboardType="numeric"
@@ -461,28 +584,31 @@ export const AssessmentsScreen = ({ navigation }: any) => {
                 </View>
               </View>
 
-              <View style={styles.switchRow}>
+              <View style={styles.switchCard}>
                 <View style={{ flex: 1, marginRight: 12 }}>
-                  <Text style={styles.switchLabel}>Mandatory for Course Completion</Text>
-                  <Text style={styles.switchSublabel}>Learners must pass this assessment to earn their completion certificate.</Text>
+                  <Text style={styles.switchLabel}>Required for E-Certificate</Text>
+                  <Text style={styles.switchSublabel}>
+                    Learners must submit this assessment to satisfy course completion rules.
+                  </Text>
                 </View>
                 <Switch
                   value={requireForCompletion}
                   onValueChange={setRequireForCompletion}
-                  trackColor={{ false: '#D1D5DB', true: '#818CF8' }}
-                  thumbColor={requireForCompletion ? '#4F46E5' : '#F3F4F6'}
+                  trackColor={{ false: COLORS.borderSubtle, true: '#FC9174' }}
+                  thumbColor={requireForCompletion ? COLORS.primaryDark : COLORS.white}
                 />
               </View>
 
               {/* 5. Instructions */}
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionHeaderTitle}>Instructions for Learners</Text>
+              <View style={styles.sectionDivider}>
+                <Text style={styles.sectionDividerText}>Learner Instructions</Text>
               </View>
 
               <View style={styles.inputGroup}>
                 <TextInput
                   style={[styles.input, styles.textArea]}
-                  placeholder="Provide instructions for learners taking this assessment..."
+                  placeholder="Provide instructions, hints, or requirements for learners taking this assessment..."
+                  placeholderTextColor={COLORS.neutralLight}
                   value={instructions}
                   onChangeText={setInstructions}
                   multiline
@@ -491,19 +617,26 @@ export const AssessmentsScreen = ({ navigation }: any) => {
                 />
               </View>
 
-              {/* Submit Button */}
-              <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={isSaving}>
+              {/* Save Button */}
+              <TouchableOpacity
+                style={styles.saveBtn}
+                onPress={handleSave}
+                disabled={isSaving}
+                activeOpacity={0.9}
+              >
                 {isSaving ? (
-                  <ActivityIndicator color="#FFF" />
+                  <ActivityIndicator color={COLORS.white} />
                 ) : (
-                  <Text style={styles.saveBtnText}>{isEditing ? 'Save Changes' : 'Create Assessment'}</Text>
+                  <Text style={styles.saveBtnText}>
+                    {isEditing ? 'Save Changes' : 'Publish Assessment →'}
+                  </Text>
                 )}
               </TouchableOpacity>
             </ScrollView>
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -512,372 +645,569 @@ export default AssessmentsScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: COLORS.bgWarm,
+    ...Platform.select({
+      web: {
+        height: '100vh' as any,
+        maxHeight: '100vh' as any,
+        overflow: 'hidden' as any,
+      },
+    }),
+  },
+  flatList: {
+    flex: 1,
+    ...Platform.select({
+      web: {
+        overflowY: 'auto' as any,
+        WebkitOverflowScrolling: 'touch' as any,
+      },
+    }),
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 24,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    paddingTop: 50,
-    backgroundColor: '#FFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    paddingHorizontal: 18,
+    paddingTop: 12,
+    paddingBottom: 10,
+    backgroundColor: COLORS.bgWarm,
   },
   backBtn: {
-    padding: 6,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.borderSubtle,
+    elevation: 2,
+    shadowColor: COLORS.shadowColor,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#111827',
+    fontWeight: '800',
+    color: COLORS.neutralDark,
+    letterSpacing: -0.3,
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    color: COLORS.neutralMedium,
+    fontWeight: '500',
+    marginTop: 1,
   },
   headerCreateBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#4F46E5',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
+    backgroundColor: COLORS.primaryDark,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 20,
+    elevation: 2,
+    shadowColor: COLORS.primaryDark,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   headerCreateBtnText: {
-    color: '#FFF',
-    fontWeight: '600',
-    fontSize: 13,
-    marginLeft: 4,
+    color: COLORS.white,
+    fontWeight: '800',
+    fontSize: 12,
+    marginLeft: 3,
   },
+
+  // Summary Pill Bar
+  summaryBar: {
+    flexDirection: 'row',
+    paddingHorizontal: 18,
+    gap: 10,
+    marginBottom: 12,
+  },
+  summaryChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.white,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: COLORS.borderWarm,
+  },
+  summaryChipIcon: {
+    fontSize: 12,
+    marginRight: 6,
+  },
+  summaryChipText: {
+    fontSize: 12,
+    color: COLORS.neutralMedium,
+    fontWeight: '600',
+  },
+
   listContainer: {
-    padding: 16,
+    paddingHorizontal: 18,
+    paddingBottom: 40,
     gap: 16,
   },
+
+  // Course Card
   courseCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 16,
+    backgroundColor: COLORS.surfaceCard,
+    borderRadius: 22,
     padding: 18,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
+    borderColor: COLORS.borderSubtle,
     elevation: 2,
+    shadowColor: COLORS.shadowColor,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
   },
   courseCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 14,
+  },
+  courseBadgeRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-    marginBottom: 12,
+    gap: 6,
+    marginBottom: 4,
+  },
+  coursePill: {
+    backgroundColor: COLORS.badgeOrangeBg,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  coursePillText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: COLORS.primary,
+    letterSpacing: 0.5,
+  },
+  countPill: {
+    backgroundColor: COLORS.honeyBg,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  countPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.honeyText,
   },
   courseCardTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#111827',
+    fontWeight: '800',
+    color: COLORS.neutralDark,
+    letterSpacing: -0.2,
   },
-  courseCardCount: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginTop: 2,
-  },
-  addAssessmentMiniBtn: {
+  addMiniBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#EEF2FF',
-    paddingHorizontal: 10,
+    backgroundColor: COLORS.badgeOrangeBg,
+    paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#C7D2FE',
+    borderColor: COLORS.borderWarm,
   },
-  addAssessmentMiniBtnText: {
+  addMiniBtnText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#4F46E5',
-    marginLeft: 4,
+    color: COLORS.primary,
+    marginLeft: 3,
   },
+
+  // Assessments List Inside Card
   quizList: {
     gap: 12,
   },
   quizItem: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
+    backgroundColor: COLORS.cardBgSoft,
+    borderRadius: 16,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: COLORS.borderWarm,
   },
   quizHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 8,
+    marginBottom: 10,
+  },
+  quizIconBubble: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: COLORS.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: COLORS.borderWarm,
   },
   quizTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#1F2937',
+    fontSize: 14,
+    fontWeight: '800',
+    color: COLORS.neutralDark,
+    marginBottom: 4,
   },
   badgeRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginTop: 4,
+    flexWrap: 'wrap',
   },
   requirementBadge: {
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 6,
+    borderRadius: 8,
   },
   requirementBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 10,
+    fontWeight: '800',
   },
   scoreBadge: {
-    backgroundColor: '#FEF3C7',
+    backgroundColor: COLORS.honeyBg,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 6,
+    borderRadius: 8,
   },
   scoreBadgeText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
-    color: '#92400E',
+    color: COLORS.honeyText,
   },
   actionButtons: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   iconBtn: {
-    padding: 6,
-    backgroundColor: '#FFF',
-    borderRadius: 8,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: COLORS.white,
+    justifyContent: 'center',
+    alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: COLORS.borderWarm,
   },
+  deleteBtn: {
+    marginLeft: 6,
+    backgroundColor: COLORS.errorBg,
+    borderColor: '#FFDAD6',
+  },
+
+  // Google Form Link Preview Box
   quizLinkBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
+    backgroundColor: COLORS.white,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    marginBottom: 6,
+    borderColor: COLORS.borderWarm,
+    marginBottom: 8,
+  },
+  googleIconWrapper: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#FDEAE5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
   },
   quizLinkText: {
-    fontSize: 12,
-    color: '#4F46E5',
-    fontWeight: '500',
     flex: 1,
+    fontSize: 12,
+    color: COLORS.primaryDark,
+    fontWeight: '600',
+  },
+
+  instructionsContainer: {
+    marginTop: 2,
+    paddingLeft: 4,
+  },
+  instructionsLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.neutralLight,
+    marginBottom: 1,
   },
   quizInstructions: {
     fontSize: 12,
-    color: '#6B7280',
-    fontStyle: 'italic',
-    lineHeight: 16,
+    color: COLORS.neutralMedium,
+    lineHeight: 17,
   },
+
+  // No Quizzes in Course
   noQuizzesBox: {
-    paddingVertical: 18,
+    backgroundColor: COLORS.cardBgSoft,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: COLORS.borderWarm,
+    borderStyle: 'dashed',
     alignItems: 'center',
-    justifyContent: 'center',
+  },
+  noQuizzesTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: COLORS.neutralDark,
+    marginBottom: 3,
   },
   noQuizzesText: {
-    fontSize: 13,
-    color: '#9CA3AF',
-    marginBottom: 10,
+    fontSize: 12,
+    color: COLORS.neutralMedium,
+    textAlign: 'center',
+    marginBottom: 12,
+    lineHeight: 17,
   },
   createFirstBtn: {
-    backgroundColor: '#EEF2FF',
-    paddingHorizontal: 14,
+    backgroundColor: COLORS.primaryDark,
+    paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#C7D2FE',
+    borderRadius: 16,
   },
   createFirstBtnText: {
-    color: '#4F46E5',
-    fontWeight: '700',
-    fontSize: 13,
+    fontSize: 12,
+    fontWeight: '800',
+    color: COLORS.white,
   },
+
+  // Empty Global State
   emptyState: {
+    backgroundColor: COLORS.white,
+    borderRadius: 24,
+    padding: 28,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.borderSubtle,
+    marginTop: 20,
+  },
+  emptyIconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: COLORS.badgeOrangeBg,
     justifyContent: 'center',
-    paddingVertical: 60,
+    alignItems: 'center',
+    marginBottom: 16,
   },
   emptyTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#374151',
-    marginTop: 14,
+    fontWeight: '800',
+    color: COLORS.neutralDark,
+    marginBottom: 6,
   },
   emptySub: {
     fontSize: 13,
-    color: '#9CA3AF',
+    color: COLORS.neutralMedium,
     textAlign: 'center',
-    marginHorizontal: 30,
-    marginTop: 6,
-    marginBottom: 18,
+    lineHeight: 19,
+    marginBottom: 20,
   },
   createCourseBtn: {
-    backgroundColor: '#4F46E5',
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 10,
+    backgroundColor: COLORS.primaryDark,
+    paddingHorizontal: 22,
+    paddingVertical: 12,
+    borderRadius: 22,
   },
   createCourseBtnText: {
-    color: '#FFF',
-    fontWeight: 'bold',
+    color: COLORS.white,
+    fontWeight: '800',
     fontSize: 14,
   },
+
   // Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(35, 25, 23, 0.45)',
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#FFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    backgroundColor: COLORS.white,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     maxHeight: '92%',
-    padding: 22,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    elevation: 8,
+    shadowColor: COLORS.neutralDark,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+  },
+  modalHandle: {
+    width: 44,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: COLORS.borderSubtle,
+    alignSelf: 'center',
+    marginBottom: 14,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
   },
   modalTitle: {
-    fontSize: 19,
-    fontWeight: 'bold',
-    color: '#111827',
+    fontSize: 20,
+    fontWeight: '800',
+    color: COLORS.neutralDark,
+    letterSpacing: -0.3,
   },
   modalSub: {
     fontSize: 12,
-    color: '#6B7280',
+    color: COLORS.neutralMedium,
     marginTop: 2,
   },
   closeBtn: {
-    padding: 4,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: COLORS.surfaceMuted,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   modalBody: {
-    marginBottom: 20,
+    paddingBottom: 20,
   },
-  courseSelectGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 4,
-  },
-  courseChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: '#F3F4F6',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  courseChipActive: {
-    backgroundColor: '#EEF2FF',
-    borderColor: '#4F46E5',
-  },
-  courseChipText: {
-    fontSize: 13,
-    color: '#4B5563',
-    fontWeight: '500',
-  },
-  courseChipTextActive: {
-    color: '#4F46E5',
-    fontWeight: '700',
-  },
+
+  // Inputs
   inputGroup: {
     marginBottom: 14,
   },
   label: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#374151',
+    fontWeight: '700',
+    color: COLORS.neutralDark,
     marginBottom: 6,
+  },
+  input: {
+    backgroundColor: COLORS.surfaceMuted,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: COLORS.neutralDark,
+    borderWidth: 1,
+    borderColor: COLORS.borderSubtle,
+  },
+  textArea: {
+    minHeight: 88,
+    textAlignVertical: 'top',
   },
   helperText: {
     fontSize: 11,
-    color: '#6B7280',
+    color: COLORS.neutralMedium,
+    marginTop: 4,
+    paddingLeft: 2,
+  },
+  googleMiniIcon: {
+    marginRight: 6,
+  },
+
+  // Course Selector Horizontal Chips
+  courseSelectRow: {
+    gap: 8,
+    paddingVertical: 2,
+  },
+  courseChip: {
+    backgroundColor: COLORS.surfaceMuted,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: COLORS.borderSubtle,
+    maxWidth: 240,
+  },
+  courseChipActive: {
+    backgroundColor: COLORS.primaryDark,
+    borderColor: COLORS.primaryDark,
+  },
+  courseChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.neutralDark,
+  },
+  courseChipTextActive: {
+    color: COLORS.white,
+  },
+
+  // Section Dividers in Modal
+  sectionDivider: {
+    borderTopWidth: 1,
+    borderTopColor: COLORS.borderWarm,
+    paddingTop: 12,
+    marginBottom: 12,
     marginTop: 4,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: '#1F2937',
-    backgroundColor: '#F9FAFB',
-  },
-  textArea: {
-    height: 85,
-  },
-  sectionHeader: {
-    marginTop: 10,
-    marginBottom: 10,
-    paddingBottom: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  sectionHeaderTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#4F46E5',
+  sectionDividerText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: COLORS.primary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   rowInputs: {
     flexDirection: 'row',
   },
-  switchRow: {
+
+  // Switch Card
+  switchCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: COLORS.cardBgSoft,
+    padding: 14,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 10,
-    padding: 12,
+    borderColor: COLORS.borderWarm,
     marginBottom: 14,
   },
   switchLabel: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#1F2937',
+    fontWeight: '800',
+    color: COLORS.neutralDark,
+    marginBottom: 2,
   },
   switchSublabel: {
     fontSize: 11,
-    color: '#6B7280',
-    marginTop: 2,
+    color: COLORS.neutralMedium,
+    lineHeight: 16,
   },
+
+  // Save Button
   saveBtn: {
-    backgroundColor: '#4F46E5',
-    paddingVertical: 14,
-    borderRadius: 10,
+    backgroundColor: COLORS.primaryDark,
+    paddingVertical: 15,
+    borderRadius: 24,
     alignItems: 'center',
-    marginTop: 8,
-    marginBottom: 35,
+    justifyContent: 'center',
+    marginTop: 10,
+    elevation: 3,
+    shadowColor: COLORS.primaryDark,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
   },
   saveBtnText: {
-    color: '#FFF',
-    fontWeight: 'bold',
-    fontSize: 16,
+    color: COLORS.white,
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 0.2,
   },
 });
