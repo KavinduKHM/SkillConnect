@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -9,7 +9,9 @@ import {
   SafeAreaView,
   StatusBar,
   Image,
+  RefreshControl,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fetchCourses, fetchMyLearning, fetchLearnerNotifications } from '../../api/learner.service';
 import { NotificationModal } from '../../components/common/NotificationModal';
@@ -23,6 +25,7 @@ export default function HomeScreen({ navigation }: any) {
   const [selectedCategory, setSelectedCategory] = useState('Technology');
   const [notiModalVisible, setNotiModalVisible] = useState(false);
   const [unreadNotiCount, setUnreadNotiCount] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
 
   const loadHomeData = async () => {
     try {
@@ -47,14 +50,27 @@ export default function HomeScreen({ navigation }: any) {
       }
     } catch (err) {
       console.log('Error loading home data:', err);
+    } finally {
+      setRefreshing(false);
     }
   };
+
+  useFocusEffect(
+    useCallback(() => {
+      loadHomeData();
+    }, [])
+  );
 
   useEffect(() => {
     loadHomeData();
   }, []);
 
-  const continueItem = inProgress[0] || {
+  const continueItem = inProgress[0] || (courses[0] ? {
+    id: courses[0].id,
+    courseId: courses[0].id,
+    course: courses[0],
+    courseProgress: { completedLessons: 0, totalLessons: courses[0].estimatedHours || 10, progressPercentage: 0 },
+  } : {
     id: 'e1',
     courseId: 'c1',
     course: {
@@ -63,7 +79,7 @@ export default function HomeScreen({ navigation }: any) {
       thumbnail: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=600&q=80',
     },
     courseProgress: { completedLessons: 16, totalLessons: 20, progressPercentage: 80 },
-  };
+  });
 
   const recommendedCourses = courses.length > 0
     ? courses.map((c, idx) => ({
@@ -98,7 +114,20 @@ export default function HomeScreen({ navigation }: any) {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.bgWarm} />
 
-      <ScrollView style={styles.scrollContent} contentContainerStyle={{ paddingBottom: 40 }}>
+      <ScrollView
+        style={styles.scrollContent}
+        contentContainerStyle={{ paddingBottom: 40 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              loadHomeData();
+            }}
+            tintColor={COLORS.primary}
+          />
+        }
+      >
         <View style={styles.contentPadding}>
           {/* Top Header Row (Matching image.png) */}
           <View style={styles.headerRow}>
