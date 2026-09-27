@@ -24,6 +24,15 @@ export const COLORS = {
   badgeOrangeText: '#D95D39',
   starYellow: '#E5A93C',
 
+  // Semantic Design System Tokens (DESIGN.md - Sunlit Hearth Microlearning)
+  surfaceCard: '#FFFDF9',     // Soft Ivory card surface
+  surfaceMuted: '#F3ECE2',    // Warm Oat Cream input & secondary surface
+  borderSubtle: '#EADBCE',    // Terracotta-tinted Sand Line
+  honeyBg: '#FEF8EC',         // Pale honey accent container
+  honeyText: '#9C6A08',       // Rich amber honey text
+  error: '#BA1A1A',           // Vibrant error
+  errorBg: '#FFDAD6',         // Soft error tint
+
   // UI Utilities
   white: '#FFFFFF',
   shadowColor: 'rgba(43, 33, 30, 0.08)',

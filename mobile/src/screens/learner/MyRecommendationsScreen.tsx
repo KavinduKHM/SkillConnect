@@ -8,10 +8,12 @@ import {
   StatusBar,
   TouchableOpacity,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { fetchMyRecommendations } from '../../api/learner.service';
+import { COLORS } from '../../theme/colors';
 
 export default function MyRecommendationsScreen({ navigation }: any) {
   const [recommendations, setRecommendations] = useState<any[]>([]);
@@ -20,9 +22,9 @@ export default function MyRecommendationsScreen({ navigation }: any) {
   const loadRecommendations = async () => {
     try {
       setLoading(true);
-      const res = await fetchMyRecommendations();
+      const res: any = await fetchMyRecommendations();
       const data = res?.data || res?.recommendations || (Array.isArray(res) ? res : []);
-      setRecommendations(data);
+      setRecommendations(Array.isArray(data) ? data : []);
     } catch (err) {
       console.log('Failed to load recommendations', err);
     } finally {
@@ -30,94 +32,127 @@ export default function MyRecommendationsScreen({ navigation }: any) {
     }
   };
 
-  useFocusEffect(useCallback(() => { loadRecommendations(); }, []));
+  useFocusEffect(
+    useCallback(() => {
+      loadRecommendations();
+    }, [])
+  );
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#4F46E5" />
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.bgWarm} />
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={22} color="#fff" />
+        <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backBtn} activeOpacity={0.8}>
+          <Ionicons name="arrow-back" size={20} color={COLORS.neutralDark} />
         </TouchableOpacity>
         <View style={{ flex: 1, marginLeft: 12 }}>
           <Text style={styles.headerTitle}>My Recommendations</Text>
-          <Text style={styles.headerSub}>What your Skill Sharers say about you</Text>
+          <Text style={styles.headerSub}>Endorsements from your Skill Sharers</Text>
         </View>
       </View>
 
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#4F46E5" />
+          <ActivityIndicator size="large" color={COLORS.primary} />
           <Text style={styles.loadingText}>Loading recommendations...</Text>
         </View>
       ) : recommendations.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Ionicons name="ribbon-outline" size={64} color="#D1D5DB" />
-          <Text style={styles.emptyTitle}>No Recommendations Yet</Text>
+          <View style={styles.emptyIconCircle}>
+            <Ionicons name="ribbon-outline" size={40} color={COLORS.primary} />
+          </View>
+          <Text style={styles.emptyTitle}>No Endorsements Yet</Text>
           <Text style={styles.emptyText}>
-            Complete a course and your Skill Sharer may write a recommendation highlighting your performance.
+            Complete your courses with distinction, and your Skill Sharers can write verified endorsements highlighting your skills to future employers.
           </Text>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={styles.content}>
-          {/* Banner */}
+        <ScrollView
+          style={styles.scrollArea}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Trophy Banner */}
           <View style={styles.banner}>
-            <Ionicons name="trophy" size={28} color="#F59E0B" />
+            <View style={styles.bannerIconCircle}>
+              <Ionicons name="trophy" size={22} color={COLORS.honeyText} />
+            </View>
             <View style={{ flex: 1, marginLeft: 12 }}>
-              <Text style={styles.bannerTitle}>You have {recommendations.length} recommendation{recommendations.length !== 1 ? 's' : ''}!</Text>
-              <Text style={styles.bannerSub}>These are visible to potential employers.</Text>
+              <Text style={styles.bannerTitle}>
+                {recommendations.length} Verified Endorsement{recommendations.length !== 1 ? 's' : ''}
+              </Text>
+              <Text style={styles.bannerSub}>
+                These recommendations are visible on your profile and shareable with potential employers.
+              </Text>
             </View>
           </View>
 
           {recommendations.map((rec: any) => {
-            const instructorName = rec.instructor?.name || rec.skillSharer?.name || rec.recommender?.name || 'Skill Sharer';
+            const instructorName =
+              rec.instructor?.name || rec.skillSharer?.name || rec.recommender?.name || 'Skill Sharer';
             const instructorTitle = rec.instructor?.profile?.headline || rec.skillSharer?.profile?.headline || '';
             const courseName = rec.course?.title || '';
-            const recDate = rec.createdAt ? new Date(rec.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }) : '';
+            const recDate = rec.createdAt
+              ? new Date(rec.createdAt).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric',
+                })
+              : '';
             const isPublic = rec.isPublic !== false;
+            const initial = instructorName[0]?.toUpperCase() || 'S';
 
             return (
               <View key={rec.id} style={styles.recCard}>
-                {/* Quote icon */}
-                <View style={styles.quoteIcon}>
-                  <Ionicons name="chatbubble-ellipses" size={18} color="#4F46E5" />
-                </View>
-
-                {/* Content */}
-                <Text style={styles.recTitle}>{rec.title}</Text>
-                <Text style={styles.recContent}>"{rec.content}"</Text>
-
-                {/* Divider */}
-                <View style={styles.divider} />
-
-                {/* Recommender */}
-                <View style={styles.recommenderRow}>
-                  <View style={styles.recommenderAvatar}>
-                    <Text style={styles.recommenderAvatarText}>
-                      {instructorName[0]?.toUpperCase() || 'S'}
+                {/* Header Tag Row */}
+                <View style={styles.cardHeaderRow}>
+                  <View style={styles.courseTag}>
+                    <Ionicons name="book-outline" size={12} color={COLORS.primary} style={{ marginRight: 4 }} />
+                    <Text style={styles.courseTagText} numberOfLines={1}>
+                      {courseName || 'Completed Course'}
                     </Text>
                   </View>
-                  <View style={{ flex: 1 }}>
+
+                  <View
+                    style={[
+                      styles.publicBadge,
+                      { backgroundColor: isPublic ? COLORS.badgeGreenBg : COLORS.surfaceMuted },
+                    ]}
+                  >
+                    <Ionicons
+                      name={isPublic ? 'globe-outline' : 'lock-closed-outline'}
+                      size={11}
+                      color={isPublic ? COLORS.badgeGreenText : COLORS.neutralMedium}
+                      style={{ marginRight: 3 }}
+                    />
+                    <Text
+                      style={[
+                        styles.publicBadgeText,
+                        { color: isPublic ? COLORS.badgeGreenText : COLORS.neutralMedium },
+                      ]}
+                    >
+                      {isPublic ? 'Public' : 'Private'}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Content Quote */}
+                <Text style={styles.recTitle}>"{rec.title}"</Text>
+                <Text style={styles.recContent}>{rec.content}</Text>
+
+                {/* Recommender Footer */}
+                <View style={styles.recommenderRow}>
+                  <View style={styles.recommenderAvatar}>
+                    <Text style={styles.recommenderAvatarText}>{initial}</Text>
+                  </View>
+                  <View style={{ flex: 1, marginRight: 8 }}>
                     <Text style={styles.recommenderName}>{instructorName}</Text>
                     {instructorTitle ? <Text style={styles.recommenderTitle}>{instructorTitle}</Text> : null}
-                    {courseName ? (
-                      <View style={styles.courseTag}>
-                        <Ionicons name="book-outline" size={11} color="#6B7280" />
-                        <Text style={styles.courseTagText}>{courseName}</Text>
-                      </View>
-                    ) : null}
+                    <Text style={styles.instructorBadgeText}>Verified Course Instructor</Text>
                   </View>
-                  <View style={styles.metaRight}>
-                    {recDate ? <Text style={styles.recDate}>{recDate}</Text> : null}
-                    {isPublic && (
-                      <View style={styles.publicBadge}>
-                        <Ionicons name="globe-outline" size={10} color="#059669" />
-                        <Text style={styles.publicBadgeText}>Public</Text>
-                      </View>
-                    )}
-                  </View>
+                  {recDate ? <Text style={styles.recDate}>{recDate}</Text> : null}
                 </View>
               </View>
             );
@@ -129,71 +164,243 @@ export default function MyRecommendationsScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.bgWarm,
+    ...Platform.select({
+      web: {
+        height: '100vh' as any,
+        maxHeight: '100vh' as any,
+        overflow: 'hidden' as any,
+      },
+    }),
+  },
   header: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#4F46E5', paddingHorizontal: 16, paddingVertical: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 18,
+    paddingTop: 12,
+    paddingBottom: 10,
+    backgroundColor: COLORS.bgWarm,
   },
   backBtn: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center', justifyContent: 'center',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.borderSubtle,
+    elevation: 2,
+    shadowColor: COLORS.shadowColor,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
   },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: '#fff' },
-  headerSub: { fontSize: 12, color: '#C7D2FE', marginTop: 2 },
-
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { marginTop: 12, color: '#6B7280', fontSize: 14 },
-
-  emptyContainer: {
-    flex: 1, justifyContent: 'center', alignItems: 'center',
-    paddingHorizontal: 32, gap: 12,
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: COLORS.neutralDark,
+    letterSpacing: -0.3,
   },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: '#374151' },
-  emptyText: { fontSize: 14, color: '#9CA3AF', textAlign: 'center', lineHeight: 22 },
+  headerSub: {
+    fontSize: 12,
+    color: COLORS.neutralMedium,
+    fontWeight: '500',
+    marginTop: 1,
+  },
+  scrollArea: {
+    flex: 1,
+    ...Platform.select({
+      web: {
+        overflowY: 'auto' as any,
+        WebkitOverflowScrolling: 'touch' as any,
+      },
+    }),
+  },
+  content: {
+    paddingHorizontal: 18,
+    paddingBottom: 40,
+    gap: 16,
+  },
 
-  content: { padding: 16, gap: 16, paddingBottom: 40 },
-
+  // Banner
   banner: {
-    backgroundColor: '#FFFBEB', borderRadius: 14, padding: 16,
-    flexDirection: 'row', alignItems: 'center',
-    borderWidth: 1, borderColor: '#FDE68A',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.honeyBg,
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#FBE8C4',
   },
-  bannerTitle: { fontSize: 14, fontWeight: '700', color: '#92400E' },
-  bannerSub: { fontSize: 12, color: '#A16207', marginTop: 2 },
+  bannerIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#F7DCAB',
+  },
+  bannerTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: COLORS.honeyText,
+    marginBottom: 2,
+  },
+  bannerSub: {
+    fontSize: 11,
+    color: COLORS.neutralDark,
+    lineHeight: 16,
+  },
 
+  // Card
   recCard: {
-    backgroundColor: '#fff', borderRadius: 18, padding: 20,
-    shadowColor: '#4F46E5', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.07, shadowRadius: 12, elevation: 4,
-    borderLeftWidth: 4, borderLeftColor: '#4F46E5',
+    backgroundColor: COLORS.surfaceCard,
+    borderRadius: 22,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: COLORS.borderSubtle,
+    elevation: 2,
+    shadowColor: COLORS.shadowColor,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
   },
-  quoteIcon: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center',
-    marginBottom: 12,
+  cardHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
   },
-  recTitle: { fontSize: 15, fontWeight: '700', color: '#111827', marginBottom: 8 },
-  recContent: {
-    fontSize: 14, color: '#374151', lineHeight: 22,
-    fontStyle: 'italic', marginBottom: 16,
+  courseTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.badgeOrangeBg,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    maxWidth: '70%',
   },
-  divider: { height: 1, backgroundColor: '#F3F4F6', marginBottom: 14 },
-
-  recommenderRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  recommenderAvatar: {
-    width: 42, height: 42, borderRadius: 21,
-    backgroundColor: '#4F46E5', alignItems: 'center', justifyContent: 'center',
+  courseTagText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.primary,
   },
-  recommenderAvatarText: { fontSize: 18, fontWeight: '700', color: '#fff' },
-  recommenderName: { fontSize: 14, fontWeight: '700', color: '#111827' },
-  recommenderTitle: { fontSize: 12, color: '#6B7280', marginTop: 1 },
-  courseTag: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
-  courseTagText: { fontSize: 11, color: '#6B7280' },
-  metaRight: { alignItems: 'flex-end', gap: 4 },
-  recDate: { fontSize: 11, color: '#9CA3AF' },
   publicBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 3,
-    backgroundColor: '#D1FAE5', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
   },
-  publicBadgeText: { fontSize: 10, fontWeight: '600', color: '#059669' },
+  publicBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  recTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: COLORS.neutralDark,
+    marginBottom: 6,
+    letterSpacing: -0.2,
+  },
+  recContent: {
+    fontSize: 13,
+    color: COLORS.neutralDark,
+    fontStyle: 'italic',
+    lineHeight: 20,
+    marginBottom: 14,
+  },
+
+  recommenderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: COLORS.borderWarm,
+    paddingTop: 12,
+  },
+  recommenderAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.badgeOrangeBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: COLORS.borderWarm,
+  },
+  recommenderAvatarText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: COLORS.primaryDark,
+  },
+  recommenderName: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: COLORS.neutralDark,
+  },
+  recommenderTitle: {
+    fontSize: 11,
+    color: COLORS.neutralMedium,
+  },
+  instructorBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: COLORS.primary,
+    marginTop: 1,
+  },
+  recDate: {
+    fontSize: 10,
+    color: COLORS.neutralMedium,
+  },
+
+  // Loading & Empty
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 13,
+    color: COLORS.neutralMedium,
+    fontWeight: '600',
+  },
+  emptyContainer: {
+    backgroundColor: COLORS.surfaceCard,
+    borderRadius: 22,
+    padding: 28,
+    alignItems: 'center',
+    marginHorizontal: 18,
+    marginTop: 20,
+    borderWidth: 1,
+    borderColor: COLORS.borderSubtle,
+  },
+  emptyIconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: COLORS.badgeOrangeBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  emptyTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: COLORS.neutralDark,
+    marginBottom: 6,
+  },
+  emptyText: {
+    fontSize: 12,
+    color: COLORS.neutralMedium,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
 });

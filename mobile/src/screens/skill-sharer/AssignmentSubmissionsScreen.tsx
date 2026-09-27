@@ -11,16 +11,21 @@ import {
   ActivityIndicator,
   Platform,
   Linking,
+  SafeAreaView,
+  StatusBar,
+  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { assignmentApi } from '../../api/skill-sharer.service';
 import { AssignmentSubmission } from '../../types';
+import { COLORS } from '../../theme/colors';
 
 export const AssignmentSubmissionsScreen = ({ route, navigation }: any) => {
   const { assignmentId, assignmentTitle } = route.params || {};
   const [submissions, setSubmissions] = useState<AssignmentSubmission[]>([]);
   const [loading, setLoading] = useState(true);
-  
+  const [refreshing, setRefreshing] = useState(false);
+
   // Grading Modal State
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<AssignmentSubmission | null>(null);
@@ -53,6 +58,7 @@ export const AssignmentSubmissionsScreen = ({ route, navigation }: any) => {
       showNotification('Error', error?.error || error?.response?.data?.error || 'Failed to load submissions.');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -70,13 +76,19 @@ export const AssignmentSubmissionsScreen = ({ route, navigation }: any) => {
       return;
     }
 
+    const numericGrade = parseFloat(grade);
+    if (isNaN(numericGrade)) {
+      showNotification('Validation Error', 'Please enter a valid numeric grade.');
+      return;
+    }
+
     try {
       setIsSaving(true);
       await assignmentApi.gradeSubmission(selectedSubmission.id, {
-        grade: parseFloat(grade),
+        grade: numericGrade,
         feedback: feedback.trim(),
       });
-      
+
       showNotification('Success', 'Grade saved successfully!');
       setModalVisible(false);
       fetchSubmissions();
@@ -94,87 +106,170 @@ export const AssignmentSubmissionsScreen = ({ route, navigation }: any) => {
     return `http://localhost:5000${url.startsWith('/') ? '' : '/'}${url}`;
   };
 
+  const totalCount = submissions.length;
+  const gradedCount = submissions.filter(
+    (s) => s.status === 'GRADED' || s.status === 'COMPLETED' || (s.grade !== null && s.grade !== undefined)
+  ).length;
+  const pendingCount = totalCount - gradedCount;
+
   const renderSubmission = ({ item }: { item: AssignmentSubmission }) => {
-    const isGraded = item.status === 'GRADED' || item.status === 'COMPLETED' || (item.grade !== null && item.grade !== undefined);
+    const isGraded =
+      item.status === 'GRADED' || item.status === 'COMPLETED' || (item.grade !== null && item.grade !== undefined);
+    const submissionDateFormatted = item.submissionDate
+      ? new Date(item.submissionDate).toLocaleDateString(undefined, {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+        })
+      : 'Unknown date';
+
+    const learnerInitials = item.learner?.name
+      ? item.learner.name
+          .split(' ')
+          .map((n) => n[0])
+          .join('')
+          .toUpperCase()
+          .slice(0, 2)
+      : 'L';
 
     return (
       <View style={styles.card}>
+        {/* Card Header */}
         <View style={styles.cardHeader}>
-          <View style={styles.learnerInfo}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{item.learner?.name?.charAt(0) || 'L'}</Text>
+          <View style={styles.learnerRow}>
+            <View style={styles.avatarCircle}>
+              <Text style={styles.avatarText}>{learnerInitials}</Text>
             </View>
-            <View>
-              <Text style={styles.learnerName}>{item.learner?.name || 'Unknown Learner'}</Text>
-              <Text style={styles.submissionDate}>
-                Submitted: {new Date(item.submissionDate).toLocaleDateString()}
+            <View style={{ flex: 1, marginRight: 8 }}>
+              <Text style={styles.learnerName} numberOfLines={1}>
+                {item.learner?.name || 'Enrolled Learner'}
               </Text>
+              <View style={styles.metaRow}>
+                <Ionicons name="calendar-outline" size={12} color={COLORS.neutralMedium} style={{ marginRight: 4 }} />
+                <Text style={styles.metaText}>{submissionDateFormatted}</Text>
+                {item.isLate && (
+                  <View style={styles.lateBadge}>
+                    <Text style={styles.lateBadgeText}>Late</Text>
+                  </View>
+                )}
+              </View>
             </View>
           </View>
-          <View style={[styles.statusBadge, isGraded ? styles.statusGraded : styles.statusPending]}>
-            <Text style={[styles.statusText, isGraded ? styles.statusTextGraded : styles.statusTextPending]}>
-              {isGraded ? 'GRADED' : (item.status || 'SUBMITTED')}
+
+          <View style={[styles.statusPill, isGraded ? styles.statusPillGraded : styles.statusPillPending]}>
+            <Text style={[styles.statusPillText, isGraded ? styles.statusTextGraded : styles.statusTextPending]}>
+              {isGraded ? '✓ GRADED' : 'NEEDS REVIEW'}
             </Text>
           </View>
         </View>
 
-        <View style={styles.cardBody}>
-          {item.textSubmission && (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Text Notes:</Text>
-              <Text style={styles.detailValue}>{item.textSubmission}</Text>
+        {/* Deliverables Section */}
+        <View style={styles.deliverablesSection}>
+          {/* Text Notes */}
+          {item.textSubmission ? (
+            <View style={styles.notesBox}>
+              <View style={styles.sectionHeaderRow}>
+                <Ionicons name="document-text-outline" size={14} color={COLORS.primary} style={{ marginRight: 4 }} />
+                <Text style={styles.deliverableLabel}>Learner Notes</Text>
+              </View>
+              <Text style={styles.notesText}>{item.textSubmission}</Text>
             </View>
-          )}
-          {item.githubLink && (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Project Link:</Text>
-              <TouchableOpacity onPress={() => Linking.openURL(item.githubLink!)}>
-                <Text style={styles.linkValue}>{item.githubLink}</Text>
+          ) : null}
+
+          {/* GitHub Project Link */}
+          {item.githubLink ? (
+            <View style={styles.deliverableItem}>
+              <View style={styles.sectionHeaderRow}>
+                <Ionicons name="logo-github" size={14} color={COLORS.neutralDark} style={{ marginRight: 4 }} />
+                <Text style={styles.deliverableLabel}>Repository / Project Link</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.linkPill}
+                onPress={() => Linking.openURL(item.githubLink!)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="link-outline" size={14} color={COLORS.primary} style={{ marginRight: 6 }} />
+                <Text style={styles.linkPillText} numberOfLines={1}>
+                  {item.githubLink}
+                </Text>
+                <Ionicons name="open-outline" size={14} color={COLORS.primary} style={{ marginLeft: 6 }} />
               </TouchableOpacity>
             </View>
-          )}
-          {item.fileUrls && item.fileUrls.length > 0 && (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Attached Files ({item.fileUrls.length}):</Text>
-              {item.fileUrls.map((url, idx) => {
-                const fullUrl = getFileUrl(url);
-                const fileName = url.split('/').pop() || `File ${idx + 1}`;
-                return (
-                  <TouchableOpacity
-                    key={idx}
-                    style={styles.fileLinkBtn}
-                    onPress={() => Linking.openURL(fullUrl)}
-                  >
-                    <Ionicons name="document-attach-outline" size={18} color="#4F46E5" />
-                    <Text style={styles.fileLinkText} numberOfLines={1}>
-                      {fileName}
-                    </Text>
-                    <Ionicons name="download-outline" size={16} color="#4F46E5" />
-                  </TouchableOpacity>
-                );
-              })}
+          ) : null}
+
+          {/* Attached Files */}
+          {item.fileUrls && item.fileUrls.length > 0 ? (
+            <View style={styles.deliverableItem}>
+              <View style={styles.sectionHeaderRow}>
+                <Ionicons name="attach" size={14} color={COLORS.neutralDark} style={{ marginRight: 4 }} />
+                <Text style={styles.deliverableLabel}>Attached Deliverables ({item.fileUrls.length})</Text>
+              </View>
+              <View style={styles.filesGrid}>
+                {item.fileUrls.map((url, idx) => {
+                  const fullUrl = getFileUrl(url);
+                  const fileName = url.split('/').pop() || `Deliverable_${idx + 1}`;
+                  return (
+                    <TouchableOpacity
+                      key={idx}
+                      style={styles.fileCard}
+                      onPress={() => Linking.openURL(fullUrl)}
+                      activeOpacity={0.8}
+                    >
+                      <View style={styles.fileIconWrap}>
+                        <Ionicons name="document-outline" size={16} color={COLORS.primary} />
+                      </View>
+                      <Text style={styles.fileCardName} numberOfLines={1}>
+                        {fileName}
+                      </Text>
+                      <Ionicons name="cloud-download-outline" size={16} color={COLORS.neutralMedium} />
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </View>
-          )}
-          {item.feedback && (
-            <View style={[styles.detailRow, { marginTop: 6, backgroundColor: '#F9FAFB', padding: 8, borderRadius: 6 }]}>
-              <Text style={styles.detailLabel}>Feedback Given:</Text>
-              <Text style={[styles.detailValue, { fontStyle: 'italic', color: '#4B5563' }]}>{item.feedback}</Text>
+          ) : null}
+
+          {/* Instructor Feedback Given */}
+          {isGraded ? (
+            <View style={styles.gradedBanner}>
+              <View style={styles.scoreRow}>
+                <View style={styles.scoreBadge}>
+                  <Ionicons name="ribbon-outline" size={16} color={COLORS.honeyText} style={{ marginRight: 4 }} />
+                  <Text style={styles.scoreBadgeLabel}>Awarded Score:</Text>
+                  <Text style={styles.scoreBadgeValue}>{item.grade} pts</Text>
+                </View>
+              </View>
+              {item.feedback ? (
+                <View style={styles.feedbackContainer}>
+                  <Text style={styles.feedbackTitle}>Feedback given to learner:</Text>
+                  <Text style={styles.feedbackContent}>"{item.feedback}"</Text>
+                </View>
+              ) : null}
             </View>
-          )}
+          ) : null}
         </View>
 
+        {/* Card Footer / Action */}
         <View style={styles.cardFooter}>
-          <View>
-            <Text style={styles.gradeLabel}>Current Grade:</Text>
-            <Text style={styles.gradeValue}>
-              {item.grade !== null && item.grade !== undefined ? `${item.grade}` : 'Not Graded'}
-            </Text>
-          </View>
-          <TouchableOpacity 
-            style={styles.gradeBtn}
+          <TouchableOpacity
+            style={[styles.gradeActionBtn, isGraded ? styles.gradeActionBtnSecondary : styles.gradeActionBtnPrimary]}
             onPress={() => handleOpenGradeModal(item)}
+            activeOpacity={0.85}
           >
-            <Text style={styles.gradeBtnText}>{item.grade !== null && item.grade !== undefined ? 'Update Grade' : 'Grade Now'}</Text>
+            <Ionicons
+              name={isGraded ? 'create-outline' : 'checkmark-circle-outline'}
+              size={16}
+              color={isGraded ? COLORS.primaryDark : COLORS.white}
+              style={{ marginRight: 6 }}
+            />
+            <Text
+              style={[
+                styles.gradeActionBtnText,
+                isGraded ? styles.gradeActionBtnTextSecondary : styles.gradeActionBtnTextPrimary,
+              ]}
+            >
+              {isGraded ? 'Update Grade & Feedback' : 'Grade Submission →'}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -182,286 +277,743 @@ export const AssignmentSubmissionsScreen = ({ route, navigation }: any) => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.bgWarm} />
+
+      {/* Top Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation?.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#111827" />
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation?.goBack()} activeOpacity={0.8}>
+          <Ionicons name="arrow-back" size={20} color={COLORS.neutralDark} />
         </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle} numberOfLines={1}>Submissions</Text>
-          <Text style={styles.headerSubtitle} numberOfLines={1}>{assignmentTitle || 'Assignment'}</Text>
+
+        <View style={{ flex: 1, marginLeft: 12 }}>
+          <Text style={styles.headerTitle}>Review Submissions</Text>
+          <Text style={styles.headerSubtitle} numberOfLines={1}>
+            {assignmentTitle || 'Course Practical Assignment'}
+          </Text>
+        </View>
+
+        <TouchableOpacity style={styles.refreshBtn} onPress={fetchSubmissions} activeOpacity={0.8}>
+          <Ionicons name="refresh-outline" size={18} color={COLORS.neutralDark} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Stats Summary Bar */}
+      <View style={styles.summaryBar}>
+        <View style={styles.summaryPill}>
+          <Text style={styles.summaryPillNum}>{totalCount}</Text>
+          <Text style={styles.summaryPillLabel}>Total</Text>
+        </View>
+        <View style={[styles.summaryPill, { backgroundColor: COLORS.honeyBg }]}>
+          <Text style={[styles.summaryPillNum, { color: COLORS.honeyText }]}>{pendingCount}</Text>
+          <Text style={[styles.summaryPillLabel, { color: COLORS.honeyText }]}>Awaiting Grade</Text>
+        </View>
+        <View style={[styles.summaryPill, { backgroundColor: COLORS.badgeGreenBg }]}>
+          <Text style={[styles.summaryPillNum, { color: COLORS.badgeGreenText }]}>{gradedCount}</Text>
+          <Text style={[styles.summaryPillLabel, { color: COLORS.badgeGreenText }]}>Graded</Text>
         </View>
       </View>
 
-      <View style={styles.content}>
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#4F46E5" />
-            <Text style={styles.loadingText}>Loading submissions...</Text>
+      {/* Main Content */}
+      {loading && !refreshing ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={styles.loadingText}>Fetching learner submissions...</Text>
+        </View>
+      ) : submissions.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <View style={styles.emptyIconCircle}>
+            <Ionicons name="file-tray-full-outline" size={38} color={COLORS.primary} />
           </View>
-        ) : submissions.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Ionicons name="documents-outline" size={64} color="#D1D5DB" />
-            <Text style={styles.emptyStateTitle}>No Submissions Yet</Text>
-            <Text style={styles.emptyStateText}>When learners submit their assignments, they will appear here.</Text>
-          </View>
-        ) : (
-          <FlatList
-            data={submissions}
-            renderItem={renderSubmission}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.listContainer}
-            showsVerticalScrollIndicator={false}
-          />
-        )}
-      </View>
+          <Text style={styles.emptyTitle}>No Submissions Yet</Text>
+          <Text style={styles.emptySub}>
+            Learner submissions, code links, and files will appear here once submitted for grading.
+          </Text>
+          <TouchableOpacity style={styles.backToAssignmentsBtn} onPress={() => navigation?.goBack()} activeOpacity={0.85}>
+            <Text style={styles.backToAssignmentsBtnText}>Return to Assignments</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <FlatList
+          data={submissions}
+          renderItem={renderSubmission}
+          keyExtractor={(item) => item.id}
+          style={styles.flatList}
+          contentContainerStyle={styles.listContainer}
+          showsVerticalScrollIndicator={false}
+          refreshing={refreshing}
+          onRefresh={() => {
+            setRefreshing(true);
+            fetchSubmissions();
+          }}
+        />
+      )}
 
-      {/* Grading Modal */}
+      {/* Grading Bottom-Sheet Modal */}
       <Modal
         visible={modalVisible}
-        animationType="fade"
+        animationType="slide"
         transparent={true}
         onRequestClose={() => setModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
+            {/* Modal Drag Handle */}
+            <View style={styles.modalHandle} />
+
+            {/* Modal Header */}
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Grade Submission</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Ionicons name="close" size={24} color="#6B7280" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.modalTitle}>Grade Submission</Text>
+                <Text style={styles.modalSub}>
+                  Learner: <Text style={{ fontWeight: '800', color: COLORS.neutralDark }}>{selectedSubmission?.learner?.name || 'Learner'}</Text>
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeBtn} activeOpacity={0.7}>
+                <Ionicons name="close" size={20} color={COLORS.neutralDark} />
               </TouchableOpacity>
             </View>
 
-            <View style={styles.modalBody}>
-              <Text style={styles.learnerNameModal}>
-                Learner: {selectedSubmission?.learner?.name}
-              </Text>
-              
+            <ScrollView
+              style={styles.modalBody}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: 24 }}
+            >
+              {/* Score Input */}
               <View style={styles.formGroup}>
-                <Text style={styles.label}>Grade (Score) *</Text>
+                <Text style={styles.label}>Numeric Score (Marks) *</Text>
                 <TextInput
                   style={styles.input}
                   value={grade}
                   onChangeText={setGrade}
                   keyboardType="numeric"
                   placeholder="e.g. 85"
+                  placeholderTextColor={COLORS.neutralLight}
                 />
+                <View style={styles.quickScoresRow}>
+                  {['100', '95', '90', '85', '80', '75'].map((quickScore) => (
+                    <TouchableOpacity
+                      key={quickScore}
+                      style={[styles.quickScorePill, grade === quickScore && styles.quickScorePillActive]}
+                      onPress={() => setGrade(quickScore)}
+                      activeOpacity={0.8}
+                    >
+                      <Text
+                        style={[styles.quickScoreText, grade === quickScore && styles.quickScoreTextActive]}
+                      >
+                        {quickScore}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </View>
 
+              {/* Feedback Input */}
               <View style={styles.formGroup}>
-                <Text style={styles.label}>Feedback (Optional)</Text>
+                <Text style={styles.label}>Mentor Feedback & Rubric Notes</Text>
                 <TextInput
                   style={[styles.input, styles.textArea]}
                   value={feedback}
                   onChangeText={setFeedback}
-                  placeholder="Provide constructive feedback..."
+                  placeholder="Provide constructive feedback, highlight strengths, or point out areas for improvement..."
+                  placeholderTextColor={COLORS.neutralLight}
                   multiline
                   numberOfLines={4}
                   textAlignVertical="top"
                 />
               </View>
-            </View>
 
-            <View style={styles.modalFooter}>
-              <TouchableOpacity 
-                style={styles.cancelBtn} 
-                onPress={() => setModalVisible(false)}
-                disabled={isSaving}
-              >
-                <Text style={styles.cancelBtnText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.saveBtn, isSaving && styles.saveBtnDisabled]} 
-                onPress={handleSaveGrade}
-                disabled={isSaving}
-              >
-                {isSaving ? (
-                  <ActivityIndicator size="small" color="#FFF" />
-                ) : (
-                  <Text style={styles.saveBtnText}>Save Grade</Text>
-                )}
-              </TouchableOpacity>
-            </View>
+              {/* Action Buttons */}
+              <View style={styles.modalActionsRow}>
+                <TouchableOpacity
+                  style={styles.cancelModalBtn}
+                  onPress={() => setModalVisible(false)}
+                  disabled={isSaving}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.cancelModalBtnText}>Cancel</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.saveModalBtn, isSaving && { opacity: 0.7 }]}
+                  onPress={handleSaveGrade}
+                  disabled={isSaving}
+                  activeOpacity={0.9}
+                >
+                  {isSaving ? (
+                    <ActivityIndicator size="small" color={COLORS.white} />
+                  ) : (
+                    <Text style={styles.saveModalBtnText}>Save Grade</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 };
 
+export default AssignmentSubmissionsScreen;
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.bgWarm,
+    ...Platform.select({
+      web: {
+        height: '100vh' as any,
+        maxHeight: '100vh' as any,
+        overflow: 'hidden' as any,
+      },
+    }),
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    backgroundColor: '#FFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    paddingHorizontal: 18,
+    paddingTop: 12,
+    paddingBottom: 10,
+    backgroundColor: COLORS.bgWarm,
   },
   backBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: COLORS.white,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 15,
-  },
-  headerTitle: { fontSize: 24, fontWeight: '700', color: '#111827' },
-  headerSubtitle: { fontSize: 14, color: '#6B7280', marginTop: 2 },
-  content: { flex: 1 },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { marginTop: 10, color: '#6B7280', fontSize: 16 },
-  listContainer: { padding: 20, paddingBottom: 100 },
-  emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
-  emptyStateTitle: { fontSize: 20, fontWeight: '600', color: '#111827', marginTop: 20 },
-  emptyStateText: { fontSize: 14, color: '#6B7280', textAlign: 'center', marginTop: 10 },
-  
-  card: {
-    backgroundColor: '#FFF',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    borderWidth: 1,
+    borderColor: COLORS.borderSubtle,
+    elevation: 2,
+    shadowColor: COLORS.shadowColor,
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
-    shadowRadius: 15,
-    elevation: 3,
+    shadowRadius: 3,
+  },
+  refreshBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: COLORS.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.borderSubtle,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: COLORS.neutralDark,
+    letterSpacing: -0.3,
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    color: COLORS.neutralMedium,
+    fontWeight: '500',
+    marginTop: 1,
+  },
+
+  // Summary Bar
+  summaryBar: {
+    flexDirection: 'row',
+    paddingHorizontal: 18,
+    gap: 8,
+    marginBottom: 12,
+  },
+  summaryPill: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.white,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: COLORS.borderWarm,
+  },
+  summaryPillNum: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: COLORS.neutralDark,
+    marginRight: 4,
+  },
+  summaryPillLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLORS.neutralMedium,
+  },
+
+  flatList: {
+    flex: 1,
+    ...Platform.select({
+      web: {
+        overflowY: 'auto' as any,
+        WebkitOverflowScrolling: 'touch' as any,
+      },
+    }),
+  },
+  listContainer: {
+    paddingHorizontal: 18,
+    paddingBottom: 40,
+    gap: 14,
+  },
+
+  // Card
+  card: {
+    backgroundColor: COLORS.surfaceCard,
+    borderRadius: 22,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: COLORS.borderSubtle,
+    elevation: 2,
+    shadowColor: COLORS.shadowColor,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    marginBottom: 12,
   },
-  learnerInfo: { flexDirection: 'row', alignItems: 'center' },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#4F46E5',
+  learnerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  avatarCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: COLORS.badgeOrangeBg,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: COLORS.borderWarm,
   },
-  avatarText: { color: '#FFF', fontSize: 16, fontWeight: 'bold' },
-  learnerName: { fontSize: 16, fontWeight: '600', color: '#111827' },
-  submissionDate: { fontSize: 12, color: '#6B7280', marginTop: 2 },
-  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
-  statusPending: { backgroundColor: '#FEF3C7' },
-  statusGraded: { backgroundColor: '#DEF7EC' },
-  statusText: { fontSize: 12, fontWeight: '600' },
-  statusTextPending: { color: '#92400E' },
-  statusTextGraded: { color: '#03543F' },
-  
-  cardBody: { marginBottom: 16 },
-  detailRow: { marginBottom: 8 },
-  detailLabel: { fontSize: 14, fontWeight: '600', color: '#4B5563', marginBottom: 4 },
-  detailValue: { fontSize: 14, color: '#111827' },
-  linkValue: { fontSize: 14, color: '#4F46E5', textDecorationLine: 'underline' },
-  fileLinkBtn: {
+  avatarText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: COLORS.primaryDark,
+  },
+  learnerName: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: COLORS.neutralDark,
+    letterSpacing: -0.2,
+  },
+  metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    padding: 10,
-    borderRadius: 8,
-    marginTop: 6,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    marginTop: 2,
   },
-  fileLinkText: {
-    flex: 1,
-    marginLeft: 8,
-    marginRight: 8,
-    fontSize: 13,
-    color: '#4F46E5',
+  metaText: {
+    fontSize: 11,
+    color: COLORS.neutralMedium,
     fontWeight: '500',
   },
-  
-  cardFooter: {
+  lateBadge: {
+    backgroundColor: COLORS.errorBg,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 6,
+    marginLeft: 6,
+  },
+  lateBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: COLORS.error,
+  },
+
+  statusPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  statusPillGraded: {
+    backgroundColor: COLORS.badgeGreenBg,
+  },
+  statusPillPending: {
+    backgroundColor: COLORS.badgeOrangeBg,
+  },
+  statusPillText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+  },
+  statusTextGraded: {
+    color: COLORS.badgeGreenText,
+  },
+  statusTextPending: {
+    color: COLORS.primary,
+  },
+
+  // Deliverables
+  deliverablesSection: {
+    borderTopWidth: 1,
+    borderTopColor: COLORS.borderWarm,
+    paddingTop: 12,
+    gap: 10,
+  },
+  sectionHeaderRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    marginBottom: 4,
+  },
+  deliverableLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.neutralMedium,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  notesBox: {
+    backgroundColor: COLORS.cardBgSoft,
     padding: 12,
-    borderRadius: 8,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: COLORS.borderWarm,
   },
-  gradeLabel: { fontSize: 12, color: '#6B7280' },
-  gradeValue: { fontSize: 18, fontWeight: '700', color: '#111827' },
-  gradeBtn: {
-    backgroundColor: '#EEF2FF',
-    paddingHorizontal: 16,
+  notesText: {
+    fontSize: 13,
+    color: COLORS.neutralDark,
+    lineHeight: 18,
+    marginTop: 2,
+  },
+  deliverableItem: {
+    marginTop: 2,
+  },
+  linkPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.white,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.borderWarm,
+  },
+  linkPillText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.primaryDark,
+  },
+  filesGrid: {
+    gap: 6,
+  },
+  fileCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.white,
+    paddingHorizontal: 10,
     paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.borderWarm,
   },
-  gradeBtnText: { color: '#4F46E5', fontWeight: '600', fontSize: 14 },
+  fileIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: COLORS.badgeOrangeBg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  fileCardName: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.neutralDark,
+    marginRight: 8,
+  },
+
+  // Graded Banner
+  gradedBanner: {
+    backgroundColor: COLORS.honeyBg,
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#FBE8C4',
+    marginTop: 4,
+  },
+  scoreRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  scoreBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  scoreBadgeLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.honeyText,
+    marginRight: 4,
+  },
+  scoreBadgeValue: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: COLORS.honeyText,
+  },
+  feedbackContainer: {
+    marginTop: 6,
+    paddingTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: '#F7DCAB',
+  },
+  feedbackTitle: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: COLORS.honeyText,
+    textTransform: 'uppercase',
+  },
+  feedbackContent: {
+    fontSize: 12,
+    fontStyle: 'italic',
+    color: COLORS.neutralDark,
+    marginTop: 2,
+    lineHeight: 17,
+  },
+
+  // Footer Action
+  cardFooter: {
+    marginTop: 14,
+  },
+  gradeActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 11,
+    borderRadius: 16,
+  },
+  gradeActionBtnPrimary: {
+    backgroundColor: COLORS.primaryDark,
+    elevation: 2,
+    shadowColor: COLORS.primaryDark,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  gradeActionBtnSecondary: {
+    backgroundColor: COLORS.surfaceMuted,
+    borderWidth: 1,
+    borderColor: COLORS.borderSubtle,
+  },
+  gradeActionBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  gradeActionBtnTextPrimary: {
+    color: COLORS.white,
+  },
+  gradeActionBtnTextSecondary: {
+    color: COLORS.primaryDark,
+  },
+
+  // Empty State
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 30,
+    marginTop: 40,
+  },
+  emptyIconCircle: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: COLORS.badgeOrangeBg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: COLORS.borderWarm,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: COLORS.neutralDark,
+    marginBottom: 6,
+  },
+  emptySub: {
+    fontSize: 13,
+    color: COLORS.neutralMedium,
+    textAlign: 'center',
+    lineHeight: 19,
+    marginBottom: 20,
+  },
+  backToAssignmentsBtn: {
+    backgroundColor: COLORS.primaryDark,
+    paddingHorizontal: 20,
+    paddingVertical: 11,
+    borderRadius: 20,
+  },
+  backToAssignmentsBtnText: {
+    color: COLORS.white,
+    fontWeight: '800',
+    fontSize: 13,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  loadingText: {
+    marginTop: 12,
+    color: COLORS.neutralMedium,
+    fontWeight: '600',
+    fontSize: 13,
+  },
 
   // Modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    padding: 20,
+    backgroundColor: 'rgba(35, 25, 23, 0.45)',
+    justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#FFF',
-    borderRadius: 16,
-    overflow: 'hidden',
+    backgroundColor: COLORS.white,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    maxHeight: '90%',
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    elevation: 8,
+    shadowColor: COLORS.neutralDark,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+  },
+  modalHandle: {
+    width: 44,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: COLORS.borderSubtle,
+    alignSelf: 'center',
+    marginBottom: 14,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    alignItems: 'flex-start',
+    marginBottom: 16,
   },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: '#111827' },
-  modalBody: { padding: 20 },
-  learnerNameModal: { fontSize: 16, fontWeight: '500', color: '#374151', marginBottom: 20 },
-  formGroup: { marginBottom: 16 },
-  label: { fontSize: 14, fontWeight: '500', color: '#374151', marginBottom: 8 },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: COLORS.neutralDark,
+    letterSpacing: -0.3,
+  },
+  modalSub: {
+    fontSize: 12,
+    color: COLORS.neutralMedium,
+    marginTop: 2,
+  },
+  closeBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: COLORS.surfaceMuted,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalBody: {
+    paddingBottom: 20,
+  },
+  formGroup: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.neutralDark,
+    marginBottom: 6,
+  },
   input: {
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 12,
+    backgroundColor: COLORS.surfaceMuted,
+    borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    fontSize: 16,
-    color: '#111827',
+    fontSize: 14,
+    color: COLORS.neutralDark,
+    borderWidth: 1,
+    borderColor: COLORS.borderSubtle,
   },
-  textArea: { height: 100 },
-  modalFooter: {
+  textArea: {
+    minHeight: 90,
+    textAlignVertical: 'top',
+  },
+  quickScoresRow: {
     flexDirection: 'row',
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-    backgroundColor: '#FFF',
+    gap: 6,
+    marginTop: 8,
+    flexWrap: 'wrap',
   },
-  cancelBtn: {
-    flex: 1,
-    paddingVertical: 12,
+  quickScorePill: {
+    backgroundColor: COLORS.surfaceMuted,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 12,
-    backgroundColor: '#F3F4F6',
-    marginRight: 10,
-    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.borderSubtle,
   },
-  cancelBtnText: { color: '#4B5563', fontSize: 16, fontWeight: '600' },
-  saveBtn: {
+  quickScorePillActive: {
+    backgroundColor: COLORS.primaryDark,
+    borderColor: COLORS.primaryDark,
+  },
+  quickScoreText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.neutralDark,
+  },
+  quickScoreTextActive: {
+    color: COLORS.white,
+  },
+  modalActionsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 10,
+  },
+  cancelModalBtn: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: '#4F46E5',
-    marginLeft: 10,
+    paddingVertical: 14,
+    borderRadius: 22,
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.surfaceMuted,
+    borderWidth: 1,
+    borderColor: COLORS.borderSubtle,
   },
-  saveBtnDisabled: { opacity: 0.7 },
-  saveBtnText: { color: '#FFF', fontSize: 16, fontWeight: '600' },
+  cancelModalBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.neutralDark,
+  },
+  saveModalBtn: {
+    flex: 2,
+    paddingVertical: 14,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.primaryDark,
+    elevation: 3,
+    shadowColor: COLORS.primaryDark,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+  },
+  saveModalBtnText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: COLORS.white,
+    letterSpacing: 0.2,
+  },
 });

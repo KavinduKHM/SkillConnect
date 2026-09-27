@@ -12,7 +12,7 @@ import {
   Image,
   Platform,
 } from 'react-native';
-import { fetchCourseDetails, enrollCourse, cancelEnrollment, completeLesson } from '../../api/learner.service';
+import { fetchCourseDetails, enrollCourse, cancelEnrollment, completeLesson, requestCourseCompletion } from '../../api/learner.service';
 import { COLORS } from '../../theme/colors';
 
 export default function CourseDetailScreen({ route, navigation }: any) {
@@ -144,6 +144,32 @@ export default function CourseDetailScreen({ route, navigation }: any) {
 
   const isEnrolled = !!(userEnrollment && userEnrollment.status !== 'CANCELLED');
   const progressPct = userEnrollment?.courseProgress?.progressPercentage ?? userEnrollment?.progressPercentage ?? 0;
+
+  const handleRequestCertificate = async () => {
+    try {
+      setActionLoading(true);
+      await requestCourseCompletion(courseId);
+      if (Platform.OS === 'web') {
+        window.alert('Completion Request Sent! Your course completion request has been submitted to your instructor. Once verified, your course certificate will be available under My Learning!');
+        navigation?.navigate('MainTabs', { screen: 'MyLearningTab' });
+      } else {
+        Alert.alert(
+          'Completion Request Sent! 🎓',
+          'Your course completion request has been submitted to your instructor. Once verified, your course certificate will be available under My Learning!',
+          [{ text: 'View My Dashboard', onPress: () => navigation?.navigate('MainTabs', { screen: 'MyLearningTab' }) }]
+        );
+      }
+    } catch (error: any) {
+      const errMsg = error?.response?.data?.error || error?.error || error?.message || 'Failed to submit completion request.';
+      if (Platform.OS === 'web') {
+        window.alert(errMsg);
+      } else {
+        Alert.alert('Notice', errMsg);
+      }
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -340,13 +366,8 @@ export default function CourseDetailScreen({ route, navigation }: any) {
               {progressPct >= 100 ? (
                 <TouchableOpacity
                   style={styles.continueBtn}
-                  onPress={() =>
-                    Alert.alert(
-                      'Completion Request Sent! 🎓',
-                      'Your course completion request has been submitted to your instructor. Once verified, your course certificate will be available under My Learning!',
-                      [{ text: 'View My Dashboard', onPress: () => navigation?.navigate('MainTabs', { screen: 'MyLearningTab' }) }]
-                    )
-                  }
+                  onPress={handleRequestCertificate}
+                  activeOpacity={0.85}
                 >
                   <Text style={styles.actionBtnText}>Request Certificate 🎓</Text>
                 </TouchableOpacity>

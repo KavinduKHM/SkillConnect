@@ -1,13 +1,22 @@
 import React, { useState, useCallback } from 'react';
 import {
-  StyleSheet, Text, View, ScrollView, SafeAreaView,
-  StatusBar, TouchableOpacity, TextInput, ActivityIndicator,
-  Alert, FlatList,
+  StyleSheet,
+  Text,
+  View,
+  ScrollView,
+  SafeAreaView,
+  StatusBar,
+  TouchableOpacity,
+  TextInput,
+  ActivityIndicator,
+  Alert,
+  Platform,
+  Switch,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { certificateApi, recommendationApi } from '../../api/skill-sharer.service';
-import { courseApi } from '../../api/skill-sharer.service';
+import { certificateApi, recommendationApi, courseApi } from '../../api/skill-sharer.service';
+import { COLORS } from '../../theme/colors';
 
 export function RecommendationScreen({ navigation }: any) {
   const [myCourses, setMyCourses] = useState<any[]>([]);
@@ -20,13 +29,21 @@ export function RecommendationScreen({ navigation }: any) {
   const [loadingCourses, setLoadingCourses] = useState(true);
   const [loadingLearners, setLoadingLearners] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [activeTab, setActiveTab] = useState<'write' | 'history'>('write');
-  const [history, setHistory] = useState<any[]>([]);
   const [editingRec, setEditingRec] = useState<any | null>(null);
 
-  useFocusEffect(useCallback(() => {
-    loadMyCourses();
-  }, []));
+  const showNotification = (msgTitle: string, message: string) => {
+    if (Platform.OS === 'web') {
+      window.alert(`${msgTitle}: ${message}`);
+    } else {
+      Alert.alert(msgTitle, message);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      loadMyCourses();
+    }, [])
+  );
 
   const loadMyCourses = async () => {
     try {
@@ -48,7 +65,7 @@ export function RecommendationScreen({ navigation }: any) {
       setCompletedLearners([]);
       const res: any = await certificateApi.getCourseCompletionRequests(courseId);
       const requests = res?.data || res?.requests || [];
-      // Only show approved requests (completed learners with certificates)
+      // Only show approved requests (graduates with verified completion)
       const approved = requests.filter((r: any) => r.status === 'APPROVED');
       setCompletedLearners(approved);
     } catch (err) {
@@ -65,18 +82,23 @@ export function RecommendationScreen({ navigation }: any) {
   };
 
   const handleSubmit = async () => {
+    if (!selectedCourse) {
+      showNotification('Select a Course', 'Please select a course first.');
+      return;
+    }
     if (!selectedLearner) {
-      Alert.alert('Select a Learner', 'Please select a learner to recommend.');
+      showNotification('Select a Learner', 'Please select a certified graduate to endorse.');
       return;
     }
     if (!title.trim()) {
-      Alert.alert('Title Required', 'Please provide a short title for the recommendation.');
+      showNotification('Title Required', 'Please provide a short headline or title for the recommendation.');
       return;
     }
     if (!content.trim() || content.trim().length < 20) {
-      Alert.alert('Content Required', 'Please write at least 20 characters for the recommendation.');
+      showNotification('Content Required', 'Please write at least 20 characters for the endorsement.');
       return;
     }
+
     try {
       setSubmitting(true);
       const data = {
@@ -86,130 +108,174 @@ export function RecommendationScreen({ navigation }: any) {
         content: content.trim(),
         isPublic,
       };
+
       if (editingRec) {
-        await recommendationApi.update(editingRec.id, { title: data.title, content: data.content, isPublic });
-        Alert.alert('Updated!', 'Recommendation updated successfully.');
+        await recommendationApi.update(editingRec.id, {
+          title: data.title,
+          content: data.content,
+          isPublic,
+        });
+        showNotification('Updated!', 'Recommendation updated successfully.');
       } else {
         await recommendationApi.create(data);
-        Alert.alert('Sent!', `Your recommendation for ${selectedLearner.learner?.name || 'the learner'} has been submitted.`);
+        showNotification(
+          'Sent!',
+          `Your endorsement for ${selectedLearner.learner?.name || 'the learner'} has been published successfully.`
+        );
       }
+
       setTitle('');
       setContent('');
       setSelectedLearner(null);
       setEditingRec(null);
     } catch (err: any) {
-      Alert.alert('Error', err?.error || err?.message || 'Failed to submit recommendation.');
+      showNotification('Error', err?.error || err?.message || 'Failed to submit recommendation.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleDelete = (id: string) => {
-    Alert.alert('Delete Recommendation', 'Are you sure you want to delete this recommendation?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete', style: 'destructive',
-        onPress: async () => {
-          try {
-            await recommendationApi.delete(id);
-            setHistory(prev => prev.filter(r => r.id !== id));
-          } catch (err: any) {
-            Alert.alert('Error', err?.error || 'Failed to delete.');
-          }
-        }
-      }
-    ]);
-  };
-
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#4F46E5" />
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.bgWarm} />
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={22} color="#fff" />
+        <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backBtn} activeOpacity={0.8}>
+          <Ionicons name="arrow-back" size={20} color={COLORS.neutralDark} />
         </TouchableOpacity>
         <View style={{ flex: 1, marginLeft: 12 }}>
           <Text style={styles.headerTitle}>Learner Recommendations</Text>
-          <Text style={styles.headerSub}>Recognize outstanding learners</Text>
+          <Text style={styles.headerSub}>Endorse Standout Course Graduates</Text>
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        {/* Info Banner */}
+      <ScrollView
+        style={styles.scrollArea}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Info Philosophy Banner */}
         <View style={styles.infoBanner}>
-          <Ionicons name="information-circle" size={20} color="#3B82F6" />
-          <Text style={styles.infoText}>
-            Recommendations help learners showcase their skills to future employers. Only learners who have completed your course are eligible.
-          </Text>
+          <View style={styles.infoIconWrap}>
+            <Ionicons name="ribbon" size={20} color={COLORS.honeyText} />
+          </View>
+          <View style={{ flex: 1, marginLeft: 10 }}>
+            <Text style={styles.infoTitle}>Mentor Endorsements</Text>
+            <Text style={styles.infoText}>
+              Formal recommendations help top learners showcase practical mastery to employers and peers.
+              Only verified graduates with approved completion can be endorsed.
+            </Text>
+          </View>
         </View>
 
         {/* Step 1: Select Course */}
         <View style={styles.card}>
-          <Text style={styles.stepLabel}>Step 1: Select a Course</Text>
+          <View style={styles.stepHeaderRow}>
+            <View style={styles.stepNumberBadge}>
+              <Text style={styles.stepNumberBadgeText}>STEP 1</Text>
+            </View>
+            <Text style={styles.stepLabel}>Select a Course</Text>
+          </View>
+
           {loadingCourses ? (
-            <ActivityIndicator color="#4F46E5" />
+            <View style={styles.loadingBoxMini}>
+              <ActivityIndicator color={COLORS.primary} size="small" />
+              <Text style={styles.loadingTextMini}>Loading courses...</Text>
+            </View>
           ) : myCourses.length === 0 ? (
-            <Text style={styles.noDataText}>No published courses found.</Text>
+            <View style={styles.noCoursesBox}>
+              <Text style={styles.noDataText}>No published courses found.</Text>
+            </View>
           ) : (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingVertical: 4 }}>
-              {myCourses.map((course: any) => (
-                <TouchableOpacity
-                  key={course.id}
-                  style={[styles.courseChip, selectedCourse?.id === course.id && styles.courseChipActive]}
-                  onPress={() => handleSelectCourse(course)}
-                >
-                  <Ionicons
-                    name="book-outline"
-                    size={14}
-                    color={selectedCourse?.id === course.id ? '#fff' : '#4F46E5'}
-                  />
-                  <Text style={[styles.courseChipText, selectedCourse?.id === course.id && styles.courseChipTextActive]}>
-                    {course.title}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.courseChipsContainer}
+            >
+              {myCourses.map((course: any) => {
+                const isSelected = selectedCourse?.id === course.id;
+                return (
+                  <TouchableOpacity
+                    key={course.id}
+                    style={[styles.courseChip, isSelected && styles.courseChipActive]}
+                    onPress={() => handleSelectCourse(course)}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons
+                      name="book-outline"
+                      size={14}
+                      color={isSelected ? COLORS.white : COLORS.primary}
+                    />
+                    <Text style={[styles.courseChipText, isSelected && styles.courseChipTextActive]}>
+                      {course.title}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
           )}
         </View>
 
-        {/* Step 2: Select Learner */}
+        {/* Step 2: Select Graduate */}
         {selectedCourse && (
           <View style={styles.card}>
-            <Text style={styles.stepLabel}>Step 2: Select Learner</Text>
-            <Text style={styles.stepSub}>Only learners who completed "{selectedCourse.title}" are shown.</Text>
+            <View style={styles.stepHeaderRow}>
+              <View style={styles.stepNumberBadge}>
+                <Text style={styles.stepNumberBadgeText}>STEP 2</Text>
+              </View>
+              <Text style={styles.stepLabel}>Select Eligible Graduate</Text>
+            </View>
+            <Text style={styles.stepSub}>
+              Showing learners who successfully completed "{selectedCourse.title}".
+            </Text>
+
             {loadingLearners ? (
-              <ActivityIndicator color="#4F46E5" style={{ marginTop: 8 }} />
+              <View style={styles.loadingBoxMini}>
+                <ActivityIndicator color={COLORS.primary} size="small" />
+                <Text style={styles.loadingTextMini}>Checking course graduates...</Text>
+              </View>
             ) : completedLearners.length === 0 ? (
-              <View style={styles.emptyBox}>
-                <Ionicons name="people-outline" size={32} color="#D1D5DB" />
-                <Text style={styles.noDataText}>No completed learners yet for this course.</Text>
+              <View style={styles.emptyGraduatesBox}>
+                <View style={styles.emptyGraduatesIcon}>
+                  <Ionicons name="school-outline" size={28} color={COLORS.neutralMedium} />
+                </View>
+                <Text style={styles.emptyGraduatesTitle}>No Certified Graduates Yet</Text>
+                <Text style={styles.emptyGraduatesSub}>
+                  Once learners finish all course assessments and have their completion approved, they will appear here.
+                </Text>
               </View>
             ) : (
-              <View style={{ gap: 8, marginTop: 8 }}>
+              <View style={styles.learnersGrid}>
                 {completedLearners.map((req: any) => {
                   const learner = req.learner;
                   const isSelected = selectedLearner?.learnerId === req.learnerId;
+                  const initial = (learner?.name || learner?.email || '?')[0]?.toUpperCase() || 'L';
+
                   return (
                     <TouchableOpacity
                       key={req.id}
                       style={[styles.learnerRow, isSelected && styles.learnerRowActive]}
                       onPress={() => setSelectedLearner(req)}
+                      activeOpacity={0.8}
                     >
-                      <View style={[styles.learnerAvatar, isSelected && { backgroundColor: '#4F46E5' }]}>
-                        <Text style={[styles.learnerAvatarText, isSelected && { color: '#fff' }]}>
-                          {(learner?.name || learner?.email || '?')[0].toUpperCase()}
+                      <View style={[styles.learnerAvatar, isSelected && styles.learnerAvatarActive]}>
+                        <Text style={[styles.learnerAvatarText, isSelected && styles.learnerAvatarTextActive]}>
+                          {initial}
                         </Text>
                       </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[styles.learnerName, isSelected && { color: '#4F46E5' }]}>
-                          {learner?.name || 'Learner'}
+                      <View style={{ flex: 1, marginRight: 8 }}>
+                        <Text style={[styles.learnerName, isSelected && styles.learnerNameActive]}>
+                          {learner?.name || 'Course Graduate'}
                         </Text>
-                        <Text style={styles.learnerEmail}>{learner?.email || ''}</Text>
+                        <Text style={styles.learnerEmail} numberOfLines={1}>
+                          {learner?.email || ''}
+                        </Text>
                       </View>
-                      {isSelected && (
-                        <Ionicons name="checkmark-circle" size={20} color="#4F46E5" />
+                      {isSelected ? (
+                        <Ionicons name="checkmark-circle" size={22} color={COLORS.primary} />
+                      ) : (
+                        <View style={styles.unselectedCircle} />
                       )}
                     </TouchableOpacity>
                   );
@@ -219,81 +285,132 @@ export function RecommendationScreen({ navigation }: any) {
           </View>
         )}
 
-        {/* Step 3: Write Recommendation */}
+        {/* Step 3: Write Recommendation & Live Preview */}
         {selectedLearner && (
           <View style={styles.card}>
-            <Text style={styles.stepLabel}>Step 3: Write Recommendation</Text>
-            <Text style={styles.stepSub}>
-              Writing for: <Text style={{ fontWeight: '700', color: '#4F46E5' }}>{selectedLearner.learner?.name || 'Learner'}</Text>
-            </Text>
+            <View style={styles.stepHeaderRow}>
+              <View style={styles.stepNumberBadge}>
+                <Text style={styles.stepNumberBadgeText}>STEP 3</Text>
+              </View>
+              <Text style={styles.stepLabel}>Write Recommendation</Text>
+            </View>
+            <View style={styles.recommendingBanner}>
+              <Text style={styles.recommendingText}>
+                Endorsement for:{' '}
+                <Text style={{ fontWeight: '800', color: COLORS.neutralDark }}>
+                  {selectedLearner.learner?.name || 'Learner'}
+                </Text>
+              </Text>
+            </View>
 
-            <TextInput
-              style={styles.titleInput}
-              placeholder='e.g. "Exceptional dedication and skill"'
-              placeholderTextColor="#9CA3AF"
-              value={title}
-              onChangeText={setTitle}
-              maxLength={100}
-            />
-            <Text style={styles.charCount}>{title.length}/100</Text>
+            {/* Headline / Title Input */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Headline / Key Quality *</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder='e.g. "Exceptional problem solver & dedicated engineer"'
+                placeholderTextColor={COLORS.neutralLight}
+                value={title}
+                onChangeText={setTitle}
+                maxLength={100}
+              />
+              <Text style={styles.charCount}>{title.length}/100</Text>
+            </View>
 
-            <TextInput
-              style={styles.contentInput}
-              placeholder='Share what made this learner stand out. Be specific about their achievements, attitude, and skills demonstrated throughout the course...'
-              placeholderTextColor="#9CA3AF"
-              value={content}
-              onChangeText={setContent}
-              multiline
-              numberOfLines={6}
-              textAlignVertical="top"
-            />
-            <Text style={styles.charCount}>{content.length} characters (min 20)</Text>
+            {/* Content / Narrative Input */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Recommendation Narrative * (min 20 chars)</Text>
+              <TextInput
+                style={[styles.textInput, styles.textArea]}
+                placeholder="Highlight the learner's dedication, project quality, collaboration skills, and technical strengths demonstrated during this course..."
+                placeholderTextColor={COLORS.neutralLight}
+                value={content}
+                onChangeText={setContent}
+                multiline
+                numberOfLines={5}
+                textAlignVertical="top"
+              />
+              <Text
+                style={[
+                  styles.charCount,
+                  content.length < 20 && content.length > 0 ? { color: COLORS.error } : null,
+                ]}
+              >
+                {content.length} characters (min 20)
+              </Text>
+            </View>
 
-            {/* Preview Card */}
-            {title.trim() && content.trim() && (
-              <View style={styles.previewCard}>
-                <Text style={styles.previewLabel}>Preview</Text>
-                <View style={styles.previewInner}>
-                  <Text style={styles.previewTitle}>{title}</Text>
-                  <Text style={styles.previewContent}>"{content}"</Text>
+            {/* Live Endorsement Preview */}
+            {title.trim().length > 0 && content.trim().length > 0 && (
+              <View style={styles.previewContainer}>
+                <View style={styles.previewHeader}>
+                  <Ionicons name="eye-outline" size={14} color={COLORS.honeyText} style={{ marginRight: 4 }} />
+                  <Text style={styles.previewHeaderLabel}>LIVE PREVIEW</Text>
+                </View>
+                <View style={styles.previewCard}>
+                  <Text style={styles.previewTitle}>"{title}"</Text>
+                  <Text style={styles.previewQuote}>{content}</Text>
                   <View style={styles.previewFooter}>
-                    <View style={styles.previewAvatar}>
-                      <Text style={styles.previewAvatarText}>Y</Text>
+                    <View style={styles.previewBadge}>
+                      <Ionicons name="ribbon" size={14} color={COLORS.primary} />
+                      <Text style={styles.previewBadgeText}>
+                        Endorsed by Instructor · {selectedCourse?.title}
+                      </Text>
                     </View>
-                    <Text style={styles.previewAuthor}>You · {selectedCourse?.title}</Text>
                   </View>
                 </View>
               </View>
             )}
 
-            {/* Public toggle */}
-            <TouchableOpacity style={styles.toggleRow} onPress={() => setIsPublic(prev => !prev)}>
-              <View style={[styles.toggle, isPublic && styles.toggleOn]}>
-                <View style={[styles.toggleThumb, isPublic && styles.toggleThumbOn]} />
-              </View>
-              <View style={{ flex: 1, marginLeft: 10 }}>
-                <Text style={styles.toggleLabel}>Make Public</Text>
+            {/* Public Switch Toggle Card */}
+            <View style={styles.toggleCard}>
+              <View style={{ flex: 1, marginRight: 12 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={styles.toggleLabel}>Public Endorsement</Text>
+                  <View
+                    style={[
+                      styles.visibilityPill,
+                      { backgroundColor: isPublic ? COLORS.badgeGreenBg : COLORS.surfaceMuted },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.visibilityPillText,
+                        { color: isPublic ? COLORS.badgeGreenText : COLORS.neutralMedium },
+                      ]}
+                    >
+                      {isPublic ? 'Public' : 'Private'}
+                    </Text>
+                  </View>
+                </View>
                 <Text style={styles.toggleSub}>
                   {isPublic
-                    ? 'This recommendation will be visible to potential employers.'
-                    : 'This recommendation will only be visible to the learner.'}
+                    ? 'Visible on learner profile to future employers and peers.'
+                    : 'Visible only directly to the learner.'}
                 </Text>
               </View>
-              <Ionicons name={isPublic ? 'globe-outline' : 'lock-closed-outline'} size={20} color={isPublic ? '#059669' : '#9CA3AF'} />
-            </TouchableOpacity>
+              <Switch
+                value={isPublic}
+                onValueChange={setIsPublic}
+                trackColor={{ false: COLORS.borderSubtle, true: '#FC9174' }}
+                thumbColor={isPublic ? COLORS.primaryDark : COLORS.white}
+              />
+            </View>
 
+            {/* Submit Button */}
             <TouchableOpacity
               style={[styles.submitBtn, submitting && { opacity: 0.7 }]}
               onPress={handleSubmit}
               disabled={submitting}
+              activeOpacity={0.9}
             >
               {submitting ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <ActivityIndicator size="small" color={COLORS.white} />
               ) : (
                 <>
-                  <Ionicons name="ribbon-outline" size={18} color="#fff" />
+                  <Ionicons name="ribbon-outline" size={18} color={COLORS.white} />
                   <Text style={styles.submitBtnText}>
-                    {editingRec ? 'Update Recommendation' : 'Send Recommendation'}
+                    {editingRec ? 'Update Recommendation' : 'Publish Endorsement →'}
                   </Text>
                 </>
               )}
@@ -305,117 +422,434 @@ export function RecommendationScreen({ navigation }: any) {
   );
 }
 
+export default RecommendationScreen;
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.bgWarm,
+    ...Platform.select({
+      web: {
+        height: '100vh' as any,
+        maxHeight: '100vh' as any,
+        overflow: 'hidden' as any,
+      },
+    }),
+  },
   header: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#4F46E5', paddingHorizontal: 16, paddingVertical: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 18,
+    paddingTop: 12,
+    paddingBottom: 10,
+    backgroundColor: COLORS.bgWarm,
   },
   backBtn: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center', justifyContent: 'center',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.borderSubtle,
+    elevation: 2,
+    shadowColor: COLORS.shadowColor,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
   },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: '#fff' },
-  headerSub: { fontSize: 12, color: '#C7D2FE', marginTop: 2 },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: COLORS.neutralDark,
+    letterSpacing: -0.3,
+  },
+  headerSub: {
+    fontSize: 12,
+    color: COLORS.neutralMedium,
+    fontWeight: '500',
+    marginTop: 1,
+  },
+  scrollArea: {
+    flex: 1,
+    ...Platform.select({
+      web: {
+        overflowY: 'auto' as any,
+        WebkitOverflowScrolling: 'touch' as any,
+      },
+    }),
+  },
+  content: {
+    paddingHorizontal: 18,
+    paddingBottom: 40,
+    gap: 16,
+  },
 
-  content: { padding: 16, gap: 16, paddingBottom: 40 },
-
+  // Info Philosophy Banner
   infoBanner: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
-    backgroundColor: '#EFF6FF', borderRadius: 12, padding: 14,
-    borderWidth: 1, borderColor: '#BFDBFE',
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: COLORS.honeyBg,
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#FBE8C4',
   },
-  infoText: { flex: 1, fontSize: 13, color: '#1D4ED8', lineHeight: 19 },
+  infoIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#F7DCAB',
+  },
+  infoTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: COLORS.honeyText,
+    marginBottom: 2,
+  },
+  infoText: {
+    fontSize: 12,
+    color: COLORS.neutralDark,
+    lineHeight: 18,
+  },
 
+  // Step Card
   card: {
-    backgroundColor: '#fff', borderRadius: 16, padding: 18,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3,
+    backgroundColor: COLORS.surfaceCard,
+    borderRadius: 22,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: COLORS.borderSubtle,
+    elevation: 2,
+    shadowColor: COLORS.shadowColor,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
   },
-  stepLabel: { fontSize: 15, fontWeight: '700', color: '#111827', marginBottom: 4 },
-  stepSub: { fontSize: 12, color: '#6B7280', marginBottom: 12 },
+  stepHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  stepNumberBadge: {
+    backgroundColor: COLORS.badgeOrangeBg,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  stepNumberBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: COLORS.primary,
+    letterSpacing: 0.5,
+  },
+  stepLabel: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: COLORS.neutralDark,
+    letterSpacing: -0.2,
+  },
+  stepSub: {
+    fontSize: 12,
+    color: COLORS.neutralMedium,
+    marginBottom: 12,
+    marginTop: 2,
+  },
 
+  // Course Selector
+  courseChipsContainer: {
+    gap: 8,
+    paddingVertical: 4,
+  },
   courseChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 14, paddingVertical: 8,
-    borderRadius: 20, borderWidth: 1.5, borderColor: '#4F46E5',
-    backgroundColor: '#EEF2FF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 18,
+    backgroundColor: COLORS.surfaceMuted,
+    borderWidth: 1,
+    borderColor: COLORS.borderSubtle,
   },
-  courseChipActive: { backgroundColor: '#4F46E5' },
-  courseChipText: { fontSize: 13, fontWeight: '600', color: '#4F46E5' },
-  courseChipTextActive: { color: '#fff' },
+  courseChipActive: {
+    backgroundColor: COLORS.primaryDark,
+    borderColor: COLORS.primaryDark,
+  },
+  courseChipText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.neutralDark,
+  },
+  courseChipTextActive: {
+    color: COLORS.white,
+  },
+  loadingBoxMini: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 12,
+  },
+  loadingTextMini: {
+    fontSize: 12,
+    color: COLORS.neutralMedium,
+    fontWeight: '600',
+  },
+  noCoursesBox: {
+    paddingVertical: 12,
+  },
+  noDataText: {
+    fontSize: 13,
+    color: COLORS.neutralMedium,
+    fontStyle: 'italic',
+  },
 
+  // Graduate Selection
+  emptyGraduatesBox: {
+    backgroundColor: COLORS.cardBgSoft,
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.borderWarm,
+    borderStyle: 'dashed',
+    marginTop: 6,
+  },
+  emptyGraduatesIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  emptyGraduatesTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: COLORS.neutralDark,
+    marginBottom: 3,
+  },
+  emptyGraduatesSub: {
+    fontSize: 11,
+    color: COLORS.neutralMedium,
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+  learnersGrid: {
+    gap: 8,
+    marginTop: 6,
+  },
   learnerRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    padding: 12, borderRadius: 12, borderWidth: 1.5, borderColor: '#E5E7EB',
-    backgroundColor: '#F9FAFB',
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 16,
+    backgroundColor: COLORS.cardBgSoft,
+    borderWidth: 1,
+    borderColor: COLORS.borderWarm,
   },
-  learnerRowActive: { borderColor: '#4F46E5', backgroundColor: '#EEF2FF' },
+  learnerRowActive: {
+    backgroundColor: COLORS.badgeOrangeBg,
+    borderColor: COLORS.primary,
+  },
   learnerAvatar: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: '#E0E7FF', alignItems: 'center', justifyContent: 'center',
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: COLORS.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: COLORS.borderWarm,
   },
-  learnerAvatarText: { fontSize: 16, fontWeight: '700', color: '#4F46E5' },
-  learnerName: { fontSize: 14, fontWeight: '600', color: '#111827' },
-  learnerEmail: { fontSize: 12, color: '#6B7280', marginTop: 1 },
+  learnerAvatarActive: {
+    backgroundColor: COLORS.primaryDark,
+    borderColor: COLORS.primaryDark,
+  },
+  learnerAvatarText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: COLORS.primaryDark,
+  },
+  learnerAvatarTextActive: {
+    color: COLORS.white,
+  },
+  learnerName: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: COLORS.neutralDark,
+  },
+  learnerNameActive: {
+    color: COLORS.primaryDark,
+  },
+  learnerEmail: {
+    fontSize: 11,
+    color: COLORS.neutralMedium,
+    marginTop: 1,
+  },
+  unselectedCircle: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 1.5,
+    borderColor: COLORS.borderSubtle,
+  },
 
-  titleInput: {
-    borderWidth: 1.5, borderColor: '#E5E7EB', borderRadius: 10,
-    paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, color: '#111827',
-    marginBottom: 2, marginTop: 12,
+  // Form Fields
+  recommendingBanner: {
+    backgroundColor: COLORS.cardBgSoft,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: COLORS.borderWarm,
   },
-  contentInput: {
-    borderWidth: 1.5, borderColor: '#E5E7EB', borderRadius: 10,
-    padding: 14, fontSize: 14, color: '#111827',
-    minHeight: 130, marginBottom: 2, marginTop: 12,
+  recommendingText: {
+    fontSize: 12,
+    color: COLORS.neutralMedium,
   },
-  charCount: { fontSize: 11, color: '#9CA3AF', textAlign: 'right', marginBottom: 12 },
+  fieldGroup: {
+    marginBottom: 14,
+  },
+  fieldLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.neutralDark,
+    marginBottom: 6,
+  },
+  textInput: {
+    backgroundColor: COLORS.surfaceMuted,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    fontSize: 13,
+    color: COLORS.neutralDark,
+    borderWidth: 1,
+    borderColor: COLORS.borderSubtle,
+  },
+  textArea: {
+    minHeight: 110,
+    textAlignVertical: 'top',
+  },
+  charCount: {
+    fontSize: 10,
+    color: COLORS.neutralMedium,
+    textAlign: 'right',
+    marginTop: 4,
+  },
 
+  // Preview
+  previewContainer: {
+    marginBottom: 16,
+  },
+  previewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  previewHeaderLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: COLORS.honeyText,
+    letterSpacing: 0.6,
+  },
   previewCard: {
-    borderRadius: 12, overflow: 'hidden', marginBottom: 16,
-    borderWidth: 1, borderColor: '#E0E7FF',
+    backgroundColor: COLORS.cardBgSoft,
+    borderRadius: 16,
+    padding: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.primary,
+    borderWidth: 1,
+    borderColor: COLORS.borderWarm,
   },
-  previewLabel: {
-    backgroundColor: '#EEF2FF', paddingHorizontal: 12, paddingVertical: 6,
-    fontSize: 11, fontWeight: '700', color: '#6366F1',
-    textTransform: 'uppercase', letterSpacing: 1,
+  previewTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: COLORS.neutralDark,
+    marginBottom: 6,
   },
-  previewInner: { padding: 14, backgroundColor: '#fff', borderLeftWidth: 4, borderLeftColor: '#4F46E5' },
-  previewTitle: { fontSize: 14, fontWeight: '700', color: '#111827', marginBottom: 6 },
-  previewContent: { fontSize: 13, color: '#374151', fontStyle: 'italic', lineHeight: 20, marginBottom: 12 },
-  previewFooter: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  previewAvatar: {
-    width: 28, height: 28, borderRadius: 14,
-    backgroundColor: '#4F46E5', alignItems: 'center', justifyContent: 'center',
+  previewQuote: {
+    fontSize: 13,
+    color: COLORS.neutralDark,
+    fontStyle: 'italic',
+    lineHeight: 19,
+    marginBottom: 10,
   },
-  previewAvatarText: { fontSize: 13, fontWeight: '700', color: '#fff' },
-  previewAuthor: { fontSize: 12, color: '#6B7280' },
+  previewFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  previewBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  previewBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLORS.neutralMedium,
+  },
 
-  toggleRow: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#F9FAFB', borderRadius: 12,
-    padding: 12, marginBottom: 16,
-    borderWidth: 1, borderColor: '#E5E7EB',
+  // Toggle
+  toggleCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.cardBgSoft,
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: COLORS.borderWarm,
+    marginBottom: 16,
   },
-  toggle: {
-    width: 44, height: 24, borderRadius: 12,
-    backgroundColor: '#E5E7EB', padding: 2,
+  toggleLabel: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: COLORS.neutralDark,
+    marginRight: 8,
   },
-  toggleOn: { backgroundColor: '#059669' },
-  toggleThumb: {
-    width: 20, height: 20, borderRadius: 10,
-    backgroundColor: '#fff',
+  visibilityPill: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 6,
   },
-  toggleThumbOn: { transform: [{ translateX: 20 }] },
-  toggleLabel: { fontSize: 14, fontWeight: '600', color: '#111827' },
-  toggleSub: { fontSize: 11, color: '#6B7280', marginTop: 2 },
+  visibilityPillText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  toggleSub: {
+    fontSize: 11,
+    color: COLORS.neutralMedium,
+    marginTop: 3,
+    lineHeight: 16,
+  },
 
   submitBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: '#4F46E5', paddingVertical: 14, borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: COLORS.primaryDark,
+    paddingVertical: 14,
+    borderRadius: 22,
+    elevation: 3,
+    shadowColor: COLORS.primaryDark,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
   },
-  submitBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
-
-  noDataText: { fontSize: 13, color: '#9CA3AF', textAlign: 'center', marginTop: 8 },
-  emptyBox: { alignItems: 'center', gap: 6, paddingVertical: 16 },
+  submitBtnText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: COLORS.white,
+    letterSpacing: 0.2,
+  },
 });

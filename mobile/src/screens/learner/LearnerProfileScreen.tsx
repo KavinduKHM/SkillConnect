@@ -149,10 +149,21 @@ export default function LearnerProfileScreen({ navigation }: any) {
             <View style={styles.settingsGroup}>
               <TouchableOpacity
                 style={styles.settingsRow}
+                onPress={() => navigation?.navigate('MyRecommendations')}
+              >
+                <Text style={styles.settingsIcon}>🎖️</Text>
+                <Text style={[styles.settingsLabel, { color: COLORS.primary, fontWeight: '800' }]}>
+                  My Recommendations & Endorsements
+                </Text>
+                <Text style={styles.chevron}>›</Text>
+              </TouchableOpacity>
+              <View style={styles.rowDivider} />
+              <TouchableOpacity
+                style={styles.settingsRow}
                 onPress={() => navigation?.navigate('LearningHistory')}
               >
                 <Text style={styles.settingsIcon}>📜</Text>
-                <Text style={[styles.settingsLabel, { color: COLORS.primary, fontWeight: '800' }]}>
+                <Text style={styles.settingsLabel}>
                   View Learning History & Growth
                 </Text>
                 <Text style={styles.chevron}>›</Text>
