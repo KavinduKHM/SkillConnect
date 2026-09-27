@@ -20,7 +20,9 @@ const router = express.Router();
 // PUBLIC ROUTES
 // ============================================================
 
-// POST /api/certificates/verify (Public - employers can verify)
+// GET & POST /api/certificates/verify/:code (Public - verify by code or ID)
+router.get('/verify/:code', verifyCertificate);
+router.get('/verify', verifyCertificate);
 router.post('/verify', verifyCertificate);
 
 // GET /api/certificates/public/:certId

@@ -106,12 +106,18 @@ export const getLearnerCertificates = async (learnerId: string) => {
   });
 };
 
-export const getCertificateByCode = async (certificateId: string) => {
-  const cert = await prisma.certificate.findUnique({
-    where: { certificateId },
+export const getCertificateByCode = async (identifier: string) => {
+  const cert = await prisma.certificate.findFirst({
+    where: {
+      OR: [
+        { certificateId: identifier },
+        { id: identifier },
+        { verificationCode: identifier },
+      ],
+    },
     include: {
       course: { select: { title: true, duration: true } },
-      learner: { select: { name: true } },
+      learner: { select: { name: true, email: true } },
       instructor: { select: { name: true } },
     },
   });
@@ -120,12 +126,19 @@ export const getCertificateByCode = async (certificateId: string) => {
   return cert;
 };
 
-export const verifyCertificate = async (verificationCode: string, ipAddress?: string, userAgent?: string) => {
-  const cert = await prisma.certificate.findUnique({
-    where: { verificationCode },
+export const verifyCertificate = async (code: string, ipAddress?: string, userAgent?: string) => {
+  const cert = await prisma.certificate.findFirst({
+    where: {
+      OR: [
+        { verificationCode: code },
+        { certificateId: code },
+        { id: code },
+      ],
+    },
     include: {
       course: { select: { title: true } },
-      learner: { select: { name: true } },
+      learner: { select: { name: true, email: true } },
+      instructor: { select: { name: true } },
     },
   });
 

@@ -73,6 +73,20 @@ app.use('/api/certificates', certificateRoutes);
 app.use('/api/certificate', certificateRoutes);
 app.use('/api/recognition', recognitionRoutes);
 
+// Public Certificate Verification Direct Routes (e.g. http://localhost:5000/verify/:code)
+app.get('/verify/:code', (req, res) => {
+  res.redirect(`/api/certificates/verify/${encodeURIComponent(req.params.code)}`);
+});
+app.get('/verify', (req, res) => {
+  const code = req.query.code;
+  if (code) {
+    res.redirect(`/api/certificates/verify/${encodeURIComponent(code as string)}`);
+  } else {
+    res.redirect('/api/certificates/verify');
+  }
+});
+
+
 
 // Error handling
 app.use(notFoundHandler);

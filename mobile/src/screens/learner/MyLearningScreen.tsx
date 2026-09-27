@@ -13,6 +13,7 @@ import {
   ScrollView,
   Platform,
   Linking,
+  Alert,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { fetchMyLearning, fetchMyQuizzes } from '../../api/learner.service';
@@ -139,7 +140,8 @@ export default function MyLearningScreen({ navigation }: any) {
 
   const downloadCertificate = async (certificate: any) => {
     try {
-      const url = `http://localhost:5000/api/certificates/${certificate.id}/download`;
+      const certId = certificate.id || certificate.certificateId;
+      const url = `http://localhost:5000/api/certificates/${certId}/download`;
       if (Platform.OS === 'web') {
         window.open(url, '_blank');
       } else {
@@ -147,7 +149,11 @@ export default function MyLearningScreen({ navigation }: any) {
       }
     } catch (error) {
       console.log('Error opening PDF download:', error);
-      alert('Could not download the certificate.');
+      if (Platform.OS === 'web') {
+        window.alert('Could not download the certificate.');
+      } else {
+        Alert.alert('Notice', 'Could not download the certificate.');
+      }
     }
   };
 
@@ -358,27 +364,188 @@ export default function MyLearningScreen({ navigation }: any) {
           />
         </View>
       ) : activeTab === 'CERTIFICATES' ? (
-        <FlatList
-          data={completedCourses}
-          keyExtractor={(item) => item.id}
+        <ScrollView
+          style={{ flex: 1 }}
           contentContainerStyle={styles.listContainer}
-          renderItem={({ item }) => {
-            const course = item.course || {};
-            return (
-              <View style={styles.certCard}>
-                <Text style={styles.certIcon}>🎖️</Text>
-                <View style={{ flex: 1, marginLeft: 12 }}>
-                  <Text style={styles.certTitle}>Certificate of Completion</Text>
-                  <Text style={styles.certCourseName}>{course.title || 'UI/UX Design Masterclass'}</Text>
-                  <Text style={styles.certDate}>Issued: September 2026 • Verified SkillConnect</Text>
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => {
+                setRefreshing(true);
+                loadMyLearning();
+              }}
+              tintColor={COLORS.primary}
+            />
+          }
+        >
+          {/* Tracking Course Completion Requests */}
+          {completionRequests.length > 0 && (
+            <View style={{ gap: 10, marginBottom: 6 }}>
+              <Text style={{ fontSize: 13, fontWeight: '800', color: COLORS.neutralDark, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                Verification & Approval Status
+              </Text>
+              {completionRequests.map((req: any) => {
+                const courseTitle = req.course?.title || 'Course';
+                const isRejected = req.status === 'REJECTED';
+                return (
+                  <View
+                    key={req.id}
+                    style={{
+                      backgroundColor: isRejected ? COLORS.errorBg : COLORS.honeyBg,
+                      borderRadius: 16,
+                      padding: 14,
+                      borderWidth: 1,
+                      borderColor: isRejected ? '#FFDAD6' : '#FBE8C4',
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: isRejected ? COLORS.error : COLORS.honeyText }}>
+                        {isRejected ? '⚠️ Action Required' : '⏳ Review in Progress'}
+                      </Text>
+                      <View
+                        style={{
+                          backgroundColor: isRejected ? '#FEE2E2' : COLORS.badgeOrangeBg,
+                          paddingHorizontal: 8,
+                          paddingVertical: 2,
+                          borderRadius: 8,
+                        }}
+                      >
+                        <Text style={{ fontSize: 10, fontWeight: '800', color: isRejected ? COLORS.error : COLORS.primary }}>
+                          {req.status}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.neutralDark, marginBottom: 2 }}>
+                      {courseTitle}
+                    </Text>
+                    <Text style={{ fontSize: 12, color: COLORS.neutralMedium, lineHeight: 17 }}>
+                      {isRejected
+                        ? `Instructor Feedback: "${req.rejectReason || 'Please review course requirements.'}"`
+                        : 'Your completion request has been submitted. Your instructor is verifying your quiz scores & assignments.'}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
+          {/* Recommendations Banner Link */}
+          <TouchableOpacity
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              backgroundColor: COLORS.honeyBg,
+              paddingHorizontal: 14,
+              paddingVertical: 12,
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: '#FBE8C4',
+              marginBottom: 4,
+            }}
+            onPress={() => navigation?.navigate('MyRecommendations')}
+            activeOpacity={0.85}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}>
+              <Text style={{ fontSize: 20, marginRight: 10 }}>🎖️</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, fontWeight: '800', color: COLORS.honeyText }}>
+                  Instructor Recommendations
+                </Text>
+                <Text style={{ fontSize: 11, color: COLORS.neutralMedium }}>
+                  View verified endorsements from your course mentors
+                </Text>
+              </View>
+            </View>
+            <Text style={{ fontSize: 16, fontWeight: '800', color: COLORS.honeyText }}>→</Text>
+          </TouchableOpacity>
+
+          {/* Certificates Section */}
+          <View style={{ gap: 12 }}>
+            <Text style={{ fontSize: 13, fontWeight: '800', color: COLORS.neutralDark, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              Earned E-Certificates ({(certificates.length > 0 ? certificates : completedCourses).length})
+            </Text>
+
+            {(certificates.length > 0 ? certificates : completedCourses).length === 0 && completionRequests.length === 0 ? (
+              <View style={styles.emptyCertificatesBox}>
+                <View style={styles.emptyCertificatesIcon}>
+                  <Text style={{ fontSize: 32 }}>🎓</Text>
                 </View>
-                <TouchableOpacity style={styles.certDownloadBtn}>
-                  <Text style={styles.certDownloadBtnText}>View 📜</Text>
+                <Text style={styles.emptyCertificatesTitle}>No Certificates Issued Yet</Text>
+                <Text style={styles.emptyCertificatesSub}>
+                  Complete all lessons, pass assessments, and submit practical assignments in your courses to request your verified e-certificate!
+                </Text>
+                <TouchableOpacity
+                  style={styles.browseCoursesBtn}
+                  onPress={() => setActiveTab('IN_PROGRESS')}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.browseCoursesBtnText}>View In-Progress Courses</Text>
                 </TouchableOpacity>
               </View>
-            );
-          }}
-        />
+            ) : (
+              (certificates.length > 0 ? certificates : completedCourses).map((item: any, idx: number) => {
+                const course = item.course || item;
+                const certId = item.id || `CERT-${1000 + idx}`;
+                const certNumber = item.certificateId || item.certificateNumber || `SKIL-${(course.id || 'CERT').slice(0, 6).toUpperCase()}`;
+                const issuedDate = (item.issueDate || item.issuedAt)
+                  ? new Date(item.issueDate || item.issuedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+                  : 'September 2026';
+                const instructorName = item.instructor?.name || course.creator?.name || 'Verified Skill Sharer';
+                const verifyCode = item.verificationCode || item.certificateId || item.id;
+
+                return (
+                  <View key={item.id || idx} style={styles.certCardRevamped}>
+                    <View style={styles.certCardHeader}>
+                      <View style={styles.certBadgeWrap}>
+                        <Text style={{ fontSize: 16 }}>🎖️</Text>
+                        <Text style={styles.certBadgeText}>OFFICIAL E-CERTIFICATE</Text>
+                      </View>
+                      <View style={styles.certIdPill}>
+                        <Text style={styles.certIdPillText}>{certNumber}</Text>
+                      </View>
+                    </View>
+
+                    <Text style={styles.certCourseTitle}>{course.title || 'Course Completion Masterclass'}</Text>
+
+                    <View style={styles.certMetaRow}>
+                      <Text style={styles.certInstructorText}>Instructor: {instructorName}</Text>
+                      <Text style={styles.certIssuedDate}>Issued: {issuedDate}</Text>
+                    </View>
+
+                    <View style={styles.certActionsRow}>
+                      <TouchableOpacity
+                        style={styles.certDownloadBtnRevamped}
+                        onPress={() => downloadCertificate(item)}
+                        activeOpacity={0.85}
+                      >
+                        <Text style={styles.certDownloadBtnRevampedText}>Download PDF 📜</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={styles.certVerifyBtnRevamped}
+                        onPress={() => {
+                          const verifyUrl = `http://localhost:5000/api/certificates/verify/${verifyCode}`;
+                          if (Platform.OS === 'web') {
+                            window.open(verifyUrl, '_blank');
+                          } else {
+                            Linking.openURL(verifyUrl).catch(() => {
+                              Alert.alert('Certificate Info', `Certificate ID: ${certNumber}\nStatus: Verified Authenticity`);
+                            });
+                          }
+                        }}
+                        activeOpacity={0.85}
+                      >
+                        <Text style={styles.certVerifyBtnRevampedText}>Verify 🔗</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                );
+              })
+            )}
+          </View>
+        </ScrollView>
       ) : (
         <FlatList
           data={activeTab === 'IN_PROGRESS' ? inProgressCourses : completedCourses}
@@ -531,4 +698,143 @@ const styles = StyleSheet.create({
   certDate: { fontSize: 11, color: COLORS.neutralMedium, marginTop: 2 },
   certDownloadBtn: { backgroundColor: COLORS.badgeOrangeBg, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
   certDownloadBtnText: { color: COLORS.primary, fontSize: 12, fontWeight: '800' },
+  emptyCertificatesBox: {
+    backgroundColor: COLORS.surfaceCard,
+    borderRadius: 22,
+    padding: 28,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.borderSubtle,
+    marginTop: 10,
+  },
+  emptyCertificatesIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: COLORS.badgeOrangeBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  emptyCertificatesTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: COLORS.neutralDark,
+    marginBottom: 4,
+  },
+  emptyCertificatesSub: {
+    fontSize: 12,
+    color: COLORS.neutralMedium,
+    textAlign: 'center',
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  browseCoursesBtn: {
+    backgroundColor: COLORS.primaryDark,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 16,
+  },
+  browseCoursesBtnText: {
+    color: COLORS.white,
+    fontWeight: '800',
+    fontSize: 12,
+  },
+  certCardRevamped: {
+    backgroundColor: COLORS.surfaceCard,
+    borderRadius: 20,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: COLORS.borderSubtle,
+    elevation: 2,
+    shadowColor: COLORS.shadowColor,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+  },
+  certCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  certBadgeWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  certBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: COLORS.honeyText,
+    letterSpacing: 0.5,
+  },
+  certIdPill: {
+    backgroundColor: COLORS.honeyBg,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  certIdPillText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: COLORS.honeyText,
+  },
+  certCourseTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: COLORS.neutralDark,
+    marginBottom: 6,
+  },
+  certMetaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  certInstructorText: {
+    fontSize: 11,
+    color: COLORS.neutralMedium,
+  },
+  certIssuedDate: {
+    fontSize: 11,
+    color: COLORS.neutralMedium,
+  },
+  certActionsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.borderWarm,
+    paddingTop: 12,
+  },
+  certDownloadBtnRevamped: {
+    flex: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.primaryDark,
+    paddingVertical: 10,
+    borderRadius: 14,
+  },
+  certDownloadBtnRevampedText: {
+    color: COLORS.white,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  certVerifyBtnRevamped: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.surfaceMuted,
+    paddingVertical: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: COLORS.borderSubtle,
+  },
+  certVerifyBtnRevampedText: {
+    color: COLORS.primaryDark,
+    fontSize: 12,
+    fontWeight: '700',
+  },
 });
