@@ -36,19 +36,17 @@ export class MaterialController {
         } as ApiResponse<null>);
       }
 
-      const materialInput: any = {
-        title,
-        type,
-        order,
-      };
-      if (description !== undefined) materialInput.description = description;
-      if (file !== undefined) materialInput.file = file;
-      if (externalUrl !== undefined) materialInput.externalUrl = externalUrl;
-
       const material = await materialService.createMaterial(
         userId,
         lessonId,
-        materialInput
+        {
+          title,
+          type,
+          description,
+          order,
+          file,
+          externalUrl,
+        }
       );
 
       return res.status(201).json({
@@ -56,12 +54,11 @@ export class MaterialController {
         data: material,
         message: 'Material uploaded successfully',
       } as ApiResponse<any>);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error uploading material:', error);
-      const errorMsg = error?.message || (typeof error === 'string' ? error : 'Internal server error');
       return res.status(500).json({
         success: false,
-        error: errorMsg,
+        error: error instanceof Error ? error.message : 'Internal server error',
       } as ApiResponse<null>);
     }
   }
@@ -70,7 +67,7 @@ export class MaterialController {
   async getMaterials(req: Request, res: Response) {
     try {
       const userId = (req as any).user.id;
-      const { lessonId } = req.params as { lessonId: string };
+      const { lessonId } = req.params;
 
       const materials = await materialService.getMaterialsByLessonId(lessonId, userId);
 
@@ -91,7 +88,7 @@ export class MaterialController {
   async getMaterial(req: Request, res: Response) {
     try {
       const userId = (req as any).user.id;
-      const { id } = req.params as { id: string };
+      const { id } = req.params;
 
       const material = await materialService.getMaterialById(id, userId);
 
@@ -127,7 +124,7 @@ export class MaterialController {
       }
 
       const userId = (req as any).user.id;
-      const { id } = req.params as { id: string };
+      const { id } = req.params;
       const data = req.body;
 
       const material = await materialService.updateMaterial(id, userId, data);
@@ -150,7 +147,7 @@ export class MaterialController {
   async deleteMaterial(req: Request, res: Response) {
     try {
       const userId = (req as any).user.id;
-      const { id } = req.params as { id: string };
+      const { id } = req.params;
 
       await materialService.deleteMaterial(id, userId);
 

@@ -9,12 +9,9 @@ import {
   StatusBar,
   ActivityIndicator,
   Alert,
-  Linking,
-  Platform,
 } from 'react-native';
-import Toast from 'react-native-toast-message';
 import { fetchLessonContent, completeLesson } from '../../api/learner.service';
-import { Header } from '../../components/common/Header';
+import { COLORS } from '../../theme/colors';
 
 export default function LessonPlayerScreen({ route, navigation }: any) {
   const courseId = route.params?.courseId;
@@ -26,154 +23,6 @@ export default function LessonPlayerScreen({ route, navigation }: any) {
   const [completing, setCompleting] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [completedMaterials, setCompletedMaterials] = useState<string[]>([]);
-  const [activeMaterial, setActiveMaterial] = useState<any>(null);
-
-  const getMaterialIcon = (type: string) => {
-    switch (type) {
-      case 'VIDEO': return '🎥';
-      case 'PDF': return '📄';
-      case 'SLIDE': return '📊';
-      case 'EXTERNAL': return '🔗';
-      case 'IMAGE': return '🖼️';
-      default: return '📄';
-    }
-  };
-
-  const getMaterialSub = (item: any) => {
-    if (item.sub) return item.sub;
-    const parts = [];
-    if (item.type) parts.push(item.type);
-    if (item.fileSize) {
-      const mb = (item.fileSize / (1024 * 1024)).toFixed(1);
-      parts.push(`${mb}MB`);
-    } else if (item.duration) {
-      parts.push(`${item.duration}m`);
-    }
-    return parts.join(' • ') || 'Resource';
-  };
-
-  const handleOpenMaterial = (item: any) => {
-    setActiveMaterial(item);
-  };
-
-  const handleDownloadMaterial = (url: string, filename?: string) => {
-    if (!url) return;
-    let targetUrl = url;
-    if (url.includes('dummy.pdf') || url.includes('example.com')) {
-      targetUrl = 'https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf';
-    } else if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      targetUrl = `http://localhost:5000${url.startsWith('/') ? '' : '/'}${url}`;
-    }
-
-    if (Platform.OS === 'web') {
-      try {
-        const link = document.createElement('a');
-        link.href = targetUrl;
-        link.download = filename || 'material.pdf';
-        link.target = '_blank';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      } catch (err) {
-        window.open(targetUrl, '_blank');
-      }
-    } else {
-      Linking.openURL(targetUrl).catch(() => {
-        Alert.alert('Error', 'Could not open or download document');
-      });
-    }
-  };
-
-  const renderActiveMaterial = () => {
-    const defaultMaterial = videoMaterial || materials[0];
-    const selected = activeMaterial || defaultMaterial;
-
-    if (!selected) {
-      return (
-        <View style={[styles.videoPlayerBox, { backgroundColor: '#1E293B' }]}>
-          <Text style={{ color: '#94A3B8', fontSize: 14, textAlign: 'center', paddingHorizontal: 20 }}>
-            Select a learning resource below to view it here.
-          </Text>
-        </View>
-      );
-    }
-
-    const url = selected.fileUrl || selected.externalUrl;
-    if (!url) {
-      return (
-        <View style={[styles.videoPlayerBox, { backgroundColor: '#1E293B' }]}>
-          <Text style={{ color: '#EF4444', fontSize: 13 }}>No viewable URL for: {selected.title}</Text>
-        </View>
-      );
-    }
-
-    let targetUrl = url;
-    if (url.includes('dummy.pdf') || url.includes('example.com')) {
-      targetUrl = 'https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf';
-    } else if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      targetUrl = `http://localhost:5000${url.startsWith('/') ? '' : '/'}${url}`;
-    }
-
-    const isVideo = selected.type === 'VIDEO' || selected.icon === '🎥' || targetUrl.endsWith('.mp4') || targetUrl.endsWith('.webm') || targetUrl.endsWith('.ogg');
-    const isPdf = selected.type === 'PDF' || selected.icon === '📄' || targetUrl.toLowerCase().includes('.pdf') || (selected.title && selected.title.toLowerCase().endsWith('.pdf'));
-
-    if (Platform.OS === 'web') {
-      if (isVideo) {
-        return (
-          <View style={styles.webFrameContainer}>
-            <video
-              src={targetUrl}
-              controls
-              style={{ width: '100%', height: '100%', border: 'none', backgroundColor: '#000' }}
-            />
-          </View>
-        );
-      } else {
-        const embedUrl = isPdf && targetUrl.startsWith('http')
-          ? `https://docs.google.com/viewer?url=${encodeURIComponent(targetUrl)}&embedded=true`
-          : targetUrl;
-
-        return (
-          <View style={styles.webFrameContainer}>
-            <iframe
-              src={embedUrl}
-              style={{ width: '100%', height: '100%', border: 'none', backgroundColor: '#FFFFFF' }}
-              title={selected.title}
-            />
-            {isPdf && (
-              <TouchableOpacity
-                style={styles.openPdfBanner}
-                onPress={() => handleDownloadMaterial(targetUrl, selected.title)}
-              >
-                <Text style={styles.openPdfBannerText}>📥 Download / Open PDF ↗</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        );
-      }
-    }
-
-    return (
-      <TouchableOpacity
-        style={styles.videoPlayerBox}
-        onPress={() => {
-          Linking.openURL(targetUrl).catch(() => {
-            Alert.alert('Error', 'Could not open learning link');
-          });
-        }}
-      >
-        <Text style={{ color: '#F1F5F9', fontSize: 32, marginBottom: 8 }}>
-          {selected.icon || getMaterialIcon(selected.type)}
-        </Text>
-        <Text style={{ color: '#F1F5F9', fontSize: 14, fontWeight: '700', textAlign: 'center', paddingHorizontal: 16 }} numberOfLines={2}>
-          Open: {selected.title}
-        </Text>
-        <Text style={{ color: '#94A3B8', fontSize: 11, marginTop: 4 }}>
-          (Tapping opens document in external browser)
-        </Text>
-      </TouchableOpacity>
-    );
-  };
 
   const loadLesson = async () => {
     if (!lessonId) return;
@@ -203,102 +52,95 @@ export default function LessonPlayerScreen({ route, navigation }: any) {
   const handleMarkComplete = async () => {
     try {
       setCompleting(true);
-      const res = await completeLesson(courseId, lessonId);
+      const res = await completeLesson(courseId, lessonId, true);
       setCompleted(true);
       const pct = res.progress?.progressPercentage ?? res.progressPercentage ?? 80;
-      Toast.show({ type: 'success', text1: 'Lesson Completed! 🎉', text2: `Course progress: ${pct}%` });
-      // Navigate back to CourseDetail so progress reloads and ticks update
-      setTimeout(() => {
-        if (courseId) {
-          navigation?.navigate('CourseDetail', { courseId });
-        } else {
-          navigation?.goBack();
-        }
-      }, 1500);
+      Alert.alert(
+        'Lesson Completed! 🎉',
+        `Course completion progress is now ${pct}%.`,
+        [{ text: 'Back to Course Details', onPress: () => navigation?.goBack() }, { text: 'OK' }]
+      );
     } catch (err: any) {
       const msg = err.response?.data?.error || err.message || 'Could not mark lesson complete';
-      Toast.show({ type: 'error', text1: 'Notice', text2: msg });
+      Alert.alert('Notice', msg);
     } finally {
       setCompleting(false);
     }
   };
 
   const currentLesson = lesson || {
-    title: 'Lesson 5: State Management',
-    moduleTitle: 'Module 2: Core Concepts',
-    description: 'Learn how to manage application state using React hooks and context API.',
+    title: 'Lesson 5: State Management with React Hooks',
+    moduleTitle: 'Module 2: State & Navigation',
+    description: 'Learn how to manage application state using React hooks (`useState`, `useEffect`, `useReducer`) and context API effectively in cross-platform mobile apps.',
     resources: [
-      { id: 'r1', title: 'Lesson Video', sub: 'MP4 • 24MB', icon: '🎥' },
-      { id: 'r2', title: 'State Management Guide.pdf', sub: 'PDF • 2.4MB', icon: '📄' },
-      { id: 'r3', title: 'Lecture Slides', sub: 'PPTX • 4.1MB', icon: '📊' },
-      { id: 'r4', title: 'React Docs — State', sub: 'Link', icon: '🔗' },
+      { id: 'r1', title: 'Interactive Video Lecture', sub: 'MP4 • 1080p • 24MB', icon: '🎥', type: 'VIDEO' },
+      { id: 'r2', title: 'State Management Architecture.pdf', sub: 'PDF Document • 2.4MB', icon: '📄', type: 'PDF' },
+      { id: 'r3', title: 'Lecture Presentation Slides', sub: 'PPTX Slides • 4.1MB', icon: '📊', type: 'SLIDE' },
+      { id: 'r4', title: 'React Native Docs — Hooks API', sub: 'External Web Link', icon: '🔗', type: 'EXTERNAL' },
     ],
   };
 
-  const materials = currentLesson.materials || currentLesson.resources || [];
-  const videoMaterials = materials.filter((m: any) => m.type === 'VIDEO' || m.icon === '🎥');
-  const videoMaterial = videoMaterials[0];
-
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FAF9F6" />
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.bgWarm} />
 
-      <Header
-        title={initialTitle}
-        showBack={true}
-        onBackPress={() => navigation?.goBack()}
-      />
+      {/* Navigation Top Header */}
+      <View style={styles.topHeader}>
+        <TouchableOpacity style={styles.circleBtn} onPress={() => navigation?.goBack()}>
+          <Text style={styles.circleBtnText}>←</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle} numberOfLines={1}>
+          {initialTitle}
+        </Text>
+        <TouchableOpacity style={styles.circleBtn}>
+          <Text style={styles.circleBtnText}>☰</Text>
+        </TouchableOpacity>
+      </View>
 
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#064E3B" />
+          <ActivityIndicator size="large" color={COLORS.primary} />
           <Text style={styles.loadingText}>Loading lesson content...</Text>
         </View>
       ) : (
-        <ScrollView style={styles.scrollContent} contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}>
-          {/* Main Video Player Screen Container / Resource Frame */}
-          {renderActiveMaterial()}
+        <ScrollView style={styles.scrollContent} contentContainerStyle={{ paddingBottom: 100 }}>
+          {/* Video Player Box Container */}
+          <View style={styles.videoPlayerBox}>
+            <View style={styles.playCircle}>
+              <Text style={styles.playIcon}>▶</Text>
+            </View>
+            <View style={styles.videoMetaBar}>
+              <Text style={styles.videoTimeText}>12:45 / 15:00</Text>
+              <Text style={styles.videoQualityText}>HD 1080p</Text>
+            </View>
+          </View>
 
-          {/* Lesson Headings & Description */}
+          {/* Lesson Details */}
           <View style={styles.bodyContent}>
             <Text style={styles.moduleSubhead}>{currentLesson.moduleTitle || 'Module 2: Core Concepts'}</Text>
-            <Text style={styles.lessonTitle}>{currentLesson.title || 'Lesson 5: State Management'}</Text>
-            <Text style={styles.descriptionText}>
-              {currentLesson.description ||
-                'Learn how to manage application state using React hooks and context API.'}
-            </Text>
+            <Text style={styles.lessonTitle}>{currentLesson.title}</Text>
+            <Text style={styles.descriptionText}>{currentLesson.description}</Text>
 
-            {/* Resources Section */}
-            <Text style={styles.sectionHeading}>Resources</Text>
-            {materials.map((res: any, idx: number) => {
+            {/* Learning Resources */}
+            <Text style={styles.sectionHeading}>Learning Materials & Resources</Text>
+            {(currentLesson.resources || []).map((res: any, idx: number) => {
               const resId = res.id || `r_${idx}`;
               const isChecked = completedMaterials.includes(resId);
-              const icon = res.icon || getMaterialIcon(res.type);
-              const subText = getMaterialSub(res);
-
               return (
                 <TouchableOpacity
                   key={resId}
                   style={[styles.resourceCard, isChecked && styles.resourceCardChecked]}
-                  onPress={() => handleOpenMaterial(res)}
+                  activeOpacity={0.8}
+                  onPress={() => toggleMaterialCheck(resId)}
                 >
-                  <Text style={styles.resourceIcon}>{icon}</Text>
+                  <Text style={styles.resourceIcon}>{res.icon || '📄'}</Text>
                   <View style={{ flex: 1, marginLeft: 12 }}>
                     <Text style={[styles.resourceTitle, isChecked && styles.resourceTitleChecked]}>
                       {res.title}
                     </Text>
-                    <Text style={styles.resourceSub}>{subText}</Text>
+                    <Text style={styles.resourceSub}>{res.sub || 'Document Resource'}</Text>
                   </View>
-                  <TouchableOpacity
-                    onPress={() => {
-                      const fileUrl = res.fileUrl || res.externalUrl;
-                      handleDownloadMaterial(fileUrl, res.title);
-                      toggleMaterialCheck(resId);
-                    }}
-                    style={{ padding: 6 }}
-                  >
-                    <Text style={styles.downloadIcon}>{isChecked ? '☑️' : '📥'}</Text>
-                  </TouchableOpacity>
+                  <Text style={styles.downloadIcon}>{isChecked ? '☑️' : '📥'}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -309,32 +151,32 @@ export default function LessonPlayerScreen({ route, navigation }: any) {
       {/* Footer Action Bar */}
       <View style={styles.bottomBar}>
         <TouchableOpacity style={styles.prevBtn} onPress={() => navigation?.goBack()}>
-          <Text style={styles.prevBtnText}>Previous</Text>
+          <Text style={styles.prevBtnText}>← Previous</Text>
         </TouchableOpacity>
 
         {completing ? (
-          <ActivityIndicator color="#064E3B" />
+          <ActivityIndicator color={COLORS.primary} />
         ) : completed ? (
           <View style={styles.completedTag}>
-            <Text style={styles.completedTagText}>Completed ✓</Text>
+            <Text style={styles.completedTagText}>Lesson Completed ✓</Text>
           </View>
         ) : (
           <TouchableOpacity style={styles.completeBtn} onPress={handleMarkComplete}>
-            <Text style={styles.completeBtnText}>Mark as Complete</Text>
+            <Text style={styles.completeBtnText}>Mark as Completed</Text>
           </TouchableOpacity>
         )}
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAF9F6' },
+  container: { flex: 1, backgroundColor: COLORS.bgWarm },
   topHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 18,
     paddingTop: 12,
     paddingBottom: 8,
   },
@@ -342,96 +184,83 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.white,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: COLORS.borderWarm,
   },
-  circleBtnText: { fontSize: 16, color: '#0F172A' },
-  headerTitle: { fontSize: 16, fontWeight: '800', color: '#0F172A', flex: 1, textAlign: 'center', marginHorizontal: 8 },
+  circleBtnText: { fontSize: 16, color: COLORS.neutralDark },
+  headerTitle: { fontSize: 15, fontWeight: '800', color: COLORS.neutralDark, flex: 1, textAlign: 'center', marginHorizontal: 8 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { marginTop: 10, color: '#64748B' },
-  scrollContent: { flex: 1, flexGrow: 1 },
+  loadingText: { marginTop: 10, color: COLORS.neutralMedium },
+  scrollContent: { flex: 1 },
   videoPlayerBox: {
     height: 220,
-    backgroundColor: '#0F172A',
+    backgroundColor: COLORS.neutralDark,
     borderRadius: 20,
-    marginHorizontal: 20,
-    marginTop: 12,
+    marginHorizontal: 18,
+    marginTop: 10,
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
+    overflow: 'hidden',
   },
   playCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#FFFFFF',
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: COLORS.primaryDark,
     justifyContent: 'center',
     alignItems: 'center',
+    elevation: 4,
   },
-  playIcon: { fontSize: 22, color: '#064E3B', marginLeft: 4 },
-  bodyContent: { paddingHorizontal: 20, paddingTop: 16 },
-  moduleSubhead: { fontSize: 13, fontWeight: '600', color: '#166534', marginBottom: 4 },
-  lessonTitle: { fontSize: 20, fontWeight: '800', color: '#0F172A', marginBottom: 8 },
-  descriptionText: { fontSize: 14, color: '#475569', lineHeight: 22, marginBottom: 20 },
-  sectionHeading: { fontSize: 18, fontWeight: '800', color: '#0F172A', marginBottom: 12 },
+  playIcon: { fontSize: 22, color: COLORS.white, marginLeft: 4 },
+  videoMetaBar: {
+    position: 'absolute',
+    bottom: 12,
+    left: 16,
+    right: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  videoTimeText: { color: COLORS.white, fontSize: 11, fontWeight: '600' },
+  videoQualityText: { color: COLORS.white, fontSize: 11, fontWeight: '700' },
+  bodyContent: { paddingHorizontal: 18, paddingTop: 16 },
+  moduleSubhead: { fontSize: 12, fontWeight: '700', color: COLORS.primary, marginBottom: 4 },
+  lessonTitle: { fontSize: 20, fontWeight: '800', color: COLORS.neutralDark, marginBottom: 8 },
+  descriptionText: { fontSize: 14, color: COLORS.neutralMedium, lineHeight: 22, marginBottom: 20 },
+  sectionHeading: { fontSize: 17, fontWeight: '800', color: COLORS.neutralDark, marginBottom: 12 },
   resourceCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.white,
     padding: 14,
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: COLORS.borderWarm,
     marginBottom: 10,
   },
-  resourceCardChecked: { backgroundColor: '#DCFCE7', borderColor: '#86EFAC' },
+  resourceCardChecked: { backgroundColor: COLORS.badgeOrangeBg, borderColor: COLORS.primary },
   resourceIcon: { fontSize: 24 },
-  resourceTitle: { fontSize: 14, fontWeight: '700', color: '#0F172A' },
-  resourceTitleChecked: { textDecorationLine: 'line-through', color: '#15803D' },
-  resourceSub: { fontSize: 12, color: '#94A3B8', marginTop: 2 },
-  downloadIcon: { fontSize: 18, color: '#64748B' },
+  resourceTitle: { fontSize: 14, fontWeight: '800', color: COLORS.neutralDark },
+  resourceTitleChecked: { textDecorationLine: 'line-through', color: COLORS.primary },
+  resourceSub: { fontSize: 11, color: COLORS.neutralLight, marginTop: 2 },
+  downloadIcon: { fontSize: 18, color: COLORS.neutralMedium },
   bottomBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 18,
     paddingVertical: 14,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.white,
     borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
+    borderTopColor: COLORS.borderWarm,
   },
   prevBtn: { paddingVertical: 12, paddingHorizontal: 16 },
-  prevBtnText: { fontSize: 14, fontWeight: '600', color: '#64748B' },
-  completeBtn: { backgroundColor: '#064E3B', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 14 },
-  completeBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
-  completedTag: { backgroundColor: '#DCFCE7', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 14 },
-  completedTagText: { color: '#15803D', fontSize: 14, fontWeight: '700' },
-  webFrameContainer: {
-    height: 480,
-    backgroundColor: '#0F172A',
-    borderRadius: 20,
-    marginHorizontal: 20,
-    marginTop: 12,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  openPdfBanner: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#064E3B',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  openPdfBannerText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '700',
-  },
+  prevBtnText: { fontSize: 14, fontWeight: '700', color: COLORS.neutralMedium },
+  completeBtn: { backgroundColor: COLORS.primaryDark, paddingVertical: 12, paddingHorizontal: 20, borderRadius: 16 },
+  completeBtnText: { color: COLORS.white, fontSize: 14, fontWeight: '800' },
+  completedTag: { backgroundColor: COLORS.badgeOrangeBg, paddingVertical: 12, paddingHorizontal: 20, borderRadius: 16 },
+  completedTagText: { color: COLORS.primary, fontSize: 14, fontWeight: '800' },
 });

@@ -1,8 +1,6 @@
 import { Router } from 'express';
 import { ModuleController } from '../controllers/module.controller.js';
 import { isAuthenticated } from '../middleware/auth.middleware.js';
-import { validateCreateModule, validateUpdateModule } from '../validators/module.validator.js';
-import { validate } from '../middleware/validation.middleware.js';
 
 const router = Router();
 const moduleController = new ModuleController();
@@ -11,7 +9,7 @@ const moduleController = new ModuleController();
 router.use(isAuthenticated);
 
 // Create module
-router.post('/', validateCreateModule, validate, moduleController.createModule);
+router.post('/', moduleController.createModule);
 
 // Reorder modules
 router.put('/:courseId/reorder', moduleController.reorderModules);
@@ -23,7 +21,7 @@ router.get('/course/:courseId', moduleController.getModules);
 router.get('/:id', moduleController.getModule);
 
 // Update module
-router.put('/:id', validateUpdateModule, validate, moduleController.updateModule);
+router.put('/:id', moduleController.updateModule);
 
 // Delete module
 router.delete('/:id', moduleController.deleteModule);

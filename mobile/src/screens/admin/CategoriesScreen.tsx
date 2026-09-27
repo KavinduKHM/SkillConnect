@@ -8,14 +8,10 @@ import {
   Alert,
   TextInput,
   Modal,
-  Platform,
   RefreshControl,
 } from 'react-native';
-import Toast from 'react-native-toast-message';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminService, Category } from '../../api/admin.service';
-import { Header } from '../../components/common/Header';
-import { ConfirmModal } from '../../components/common/ConfirmModal';
 
 export const CategoriesScreen = () => {
   const queryClient = useQueryClient();
@@ -25,18 +21,6 @@ export const CategoriesScreen = () => {
     name: '',
     description: '',
     icon: '',
-  });
-
-  const [confirmConfig, setConfirmConfig] = useState<{
-    visible: boolean;
-    title: string;
-    message: string;
-    onConfirm: () => void;
-  }>({
-    visible: false,
-    title: '',
-    message: '',
-    onConfirm: () => {},
   });
 
   const { data, isLoading, refetch } = useQuery({
@@ -49,17 +33,17 @@ export const CategoriesScreen = () => {
 
   const handleSave = async () => {
     if (!formData.name) {
-      Toast.show({ type: 'error', text1: 'Error', text2: 'Category name is required' });
+      Alert.alert('Error', 'Category name is required');
       return;
     }
 
     try {
       if (editingCategory) {
         await adminService.updateCategory(editingCategory.id, formData);
-        Toast.show({ type: 'success', text1: 'Success', text2: 'Category updated' });
+        Alert.alert('Success', 'Category updated');
       } else {
         await adminService.createCategory(formData);
-        Toast.show({ type: 'success', text1: 'Success', text2: 'Category created' });
+        Alert.alert('Success', 'Category created');
       }
       setModalVisible(false);
       setEditingCategory(null);
@@ -67,30 +51,32 @@ export const CategoriesScreen = () => {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
       refetch();
     } catch (error: any) {
-      Toast.show({ type: 'error', text1: 'Error', text2: error.response?.data?.error || 'Failed to save' });
+      Alert.alert('Error', error.response?.data?.error || 'Failed to save');
     }
   };
 
-  const handleDelete = (id: string, name: string) => {
-    setConfirmConfig({
-      visible: true,
-      title: 'Delete Category',
-      message: `Are you sure you want to delete "${name}"?`,
-      onConfirm: async () => {
-        setConfirmConfig((prev) => ({ ...prev, visible: false }));
-        queryClient.setQueryData(['categories'], (old: any) => 
-          Array.isArray(old) ? old.filter((c: any) => c.id !== id) : old
-        );
-        try {
-          await adminService.deleteCategory(id);
-          Toast.show({ type: 'success', text1: 'Success', text2: 'Category deleted' });
-          queryClient.invalidateQueries({ queryKey: ['categories'] });
-          refetch();
-        } catch (error: any) {
-          Toast.show({ type: 'error', text1: 'Error', text2: error.response?.data?.error || 'Failed to delete' });
-        }
-      },
-    });
+  const handleDelete = async (id: string, name: string) => {
+    Alert.alert(
+      'Delete Category',
+      `Are you sure you want to delete "${name}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await adminService.deleteCategory(id);
+              Alert.alert('Success', 'Category deleted');
+              queryClient.invalidateQueries({ queryKey: ['categories'] });
+              refetch();
+            } catch (error: any) {
+              Alert.alert('Error', error.response?.data?.error || 'Failed to delete');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const openEditModal = (category: Category) => {
@@ -112,19 +98,15 @@ export const CategoriesScreen = () => {
   const categories: Category[] = data || [];
 
   return (
-    <View style={{ flex: 1 }}>
-      <Header
-        title="Categories"
-        rightComponent={
-          <TouchableOpacity style={styles.addButton} onPress={openCreateModal}>
-            <Text style={styles.addButtonText}>+ Add</Text>
-          </TouchableOpacity>
-        }
-      />
-      <View style={styles.container}>
-        <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Categories</Text>
+        <TouchableOpacity style={styles.addButton} onPress={openCreateModal}>
+          <Text style={styles.addButtonText}>+ Add</Text>
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView
         refreshControl={
           <RefreshControl refreshing={isLoading} onRefresh={refetch} />
         }
@@ -232,17 +214,6 @@ export const CategoriesScreen = () => {
           </View>
         </View>
       </Modal>
-
-      <ConfirmModal
-        visible={confirmConfig.visible}
-        title={confirmConfig.title}
-        message={confirmConfig.message}
-        confirmText="Delete"
-        confirmType="danger"
-        onConfirm={confirmConfig.onConfirm}
-        onCancel={() => setConfirmConfig((prev) => ({ ...prev, visible: false }))}
-      />
-    </View>
     </View>
   );
 };

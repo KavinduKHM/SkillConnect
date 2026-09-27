@@ -142,11 +142,6 @@ export const deleteLearnerSubmission = async (assignmentId: string, versionNumbe
 // CERTIFICATES & COMPLETIONS
 // ============================================================
 
-export const checkCertificateEligibility = async (courseId: string) => {
-  const response = await client.get(`/certificates/check-eligibility/${courseId}`);
-  return response.data;
-};
-
 export const requestCourseCompletion = async (courseId: string) => {
   const response = await client.post(`/certificates/request/${courseId}`);
   return response.data;
@@ -194,3 +189,32 @@ export const fetchMyRecommendations = async () => {
   const response = await client.get('/recommendations/me');
   return response.data;
 };
+
+// ============================================================
+// LEARNING HISTORY
+// ============================================================
+
+export const fetchLearningHistory = async () => {
+  const response = await client.get('/learner/history');
+  return response.data;
+};
+
+// ============================================================
+// DEADLINE NOTIFICATIONS & EMAIL REMINDERS
+// ============================================================
+
+export const sendDeadlineReminders = async () => {
+  const response = await client.post('/learner/notifications/send-deadline-reminders');
+  return response.data;
+};
+
+export const fetchPendingDeadlines = async () => {
+  const response = await client.get('/learner/notifications/pending-deadlines');
+  return response.data;
+};
+
+export const fetchLearnerNotifications = async () => {
+  const response = await client.get('/learner/notifications');
+  return response.data;
+};
+

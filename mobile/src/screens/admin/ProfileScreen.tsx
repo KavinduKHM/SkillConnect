@@ -9,13 +9,11 @@ import {
   TextInput,
   Modal,
   ActivityIndicator,
-  Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { authService } from '../../api/auth.service';
 import { StatusBadge } from '../../components/admin/StatusBadge';
-import { Header } from '../../components/common/Header';
 
 interface UserProfile {
   id: string;
@@ -65,42 +63,22 @@ export const ProfileScreen = ({ navigation }: any) => {
   }, [data]);
 
   const handleLogout = async () => {
-    const doLogout = async () => {
-      await AsyncStorage.removeItem('token');
-      await AsyncStorage.removeItem('user');
-      if (Platform.OS === 'web') {
-        window.location.replace('/');
-      } else {
-        try {
-          if (typeof (navigation as any).replace === 'function') {
-            (navigation as any).replace('Auth');
-          } else {
-            (navigation as any).navigate('Auth');
-          }
-        } catch (e) {
-          (navigation as any).navigate('Auth');
-        }
-      }
-    };
-
-    if (Platform.OS === 'web') {
-      if (window.confirm('Are you sure you want to logout?')) {
-        doLogout();
-      }
-    } else {
-      Alert.alert(
-        'Logout',
-        'Are you sure you want to logout?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Logout',
-            style: 'destructive',
-            onPress: doLogout,
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            await AsyncStorage.removeItem('token');
+            await AsyncStorage.removeItem('user');
+            navigation.replace('Login');
           },
-        ]
-      );
-    }
+        },
+      ]
+    );
   };
 
   const handleUpdateProfile = async () => {
@@ -149,9 +127,7 @@ export const ProfileScreen = ({ navigation }: any) => {
   }
 
   return (
-    <View style={{ flex: 1 }}>
-      <Header title="My Profile" />
-      <ScrollView style={styles.container} contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}>
+    <ScrollView style={styles.container}>
       {/* Profile Header */}
       <View style={styles.headerCard}>
         <View style={styles.avatarContainer}>
@@ -315,7 +291,6 @@ export const ProfileScreen = ({ navigation }: any) => {
         </View>
       </Modal>
     </ScrollView>
-    </View>
   );
 };
 

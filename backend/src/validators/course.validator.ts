@@ -11,7 +11,7 @@ export const validateCreateCourse = [
   body('deliveryMethod').optional().isIn(['SELF_PACED', 'SCHEDULED', 'HYBRID']),
   body('prerequisites').optional().isString().trim(),
   body('learningOutcomes').optional().isArray(),
-  body('thumbnail').optional().isString(),
+  body('thumbnail').optional().isURL(),
 ];
 
 export const validateUpdateCourse = [
@@ -25,7 +25,7 @@ export const validateUpdateCourse = [
   body('deliveryMethod').optional().isIn(['SELF_PACED', 'SCHEDULED', 'HYBRID']),
   body('prerequisites').optional().isString().trim(),
   body('learningOutcomes').optional().isArray(),
-  body('thumbnail').optional().isString(),
+  body('thumbnail').optional().isURL(),
   body('status').optional().isIn(['DRAFT', 'SUBMITTED']),
 ];
 

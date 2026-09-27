@@ -13,11 +13,8 @@ import {
   Switch,
   Platform,
 } from 'react-native';
-import Toast from 'react-native-toast-message';
 import { Ionicons } from '@expo/vector-icons';
 import { courseApi, assignmentApi } from '../../api/skill-sharer.service';
-import { Header } from '../../components/common/Header';
-import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { Assignment } from '../../types';
 
 interface CourseWithAssignments {
@@ -32,18 +29,6 @@ export const AssignmentsScreen = ({ navigation }: any) => {
   const [courses, setCourses] = useState<CourseWithAssignments[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-
-  const [confirmConfig, setConfirmConfig] = useState<{
-    visible: boolean;
-    title: string;
-    message: string;
-    onConfirm: () => void;
-  }>({
-    visible: false,
-    title: '',
-    message: '',
-    onConfirm: () => {},
-  });
 
   // Modal State
   const [modalVisible, setModalVisible] = useState(false);
@@ -69,16 +54,7 @@ export const AssignmentsScreen = ({ navigation }: any) => {
     try {
       setLoading(true);
       const res: any = await courseApi.getMyCourses();
-      let myCourses = [];
-      if (res && res.success && Array.isArray(res.data)) {
-        myCourses = res.data;
-      } else if (res && res.data && res.data.success && Array.isArray(res.data.data)) {
-        myCourses = res.data.data;
-      } else if (Array.isArray(res)) {
-        myCourses = res;
-      } else if (res && Array.isArray(res.data)) {
-        myCourses = res.data;
-      }
+      const myCourses = res?.data || (Array.isArray(res) ? res : []);
 
       if (Array.isArray(myCourses)) {
         const enrichedCourses: CourseWithAssignments[] = await Promise.all(
@@ -111,14 +87,14 @@ export const AssignmentsScreen = ({ navigation }: any) => {
         );
         setCourses(enrichedCourses);
         if (enrichedCourses.length > 0 && !selectedCourseId) {
-          setSelectedCourseId(enrichedCourses[0]?.id || '');
+          setSelectedCourseId(enrichedCourses[0].id);
         }
       } else {
         setCourses([]);
       }
     } catch (error) {
       console.error('Error fetching courses and assignments:', error);
-      Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to load courses.' });
+      Alert.alert('Error', 'Failed to load courses.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -128,7 +104,7 @@ export const AssignmentsScreen = ({ navigation }: any) => {
   const handleOpenCreateModal = (targetCourseId?: string) => {
     setIsEditing(false);
     setCurrentAssignmentId(null);
-    const chosenCourseId = targetCourseId || (courses.length > 0 ? courses[0]?.id || '' : '');
+    const chosenCourseId = targetCourseId || (courses.length > 0 ? courses[0].id : '');
     setSelectedCourseId(chosenCourseId);
     
     const matchedCourse = courses.find((c) => c.id === chosenCourseId);
@@ -167,44 +143,48 @@ export const AssignmentsScreen = ({ navigation }: any) => {
     setModalVisible(true);
   };
 
-  const showNotification = (title: string, message: string, type: 'success' | 'error' | 'info' = 'info') => {
-    Toast.show({
-      type,
-      text1: title,
-      text2: message,
-    });
+  const showNotification = (title: string, message: string) => {
+    if (Platform.OS === 'web') {
+      window.alert(`${title}: ${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
   };
 
   const handleDeleteAssignment = (assignment: Assignment) => {
-    setConfirmConfig({
-      visible: true,
-      title: 'Delete Assignment',
-      message: `Are you sure you want to delete "${assignment.title}"? This cannot be undone.`,
-      onConfirm: async () => {
-        setConfirmConfig((prev) => ({ ...prev, visible: false }));
-        setCourses(prev => prev.map(c => ({
-          ...c,
-          assignments: c.assignments.filter(a => a.id !== assignment.id)
-        })));
+    const doDelete = async () => {
+      try {
+        await assignmentApi.deleteAssignment(assignment.id);
+        showNotification('Deleted', 'Assignment removed successfully.');
+        fetchCoursesAndAssignments();
+      } catch (error: any) {
+        showNotification('Error', error?.error || error?.response?.data?.error || 'Failed to delete assignment.');
+      }
+    };
 
-        try {
-          await assignmentApi.deleteAssignment(assignment.id);
-          showNotification('Deleted', 'Assignment removed successfully.', 'success');
-        } catch (error: any) {
-          showNotification('Error', error?.error || error?.response?.data?.error || 'Failed to delete assignment.', 'error');
-          fetchCoursesAndAssignments(); // Revert on failure
-        }
-      },
-    });
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Are you sure you want to delete "${assignment.title}"? This cannot be undone.`)) {
+        doDelete();
+      }
+    } else {
+      Alert.alert(
+        'Delete Assignment',
+        `Are you sure you want to delete "${assignment.title}"? This cannot be undone.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Delete', style: 'destructive', onPress: doDelete },
+        ]
+      );
+    }
   };
 
   const handleSave = async () => {
     if (!selectedCourseId) {
-      showNotification('Validation Error', 'Please select a course for this assignment.', 'error');
+      showNotification('Validation Error', 'Please select a course for this assignment.');
       return;
     }
     if (!title.trim()) {
-      showNotification('Validation Error', 'Assignment title is required.', 'error');
+      showNotification('Validation Error', 'Assignment title is required.');
       return;
     }
 
@@ -226,10 +206,10 @@ export const AssignmentsScreen = ({ navigation }: any) => {
 
       if (isEditing && currentAssignmentId) {
         await assignmentApi.updateAssignment(currentAssignmentId, payload);
-        showNotification('Success', 'Assignment updated successfully!', 'success');
+        showNotification('Success', 'Assignment updated successfully!');
       } else {
         await assignmentApi.createAssignment(payload);
-        showNotification('Success', 'New assignment created successfully!', 'success');
+        showNotification('Success', 'New assignment created successfully!');
       }
 
       setModalVisible(false);
@@ -237,7 +217,7 @@ export const AssignmentsScreen = ({ navigation }: any) => {
     } catch (error: any) {
       console.error('Error saving assignment:', error);
       const errorMsg = error?.error || error?.response?.data?.error || error?.message || 'Failed to save assignment';
-      showNotification('Error', errorMsg, 'error');
+      showNotification('Error', errorMsg);
     } finally {
       setIsSaving(false);
     }
@@ -283,40 +263,24 @@ export const AssignmentsScreen = ({ navigation }: any) => {
                 <View style={styles.quizActions}>
                   <TouchableOpacity
                     style={styles.iconBtn}
-                    onPress={() => handleOpenEditModal(item.id, assignment)}
+                    onPress={() => navigation.navigate('AssignmentSubmissions', { assignmentId: assignment.id, assignmentTitle: assignment.title })}
                   >
-                    <Ionicons name="pencil-outline" size={18} color="#6B7280" />
+                    <Ionicons name="people-outline" size={20} color="#4F46E5" />
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.iconBtn, { marginLeft: 6 }]}
+                    style={styles.iconBtn}
+                    onPress={() => handleOpenEditModal(item.id, assignment)}
+                  >
+                    <Ionicons name="pencil-outline" size={20} color="#6B7280" />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.iconBtn}
                     onPress={() => handleDeleteAssignment(assignment)}
                   >
-                    <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                    <Ionicons name="trash-outline" size={20} color="#EF4444" />
                   </TouchableOpacity>
                 </View>
               </View>
-
-              {/* Instructions preview */}
-              {assignment.instructions ? (
-                <Text style={styles.quizInstructions} numberOfLines={2}>
-                  "{assignment.instructions}"
-                </Text>
-              ) : null}
-
-              {/* View Submissions & Grade Button */}
-              <TouchableOpacity
-                style={styles.viewSubmissionsBtn}
-                onPress={() =>
-                  navigation.navigate('AssignmentSubmissions', {
-                    assignmentId: assignment.id,
-                    assignmentTitle: assignment.title,
-                    maxMarks: assignment.maxMarks || 100,
-                  })
-                }
-              >
-                <Ionicons name="documents-outline" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
-                <Text style={styles.viewSubmissionsBtnText}>View Submissions & Grade Answers →</Text>
-              </TouchableOpacity>
             </View>
           ))}
         </View>
@@ -330,9 +294,16 @@ export const AssignmentsScreen = ({ navigation }: any) => {
   );
 
   return (
-    <View style={{ flex: 1 }}>
-      <Header title="Assignments" showBack={true} />
-      <View style={styles.container}>
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation?.goBack()}>
+          <Ionicons name="arrow-back" size={24} color="#111827" />
+        </TouchableOpacity>
+        <View>
+          <Text style={styles.headerTitle}>Assignments</Text>
+          <Text style={styles.headerSubtitle}>Manage course practical work</Text>
+        </View>
+      </View>
 
       <View style={styles.content}>
         {loading && !refreshing ? (
@@ -509,17 +480,6 @@ export const AssignmentsScreen = ({ navigation }: any) => {
           </View>
         </View>
       </Modal>
-
-      <ConfirmModal
-        visible={confirmConfig.visible}
-        title={confirmConfig.title}
-        message={confirmConfig.message}
-        confirmText="Delete"
-        confirmType="danger"
-        onConfirm={confirmConfig.onConfirm}
-        onCancel={() => setConfirmConfig((prev) => ({ ...prev, visible: false }))}
-      />
-    </View>
     </View>
   );
 };
@@ -744,27 +704,4 @@ const styles = StyleSheet.create({
   },
   saveBtnDisabled: { opacity: 0.7 },
   saveBtnText: { color: '#FFF', fontSize: 16, fontWeight: '600' },
-  quizInstructions: {
-    fontSize: 12,
-    color: '#4B5563',
-    fontStyle: 'italic',
-    marginTop: 6,
-    backgroundColor: '#F9FAFB',
-    padding: 8,
-    borderRadius: 6,
-  },
-  viewSubmissionsBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#4F46E5',
-    paddingVertical: 10,
-    borderRadius: 8,
-    marginTop: 10,
-  },
-  viewSubmissionsBtnText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '700',
-  },
 });

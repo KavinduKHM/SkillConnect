@@ -11,9 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Toast from 'react-native-toast-message';
 import { authService } from '../../api/auth.service';
-import { profileService } from '../../api/skill-sharer.service';
 
 export const LoginScreen = ({ navigation }: any) => {
   const [email, setEmail] = useState('');
@@ -40,25 +38,6 @@ export const LoginScreen = ({ navigation }: any) => {
       if (user.role === 'ADMIN') {
         navigation.replace('Admin');
       } else if (user.role === 'SKILL_SHARER') {
-        try {
-          const profileRes = await profileService.getMyProfile();
-          const profile = profileRes?.data?.data ?? profileRes?.data;
-
-          if (!profile || !profile.skills || profile.skills.length === 0) {
-            Toast.show({
-              type: 'info',
-              text1: 'Add Your Skills',
-              text2: 'Welcome! Please specify your skills first so that the admin can verify your account.',
-            });
-            navigation.replace('SkillSharer');
-            setTimeout(() => {
-              navigation.navigate('Profile');
-            }, 100);
-            return;
-          }
-        } catch (e) {
-          console.error('Error checking profile skills on login:', e);
-        }
         navigation.replace('SkillSharer');
       } else {
         navigation.replace('Learner');
@@ -137,48 +116,44 @@ export const LoginScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAF9F5',
+    backgroundColor: '#f3f4f6',
     justifyContent: 'center',
-    padding: 24,
+    padding: 20,
   },
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 28,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
     elevation: 4,
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
   },
   logoText: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#166534',
-    backgroundColor: '#DCFCE7',
-    width: 60,
-    height: 60,
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#3b82f6',
+    backgroundColor: '#eff6ff',
+    width: 56,
+    height: 56,
     textAlign: 'center',
-    lineHeight: 60,
-    borderRadius: 18,
-    overflow: 'hidden',
+    lineHeight: 56,
+    borderRadius: 12,
   },
   title: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: '#0F172A',
-    marginTop: 12,
-    letterSpacing: -0.5,
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    marginTop: 8,
   },
   subtitle: {
     fontSize: 14,
-    color: '#64748B',
+    color: '#6b7280',
     textAlign: 'center',
     marginBottom: 24,
   },
@@ -186,33 +161,31 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   inputGroup: {
-    gap: 6,
+    gap: 4,
   },
   label: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#334155',
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
   },
   input: {
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: '#0F172A',
-    backgroundColor: '#FFFFFF',
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
   },
   loginButton: {
-    backgroundColor: '#164E37',
-    borderRadius: 14,
+    backgroundColor: '#3b82f6',
+    borderRadius: 8,
     paddingVertical: 14,
     alignItems: 'center',
     marginTop: 8,
   },
   loginButtonText: {
-    color: '#FFFFFF',
+    color: '#fff',
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
   },
 });

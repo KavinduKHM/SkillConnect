@@ -2,41 +2,30 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
+  Alert,
   ScrollView,
 } from 'react-native';
-import Toast from 'react-native-toast-message';
 import { Header } from '../../components/common/Header';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { CourseForm } from '../../components/skill-sharer/CourseForm';
 import { courseApi } from '../../api/skill-sharer.service';
-import { fetchCategories } from '../../api/learner.service';
 import { Category } from '../../types';
 
-export const CourseCreatorScreen = ({ navigation }: any) => {
+export const CourseCreatorScreen: React.FC = ({ navigation }: any) => {
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
 
   useEffect(() => {
-    const loadCategories = async () => {
-      try {
-        setLoadingCategories(true);
-        const response = await fetchCategories();
-        if (Array.isArray(response)) {
-          setCategories(response);
-        } else if (response && response.success && response.data) {
-          setCategories(response.data);
-        } else {
-          setCategories([]);
-        }
-      } catch (error) {
-        console.error('Error fetching categories:', error);
-        setCategories([]);
-      } finally {
-        setLoadingCategories(false);
-      }
-    };
-    loadCategories();
+    // For now, use dummy categories
+    const dummyCategories: Category[] = [
+      { id: '1', name: 'Technology', description: 'Tech courses', courseCount: 0 },
+      { id: '2', name: 'Arts', description: 'Creative courses', courseCount: 0 },
+      { id: '3', name: 'Business', description: 'Business courses', courseCount: 0 },
+      { id: '4', name: 'Health', description: 'Health courses', courseCount: 0 },
+    ];
+    setCategories(dummyCategories);
+    setLoadingCategories(false);
   }, []);
 
   const handleSubmit = async (data: any) => {
@@ -44,43 +33,29 @@ export const CourseCreatorScreen = ({ navigation }: any) => {
       setLoading(true);
       
       if (!data.categoryId) {
-        Toast.show({
-          type: 'error',
-          text1: 'Error',
-          text2: 'Please select a category',
-        });
+        Alert.alert('Error', 'Please select a category');
         return;
       }
 
       const response = await courseApi.createCourse(data);
-      const resData: any = response.data ?? response;
       
-      if (resData.success !== false) {
-        Toast.show({
-          type: 'success',
-          text1: 'Course Created! 🎉',
-          text2: 'Your course has been created successfully.',
-        });
-        navigation.navigate('MyCourses');
+      if (response.success) {
+        Alert.alert(
+          'Success',
+          'Course draft created successfully!',
+          [
+            {
+              text: 'OK',
+              onPress: () => navigation.goBack(),
+            },
+          ]
+        );
       } else {
-        Toast.show({
-          type: 'error',
-          text1: 'Error',
-          text2: resData.error || 'Failed to create course',
-        });
+        Alert.alert('Error', response.error || 'Failed to create course');
       }
     } catch (error: any) {
       console.error('Error creating course:', error);
-      // error.errors or error.data.errors contains backend validator messages
-      const validationErrors: any[] = error?.errors || error?.data?.errors || [];
-      const errorText = validationErrors.length > 0
-        ? validationErrors.map((e: any) => e.msg).join(', ')
-        : (error?.error || error?.message || 'Failed to create course');
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: errorText,
-      });
+      Alert.alert('Error', error?.message || 'Failed to create course');
     } finally {
       setLoading(false);
     }
@@ -94,13 +69,11 @@ export const CourseCreatorScreen = ({ navigation }: any) => {
     <View style={styles.container}>
       <Header title="Create Course" showBack />
       
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1 }}>
-        <CourseForm
-          onSubmit={handleSubmit}
-          loading={loading}
-          categories={categories}
-        />
-      </ScrollView>
+      <CourseForm
+        onSubmit={handleSubmit}
+        loading={loading}
+        categories={categories}
+      />
     </View>
   );
 };

@@ -6,38 +6,14 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-  Platform,
   RefreshControl,
 } from 'react-native';
-import Toast from 'react-native-toast-message';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminService, Course } from '../../api/admin.service';
 import { StatusBadge } from '../../components/admin/StatusBadge';
-import { Header } from '../../components/common/Header';
-
-import { ConfirmModal } from '../../components/common/ConfirmModal';
-import { Modal, TextInput } from 'react-native';
 
 export const CourseApprovalScreen = () => {
   const queryClient = useQueryClient();
-
-  // Confirm Modal state
-  const [confirmConfig, setConfirmConfig] = React.useState<{
-    visible: boolean;
-    title: string;
-    message: string;
-    onConfirm: () => void;
-  }>({
-    visible: false,
-    title: '',
-    message: '',
-    onConfirm: () => {},
-  });
-
-  // Reject Modal state
-  const [rejectModalVisible, setRejectModalVisible] = React.useState(false);
-  const [rejectTarget, setRejectTarget] = React.useState<{ id: string; title: string } | null>(null);
-  const [rejectReason, setRejectReason] = React.useState('');
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['pending-courses'],
@@ -47,66 +23,72 @@ export const CourseApprovalScreen = () => {
     },
   });
 
-  const handleApprove = (id: string, title: string) => {
-    setConfirmConfig({
-      visible: true,
-      title: 'Approve Course',
-      message: `Are you sure you want to approve and publish "${title}"?`,
-      onConfirm: async () => {
-        setConfirmConfig((prev) => ({ ...prev, visible: false }));
-        queryClient.setQueryData(['pending-courses'], (old: any) => 
-          Array.isArray(old) ? old.filter((c: any) => c.id !== id) : old
-        );
-        try {
-          await adminService.approveCourse(id);
-          Toast.show({ type: 'success', text1: 'Success', text2: 'Course approved and published' });
-          queryClient.invalidateQueries({ queryKey: ['pending-courses'] });
-          refetch();
-        } catch (error: any) {
-          Toast.show({ type: 'error', text1: 'Error', text2: error.response?.data?.error || 'Failed to approve' });
-        }
-      },
-    });
-  };
-
-  const handleRejectPress = (id: string, title: string) => {
-    setRejectTarget({ id, title });
-    setRejectReason('');
-    setRejectModalVisible(true);
-  };
-
-  const submitReject = async () => {
-    if (!rejectReason.trim()) {
-      Toast.show({ type: 'error', text1: 'Error', text2: 'Please enter a rejection reason' });
-      return;
-    }
-    const { id } = rejectTarget!;
-    setRejectModalVisible(false);
-    queryClient.setQueryData(['pending-courses'], (old: any) => 
-      Array.isArray(old) ? old.filter((c: any) => c.id !== id) : old
+  const handleApprove = async (id: string, title: string) => {
+    Alert.alert(
+      'Approve Course',
+      `Are you sure you want to approve "${title}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Approve',
+          onPress: async () => {
+            try {
+              await adminService.approveCourse(id);
+              Alert.alert('Success', 'Course approved and published');
+              queryClient.invalidateQueries({ queryKey: ['pending-courses'] });
+              refetch();
+            } catch (error: any) {
+              Alert.alert('Error', error.response?.data?.error || 'Failed to approve');
+            }
+          },
+        },
+      ]
     );
-    try {
-      await adminService.rejectCourse(id, rejectReason.trim());
-      Toast.show({ type: 'success', text1: 'Success', text2: 'Course rejected' });
-      queryClient.invalidateQueries({ queryKey: ['pending-courses'] });
-      refetch();
-    } catch (error: any) {
-      Toast.show({ type: 'error', text1: 'Error', text2: error.response?.data?.error || 'Failed to reject' });
-    }
+  };
+
+  const handleReject = async (id: string, title: string) => {
+    Alert.prompt(
+      'Reject Course',
+      `Please enter a reason for rejecting "${title}":`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reject',
+          onPress: async (reason?: string) => {
+            if (!reason) {
+              Alert.alert('Error', 'Please provide a reason');
+              return;
+            }
+            try {
+              await adminService.rejectCourse(id, reason);
+              Alert.alert('Success', 'Course rejected');
+              queryClient.invalidateQueries({ queryKey: ['pending-courses'] });
+              refetch();
+            } catch (error: any) {
+              Alert.alert('Error', error.response?.data?.error || 'Failed to reject');
+            }
+          },
+        },
+      ],
+      'plain-text'
+    );
   };
 
   const courses: Course[] = Array.isArray(data) ? data : [];
 
   return (
-    <View style={{ flex: 1 }}>
-      <Header title="Course Approval" />
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
-        refreshControl={
-          <RefreshControl refreshing={isLoading} onRefresh={refetch} />
-        }
-      >
+    <ScrollView
+      style={styles.container}
+      refreshControl={
+        <RefreshControl refreshing={isLoading} onRefresh={refetch} />
+      }
+    >
+      <View style={styles.header}>
+        <Text style={styles.title}>Course Approval</Text>
+        <Text style={styles.subtitle}>
+          {courses.length} courses awaiting approval
+        </Text>
+      </View>
 
       {courses.length === 0 ? (
         <View style={styles.emptyState}>
@@ -122,7 +104,7 @@ export const CourseApprovalScreen = () => {
               <StatusBadge status={course.status} />
             </View>
 
-            <Text style={styles.cardDescription} numberOfLines={3}>
+            <Text style={styles.cardDescription} numberOfLines={2}>
               {course.description}
             </Text>
 
@@ -133,48 +115,12 @@ export const CourseApprovalScreen = () => {
               </View>
               <View style={styles.metaItem}>
                 <Text style={styles.metaLabel}>Category:</Text>
-                <Text style={styles.metaValue}>{(course as any).category?.name || 'N/A'}</Text>
+                <Text style={styles.metaValue}>{course.category?.name || 'N/A'}</Text>
               </View>
               <View style={styles.metaItem}>
                 <Text style={styles.metaLabel}>Difficulty:</Text>
                 <Text style={styles.metaValue}>{course.difficulty || 'N/A'}</Text>
               </View>
-              {(course as any).deliveryMethod && (
-                <View style={styles.metaItem}>
-                  <Text style={styles.metaLabel}>Delivery:</Text>
-                  <Text style={styles.metaValue}>{(course as any).deliveryMethod.replace('_', ' ')}</Text>
-                </View>
-              )}
-              {(course as any).estimatedHours != null && (
-                <View style={styles.metaItem}>
-                  <Text style={styles.metaLabel}>Est. Hours:</Text>
-                  <Text style={styles.metaValue}>{(course as any).estimatedHours} hrs</Text>
-                </View>
-              )}
-              {(course as any).duration && (
-                <View style={styles.metaItem}>
-                  <Text style={styles.metaLabel}>Duration:</Text>
-                  <Text style={styles.metaValue}>{(course as any).duration}</Text>
-                </View>
-              )}
-              {Array.isArray((course as any).learningOutcomes) && (course as any).learningOutcomes.length > 0 && (
-                <View style={styles.metaItem}>
-                  <Text style={styles.metaLabel}>Outcomes:</Text>
-                  <Text style={styles.metaValue}>{(course as any).learningOutcomes.length} learning outcomes</Text>
-                </View>
-              )}
-              {(course as any).prerequisites && (
-                <View style={[styles.metaItem, { alignItems: 'flex-start' }]}>
-                  <Text style={styles.metaLabel}>Prereqs:</Text>
-                  <Text style={[styles.metaValue, { flex: 1 }]} numberOfLines={2}>{(course as any).prerequisites}</Text>
-                </View>
-              )}
-              {(course as any).submittedAt && (
-                <View style={styles.metaItem}>
-                  <Text style={styles.metaLabel}>Submitted:</Text>
-                  <Text style={styles.metaValue}>{new Date((course as any).submittedAt).toLocaleDateString()}</Text>
-                </View>
-              )}
             </View>
 
             {course.creator.verifiedBadge && (
@@ -193,7 +139,7 @@ export const CourseApprovalScreen = () => {
 
               <TouchableOpacity
                 style={[styles.actionButton, styles.rejectButton]}
-                onPress={() => handleRejectPress(course.id, course.title)}
+                onPress={() => handleReject(course.id, course.title)}
               >
                 <Text style={styles.rejectButtonText}>✕ Reject</Text>
               </TouchableOpacity>
@@ -202,118 +148,8 @@ export const CourseApprovalScreen = () => {
         ))
       )}
     </ScrollView>
-
-    <ConfirmModal
-      visible={confirmConfig.visible}
-      title={confirmConfig.title}
-      message={confirmConfig.message}
-      confirmText="Approve"
-      confirmType="primary"
-      onConfirm={confirmConfig.onConfirm}
-      onCancel={() => setConfirmConfig((prev) => ({ ...prev, visible: false }))}
-    />
-
-    {/* Reject Reason Modal */}
-    <Modal visible={rejectModalVisible} transparent animationType="fade" onRequestClose={() => setRejectModalVisible(false)}>
-      <View style={modalStyles.overlay}>
-        <View style={modalStyles.card}>
-          <Text style={modalStyles.title}>Reject Course</Text>
-          <Text style={modalStyles.subtitle}>
-            Please enter a reason for rejecting "{rejectTarget?.title}":
-          </Text>
-          <TextInput
-            style={modalStyles.input}
-            placeholder="e.g. Incomplete syllabus or missing assets"
-            value={rejectReason}
-            onChangeText={setRejectReason}
-            multiline
-            numberOfLines={3}
-          />
-          <View style={modalStyles.btnRow}>
-            <TouchableOpacity style={modalStyles.cancelBtn} onPress={() => setRejectModalVisible(false)}>
-              <Text style={modalStyles.cancelText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={modalStyles.rejectBtn} onPress={submitReject}>
-              <Text style={modalStyles.rejectText}>Confirm Reject</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </Modal>
-    </View>
   );
 };
-
-const modalStyles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.45)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  card: {
-    width: '100%',
-    maxWidth: 360,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    elevation: 6,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#0F172A',
-    marginBottom: 6,
-  },
-  subtitle: {
-    fontSize: 13,
-    color: '#64748B',
-    marginBottom: 14,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 14,
-    padding: 12,
-    fontSize: 14,
-    color: '#0F172A',
-    backgroundColor: '#FAF9F5',
-    textAlignVertical: 'top',
-    minHeight: 80,
-    marginBottom: 20,
-  },
-  btnRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  cancelBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 14,
-    backgroundColor: '#F1F5F9',
-    alignItems: 'center',
-  },
-  cancelText: {
-    color: '#475569',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  rejectBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 14,
-    backgroundColor: '#EF4444',
-    alignItems: 'center',
-  },
-  rejectText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-});
 
 const styles = StyleSheet.create({
   container: {
