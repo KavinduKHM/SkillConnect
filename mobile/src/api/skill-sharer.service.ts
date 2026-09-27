@@ -75,6 +75,9 @@ export const qualificationApi = {
   },
 };
 
+export const profileService = profileApi;
+export const qualificationService = qualificationApi;
+
 // ============================================================
 // Course APIs
 // ============================================================
@@ -112,6 +115,32 @@ export const courseApi = {
   deleteCourse: (id: string): Promise<ApiResponse<null>> => {
     return apiClient.delete(`/courses/${id}`);
   },
+};
+
+// Backwards-compatible service names used by course content screens.
+export const courseService = courseApi;
+
+export const moduleService = {
+  getModules: (courseId: string): Promise<ApiResponse<any[]>> =>
+    apiClient.get(`/modules/course/${courseId}`),
+  createModule: (data: any): Promise<ApiResponse<any>> =>
+    apiClient.post('/modules', data),
+  deleteModule: (id: string): Promise<ApiResponse<null>> =>
+    apiClient.delete(`/modules/${id}`),
+};
+
+export const lessonService = {
+  createLesson: (data: any): Promise<ApiResponse<any>> =>
+    apiClient.post('/lessons', data),
+  deleteLesson: (id: string): Promise<ApiResponse<null>> =>
+    apiClient.delete(`/lessons/${id}`),
+};
+
+export const materialService = {
+  uploadMaterial: (data: FormData): Promise<ApiResponse<any>> =>
+    apiClient.post('/materials', data),
+  deleteMaterial: (id: string): Promise<ApiResponse<null>> =>
+    apiClient.delete(`/materials/${id}`),
 };
 
 // ============================================================
@@ -183,6 +212,16 @@ export const certificateApi = {
 };
 
 // ============================================================
+// Progress and analytics APIs
+// ============================================================
+
+export const progressApi = {
+  getCourseAnalytics: (courseId: string): Promise<ApiResponse<any>> => {
+    return apiClient.get(`/progress/course/${courseId}/analytics`);
+  },
+};
+
+// ============================================================
 // Recommendation APIs (Skill Sharer -> Learner)
 // ============================================================
 
@@ -194,7 +233,12 @@ export const recommendationApi = {
 
   // Get all learners who completed my courses (to recommend)
   getMyCourseLearners: (courseId: string): Promise<ApiResponse<any>> => {
-    return apiClient.get(`/certificates/course/${courseId}/requests`);
+    return apiClient.get(`/recommendations/course/${courseId}/learners`);
+  },
+
+  // Get recommendations already created by the current Skill Sharer
+  getCreated: (): Promise<ApiResponse<any>> => {
+    return apiClient.get('/recommendations/created');
   },
 
   // Update a recommendation
@@ -206,4 +250,4 @@ export const recommendationApi = {
   delete: (id: string): Promise<ApiResponse<null>> => {
     return apiClient.delete(`/recommendations/${id}`);
   },
-};
+};

@@ -1,22 +1,14 @@
 import React, { useState, useCallback } from 'react';
 import {
-  StyleSheet,
-  Text,
-  View,
-  ScrollView,
-  SafeAreaView,
-  StatusBar,
-  TouchableOpacity,
-  TextInput,
-  ActivityIndicator,
-  Alert,
-  Platform,
-  Switch,
+  StyleSheet, Text, View, ScrollView, SafeAreaView,
+  StatusBar, TouchableOpacity, TextInput, ActivityIndicator,
+  Alert, FlatList,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { certificateApi, recommendationApi, courseApi } from '../../api/skill-sharer.service';
-import { COLORS } from '../../theme/colors';
+import { certificateApi, recommendationApi } from '../../api/skill-sharer.service';
+import { courseApi } from '../../api/skill-sharer.service';
 
 export function RecommendationScreen({ navigation }: any) {
   const [myCourses, setMyCourses] = useState<any[]>([]);
@@ -28,30 +20,29 @@ export function RecommendationScreen({ navigation }: any) {
   const [isPublic, setIsPublic] = useState(true);
   const [loadingCourses, setLoadingCourses] = useState(true);
   const [loadingLearners, setLoadingLearners] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [courseDropdownOpen, setCourseDropdownOpen] = useState(false);
+  const [learnerDropdownOpen, setLearnerDropdownOpen] = useState(false);
+  const [history, setHistory] = useState<any[]>([]);
   const [editingRec, setEditingRec] = useState<any | null>(null);
 
-  const showNotification = (msgTitle: string, message: string) => {
-    if (Platform.OS === 'web') {
-      window.alert(`${msgTitle}: ${message}`);
-    } else {
-      Alert.alert(msgTitle, message);
-    }
-  };
-
-  useFocusEffect(
-    useCallback(() => {
-      loadMyCourses();
-    }, [])
-  );
+  useFocusEffect(useCallback(() => {
+    loadMyCourses();
+    loadHistory();
+  }, []));
 
   const loadMyCourses = async () => {
     try {
       setLoadingCourses(true);
       const res: any = await courseApi.getMyCourses();
-      const courses = res?.data || res?.courses || (Array.isArray(res) ? res : []);
-      const published = courses.filter((c: any) => c.status === 'PUBLISHED' || c.status === 'APPROVED');
-      setMyCourses(published);
+      const courses =
+        res?.data?.data ??
+        res?.data?.courses ??
+        res?.courses ??
+        (Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : []);
+      setMyCourses(Array.isArray(courses) ? courses : []);
     } catch (err) {
       console.log('Failed to load courses', err);
     } finally {
@@ -59,17 +50,51 @@ export function RecommendationScreen({ navigation }: any) {
     }
   };
 
+  const loadHistory = async () => {
+    try {
+      setLoadingHistory(true);
+      const res: any = await recommendationApi.getCreated();
+      const recommendations =
+        res?.data?.data ??
+        res?.data?.recommendations ??
+        res?.recommendations ??
+        (Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : []);
+      setHistory(Array.isArray(recommendations) ? recommendations : []);
+    } catch (err) {
+      console.log('Failed to load recommendation history', err);
+      setHistory([]);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
   const loadCourseLearners = async (courseId: string) => {
     try {
       setLoadingLearners(true);
       setCompletedLearners([]);
-      const res: any = await certificateApi.getCourseCompletionRequests(courseId);
-      const requests = res?.data || res?.requests || [];
-      // Only show approved requests (graduates with verified completion)
-      const approved = requests.filter((r: any) => r.status === 'APPROVED');
-      setCompletedLearners(approved);
+      const res: any = await recommendationApi.getMyCourseLearners(courseId);
+      const learners =
+        res?.data?.data ??
+        res?.data?.learners ??
+        res?.learners ??
+        (Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : []);
+      if (Array.isArray(learners) && learners.length > 0) {
+        setCompletedLearners(learners);
+      } else {
+        // Fallback to completion requests
+        const reqRes: any = await certificateApi.getCourseCompletionRequests(courseId);
+        const requests = reqRes?.data || reqRes?.requests || [];
+        setCompletedLearners(requests);
+      }
     } catch (err) {
       console.log('Failed to load learners', err);
+      try {
+        const reqRes: any = await certificateApi.getCourseCompletionRequests(courseId);
+        const requests = reqRes?.data || reqRes?.requests || [];
+        setCompletedLearners(requests);
+      } catch (e) {
+        console.log('Fallback failed too', e);
+      }
     } finally {
       setLoadingLearners(false);
     }
@@ -78,343 +103,385 @@ export function RecommendationScreen({ navigation }: any) {
   const handleSelectCourse = (course: any) => {
     setSelectedCourse(course);
     setSelectedLearner(null);
+    setCourseDropdownOpen(false);
+    setLearnerDropdownOpen(false);
     loadCourseLearners(course.id);
   };
 
+  const handleSelectLearner = (item: any) => {
+    const learner = item.learner || item;
+    const learnerId = item.learnerId || learner.id || item.id;
+    setSelectedLearner({ ...item, learnerId, learner });
+    setLearnerDropdownOpen(false);
+  };
+
   const handleSubmit = async () => {
-    if (!selectedCourse) {
-      showNotification('Select a Course', 'Please select a course first.');
-      return;
-    }
     if (!selectedLearner) {
-      showNotification('Select a Learner', 'Please select a certified graduate to endorse.');
+      Toast.show({ type: 'error', text1: 'Select a Learner', text2: 'Please select a learner to recommend.' });
       return;
     }
     if (!title.trim()) {
-      showNotification('Title Required', 'Please provide a short headline or title for the recommendation.');
+      Toast.show({ type: 'error', text1: 'Title Required', text2: 'Please provide a short title for the recommendation.' });
       return;
     }
-    if (!content.trim() || content.trim().length < 20) {
-      showNotification('Content Required', 'Please write at least 20 characters for the endorsement.');
+    if (!content.trim() || content.trim().length < 5) {
+      Toast.show({ type: 'error', text1: 'Content Required', text2: 'Please write at least 5 characters for the recommendation.' });
       return;
     }
-
     try {
       setSubmitting(true);
+      const learnerId = selectedLearner.learnerId || selectedLearner.learner?.id || selectedLearner.id;
       const data = {
-        learnerId: selectedLearner.learnerId,
+        learnerId,
         courseId: selectedCourse.id,
         title: title.trim(),
         content: content.trim(),
+        message: content.trim(),
+        skillDemonstrated: title.trim(),
         isPublic,
       };
-
       if (editingRec) {
-        await recommendationApi.update(editingRec.id, {
-          title: data.title,
-          content: data.content,
-          isPublic,
-        });
-        showNotification('Updated!', 'Recommendation updated successfully.');
+        await recommendationApi.update(editingRec.id, { title: data.title, content: data.content, message: data.message, isPublic } as any);
+        Toast.show({ type: 'success', text1: 'Updated!', text2: 'Recommendation updated successfully.' });
       } else {
         await recommendationApi.create(data);
-        showNotification(
-          'Sent!',
-          `Your endorsement for ${selectedLearner.learner?.name || 'the learner'} has been published successfully.`
-        );
+        Toast.show({ type: 'success', text1: 'Sent!', text2: `Your recommendation for ${selectedLearner.learner?.name || 'the learner'} has been submitted.` });
       }
-
       setTitle('');
       setContent('');
       setSelectedLearner(null);
       setEditingRec(null);
+      await loadHistory();
+      setShowForm(false);
     } catch (err: any) {
-      showNotification('Error', err?.error || err?.message || 'Failed to submit recommendation.');
+      Toast.show({ type: 'error', text1: 'Error', text2: err?.error || err?.message || 'Failed to submit recommendation.' });
     } finally {
       setSubmitting(false);
     }
   };
 
+  const handleDelete = (id: string) => {
+    Alert.alert('Delete Recommendation', 'Are you sure you want to delete this recommendation?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete', style: 'destructive',
+        onPress: async () => {
+          try {
+            await recommendationApi.delete(id);
+            setHistory(prev => prev.filter(r => r.id !== id));
+            Toast.show({ type: 'success', text1: 'Deleted', text2: 'Recommendation deleted.' });
+          } catch (err: any) {
+            Toast.show({ type: 'error', text1: 'Error', text2: err?.error || 'Failed to delete.' });
+          }
+        }
+      }
+    ]);
+  };
+
+  const handleEdit = (recommendation: any) => {
+    const course = myCourses.find((item) => item.id === recommendation.course?.id) || recommendation.course;
+    const learner = recommendation.learner || {};
+
+    setEditingRec(recommendation);
+    setSelectedCourse(course);
+    setSelectedLearner({ learnerId: learner.id, learner });
+    setTitle(recommendation.title || recommendation.skillDemonstrated || '');
+    setContent(recommendation.content || recommendation.message || '');
+    setIsPublic(recommendation.isPublic !== false);
+    setShowForm(true);
+  };
+
+  const handleCreateNew = () => {
+    setEditingRec(null);
+    setSelectedCourse(null);
+    setSelectedLearner(null);
+    setCourseDropdownOpen(false);
+    setLearnerDropdownOpen(false);
+    setTitle('');
+    setContent('');
+    setIsPublic(true);
+    setShowForm(true);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.bgWarm} />
+      <StatusBar barStyle="light-content" backgroundColor="#B3310D" />
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backBtn} activeOpacity={0.8}>
-          <Ionicons name="arrow-back" size={20} color={COLORS.neutralDark} />
+        <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backBtn}>
+          <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
         <View style={{ flex: 1, marginLeft: 12 }}>
           <Text style={styles.headerTitle}>Learner Recommendations</Text>
-          <Text style={styles.headerSub}>Endorse Standout Course Graduates</Text>
+          <Text style={styles.headerSub}>Recognize outstanding learners</Text>
         </View>
       </View>
 
-      <ScrollView
-        style={styles.scrollArea}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Info Philosophy Banner */}
+      {!showForm && (
+        <TouchableOpacity style={styles.createButton} onPress={handleCreateNew}>
+          <Ionicons name="add-circle-outline" size={19} color="#FFFFFF" />
+          <Text style={styles.createButtonText}>Create New Recommendation</Text>
+        </TouchableOpacity>
+      )}
+
+      <ScrollView contentContainerStyle={[styles.content, { flexGrow: 1 }]}>
+        {showForm ? (
+          <>
+        {/* Info Banner */}
         <View style={styles.infoBanner}>
-          <View style={styles.infoIconWrap}>
-            <Ionicons name="ribbon" size={20} color={COLORS.honeyText} />
-          </View>
-          <View style={{ flex: 1, marginLeft: 10 }}>
-            <Text style={styles.infoTitle}>Mentor Endorsements</Text>
-            <Text style={styles.infoText}>
-              Formal recommendations help top learners showcase practical mastery to employers and peers.
-              Only verified graduates with approved completion can be endorsed.
-            </Text>
-          </View>
+          <Ionicons name="information-circle" size={20} color="#3B82F6" />
+          <Text style={styles.infoText}>
+            Recommendations help learners showcase their skills to future employers. Only learners who have completed your course are eligible.
+          </Text>
         </View>
 
         {/* Step 1: Select Course */}
         <View style={styles.card}>
-          <View style={styles.stepHeaderRow}>
-            <View style={styles.stepNumberBadge}>
-              <Text style={styles.stepNumberBadgeText}>STEP 1</Text>
-            </View>
-            <Text style={styles.stepLabel}>Select a Course</Text>
-          </View>
-
+          <Text style={styles.stepLabel}>Step 1: Select a Course</Text>
           {loadingCourses ? (
-            <View style={styles.loadingBoxMini}>
-              <ActivityIndicator color={COLORS.primary} size="small" />
-              <Text style={styles.loadingTextMini}>Loading courses...</Text>
-            </View>
+            <ActivityIndicator color="#B3310D" />
           ) : myCourses.length === 0 ? (
-            <View style={styles.noCoursesBox}>
-              <Text style={styles.noDataText}>No published courses found.</Text>
-            </View>
+            <Text style={styles.noDataText}>No courses found for your account.</Text>
           ) : (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.courseChipsContainer}
-            >
-              {myCourses.map((course: any) => {
-                const isSelected = selectedCourse?.id === course.id;
-                return (
-                  <TouchableOpacity
-                    key={course.id}
-                    style={[styles.courseChip, isSelected && styles.courseChipActive]}
-                    onPress={() => handleSelectCourse(course)}
-                    activeOpacity={0.8}
-                  >
-                    <Ionicons
-                      name="book-outline"
-                      size={14}
-                      color={isSelected ? COLORS.white : COLORS.primary}
-                    />
-                    <Text style={[styles.courseChipText, isSelected && styles.courseChipTextActive]}>
-                      {course.title}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
+            <View>
+              <TouchableOpacity
+                style={styles.dropdownButton}
+                onPress={() => {
+                  setCourseDropdownOpen((current) => !current);
+                  setLearnerDropdownOpen(false);
+                }}
+              >
+                <View style={styles.dropdownButtonContent}>
+                  <Ionicons name="book-outline" size={18} color="#B3310D" />
+                  <Text style={selectedCourse ? styles.dropdownValue : styles.dropdownPlaceholder} numberOfLines={1}>
+                    {selectedCourse?.title || 'Select a course'}
+                  </Text>
+                </View>
+                <Ionicons name={courseDropdownOpen ? 'chevron-up' : 'chevron-down'} size={18} color="#6B7280" />
+              </TouchableOpacity>
+              {courseDropdownOpen && (
+                <View style={styles.dropdownMenu}>
+                  {myCourses.map((course: any) => (
+                    <TouchableOpacity
+                      key={course.id}
+                      style={styles.dropdownOption}
+                      onPress={() => handleSelectCourse(course)}
+                    >
+                      <View style={styles.dropdownOptionText}>
+                        <Text style={styles.dropdownOptionTitle}>{course.title}</Text>
+                        <Text style={styles.dropdownOptionMeta}>{course.status || 'Course'}</Text>
+                      </View>
+                      {selectedCourse?.id === course.id && (
+                        <Ionicons name="checkmark-circle" size={19} color="#B3310D" />
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
           )}
         </View>
 
-        {/* Step 2: Select Graduate */}
+        {/* Step 2: Select Learner */}
         {selectedCourse && (
           <View style={styles.card}>
-            <View style={styles.stepHeaderRow}>
-              <View style={styles.stepNumberBadge}>
-                <Text style={styles.stepNumberBadgeText}>STEP 2</Text>
-              </View>
-              <Text style={styles.stepLabel}>Select Eligible Graduate</Text>
-            </View>
-            <Text style={styles.stepSub}>
-              Showing learners who successfully completed "{selectedCourse.title}".
-            </Text>
-
+            <Text style={styles.stepLabel}>Step 2: Select Learner</Text>
+            <Text style={styles.stepSub}>Learners enrolled in "{selectedCourse.title}" are shown.</Text>
             {loadingLearners ? (
-              <View style={styles.loadingBoxMini}>
-                <ActivityIndicator color={COLORS.primary} size="small" />
-                <Text style={styles.loadingTextMini}>Checking course graduates...</Text>
-              </View>
+              <ActivityIndicator color="#B3310D" style={{ marginTop: 8 }} />
             ) : completedLearners.length === 0 ? (
-              <View style={styles.emptyGraduatesBox}>
-                <View style={styles.emptyGraduatesIcon}>
-                  <Ionicons name="school-outline" size={28} color={COLORS.neutralMedium} />
-                </View>
-                <Text style={styles.emptyGraduatesTitle}>No Certified Graduates Yet</Text>
-                <Text style={styles.emptyGraduatesSub}>
-                  Once learners finish all course assessments and have their completion approved, they will appear here.
-                </Text>
+              <View style={styles.emptyBox}>
+                <Ionicons name="people-outline" size={32} color="#D1D5DB" />
+                <Text style={styles.noDataText}>No enrolled learners found for this course.</Text>
               </View>
             ) : (
-              <View style={styles.learnersGrid}>
-                {completedLearners.map((req: any) => {
-                  const learner = req.learner;
-                  const isSelected = selectedLearner?.learnerId === req.learnerId;
-                  const initial = (learner?.name || learner?.email || '?')[0]?.toUpperCase() || 'L';
-
-                  return (
+              <View>
+                <TouchableOpacity
+                  style={styles.dropdownButton}
+                  onPress={() => {
+                    setLearnerDropdownOpen((current) => !current);
+                    setCourseDropdownOpen(false);
+                  }}
+                >
+                  <View style={styles.dropdownButtonContent}>
+                    <Ionicons name="person-outline" size={18} color="#B3310D" />
+                    <Text style={selectedLearner ? styles.dropdownValue : styles.dropdownPlaceholder} numberOfLines={1}>
+                      {selectedLearner?.learner?.name || 'Select an enrolled learner'}
+                    </Text>
+                  </View>
+                  <Ionicons name={learnerDropdownOpen ? 'chevron-up' : 'chevron-down'} size={18} color="#6B7280" />
+                </TouchableOpacity>
+                {learnerDropdownOpen && (
+                  <View style={styles.dropdownMenu}>
+                    {completedLearners.map((item: any) => {
+                      const learner = item.learner || item;
+                      const itemLearnerId = item.learnerId || learner.id || item.id;
+                      const selectedId = selectedLearner?.learnerId || selectedLearner?.learner?.id;
+                      const isSelected = selectedId === itemLearnerId;
+                      const progress = item.progressPercentage;
+                      return (
                     <TouchableOpacity
-                      key={req.id}
-                      style={[styles.learnerRow, isSelected && styles.learnerRowActive]}
-                      onPress={() => setSelectedLearner(req)}
-                      activeOpacity={0.8}
+                      key={item.id || itemLearnerId}
+                      style={styles.dropdownOption}
+                      onPress={() => handleSelectLearner(item)}
                     >
-                      <View style={[styles.learnerAvatar, isSelected && styles.learnerAvatarActive]}>
-                        <Text style={[styles.learnerAvatarText, isSelected && styles.learnerAvatarTextActive]}>
-                          {initial}
+                      <View style={styles.dropdownOptionText}>
+                        <Text style={styles.dropdownOptionTitle}>{learner?.name || 'Learner'}</Text>
+                        <Text style={styles.dropdownOptionMeta}>
+                          {learner?.email || 'Enrolled'}{progress != null ? ` · ${Math.round(progress)}% progress` : ''}
                         </Text>
                       </View>
-                      <View style={{ flex: 1, marginRight: 8 }}>
-                        <Text style={[styles.learnerName, isSelected && styles.learnerNameActive]}>
-                          {learner?.name || 'Course Graduate'}
-                        </Text>
-                        <Text style={styles.learnerEmail} numberOfLines={1}>
-                          {learner?.email || ''}
-                        </Text>
-                      </View>
-                      {isSelected ? (
-                        <Ionicons name="checkmark-circle" size={22} color={COLORS.primary} />
-                      ) : (
-                        <View style={styles.unselectedCircle} />
+                      {isSelected && (
+                        <Ionicons name="checkmark-circle" size={20} color="#B3310D" />
                       )}
                     </TouchableOpacity>
-                  );
-                })}
+                      );
+                    })}
+                  </View>
+                )}
               </View>
             )}
           </View>
         )}
 
-        {/* Step 3: Write Recommendation & Live Preview */}
+        {/* Step 3: Write Recommendation */}
         {selectedLearner && (
           <View style={styles.card}>
-            <View style={styles.stepHeaderRow}>
-              <View style={styles.stepNumberBadge}>
-                <Text style={styles.stepNumberBadgeText}>STEP 3</Text>
-              </View>
-              <Text style={styles.stepLabel}>Write Recommendation</Text>
-            </View>
-            <View style={styles.recommendingBanner}>
-              <Text style={styles.recommendingText}>
-                Endorsement for:{' '}
-                <Text style={{ fontWeight: '800', color: COLORS.neutralDark }}>
-                  {selectedLearner.learner?.name || 'Learner'}
-                </Text>
-              </Text>
-            </View>
+            <Text style={styles.stepLabel}>Step 3: Write Recommendation</Text>
+            <Text style={styles.stepSub}>
+              Writing for: <Text style={{ fontWeight: '700', color: '#B3310D' }}>{selectedLearner.learner?.name || 'Learner'}</Text>
+            </Text>
 
-            {/* Headline / Title Input */}
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Headline / Key Quality *</Text>
-              <TextInput
-                style={styles.textInput}
-                placeholder='e.g. "Exceptional problem solver & dedicated engineer"'
-                placeholderTextColor={COLORS.neutralLight}
-                value={title}
-                onChangeText={setTitle}
-                maxLength={100}
-              />
-              <Text style={styles.charCount}>{title.length}/100</Text>
-            </View>
+            <TextInput
+              style={styles.titleInput}
+              placeholder='e.g. "Exceptional dedication and skill"'
+              placeholderTextColor="#9CA3AF"
+              value={title}
+              onChangeText={setTitle}
+              maxLength={100}
+            />
+            <Text style={styles.charCount}>{title.length}/100</Text>
 
-            {/* Content / Narrative Input */}
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Recommendation Narrative * (min 20 chars)</Text>
-              <TextInput
-                style={[styles.textInput, styles.textArea]}
-                placeholder="Highlight the learner's dedication, project quality, collaboration skills, and technical strengths demonstrated during this course..."
-                placeholderTextColor={COLORS.neutralLight}
-                value={content}
-                onChangeText={setContent}
-                multiline
-                numberOfLines={5}
-                textAlignVertical="top"
-              />
-              <Text
-                style={[
-                  styles.charCount,
-                  content.length < 20 && content.length > 0 ? { color: COLORS.error } : null,
-                ]}
-              >
-                {content.length} characters (min 20)
-              </Text>
-            </View>
+            <TextInput
+              style={styles.contentInput}
+              placeholder="Share what made this learner stand out. Be specific about their achievements, attitude, and skills demonstrated throughout the course..."
+              placeholderTextColor="#9CA3AF"
+              value={content}
+              onChangeText={setContent}
+              multiline
+              numberOfLines={6}
+              textAlignVertical="top"
+            />
+            <Text style={styles.charCount}>{content.length} characters (min 20)</Text>
 
-            {/* Live Endorsement Preview */}
-            {title.trim().length > 0 && content.trim().length > 0 && (
-              <View style={styles.previewContainer}>
-                <View style={styles.previewHeader}>
-                  <Ionicons name="eye-outline" size={14} color={COLORS.honeyText} style={{ marginRight: 4 }} />
-                  <Text style={styles.previewHeaderLabel}>LIVE PREVIEW</Text>
-                </View>
-                <View style={styles.previewCard}>
-                  <Text style={styles.previewTitle}>"{title}"</Text>
-                  <Text style={styles.previewQuote}>{content}</Text>
+            {Boolean(title.trim() && content.trim()) && (
+              <View style={styles.previewCard}>
+                <Text style={styles.previewLabel}>Preview</Text>
+                <View style={styles.previewInner}>
+                  <Text style={styles.previewTitle}>{title}</Text>
+                  <Text style={styles.previewContent}>"{content}"</Text>
                   <View style={styles.previewFooter}>
-                    <View style={styles.previewBadge}>
-                      <Ionicons name="ribbon" size={14} color={COLORS.primary} />
-                      <Text style={styles.previewBadgeText}>
-                        Endorsed by Instructor · {selectedCourse?.title}
-                      </Text>
+                    <View style={styles.previewAvatar}>
+                      <Text style={styles.previewAvatarText}>Y</Text>
                     </View>
+                    <Text style={styles.previewAuthor}>You · {selectedCourse?.title || 'Course'}</Text>
                   </View>
                 </View>
               </View>
             )}
 
-            {/* Public Switch Toggle Card */}
-            <View style={styles.toggleCard}>
-              <View style={{ flex: 1, marginRight: 12 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Text style={styles.toggleLabel}>Public Endorsement</Text>
-                  <View
-                    style={[
-                      styles.visibilityPill,
-                      { backgroundColor: isPublic ? COLORS.badgeGreenBg : COLORS.surfaceMuted },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.visibilityPillText,
-                        { color: isPublic ? COLORS.badgeGreenText : COLORS.neutralMedium },
-                      ]}
-                    >
-                      {isPublic ? 'Public' : 'Private'}
-                    </Text>
-                  </View>
-                </View>
+            <TouchableOpacity style={styles.toggleRow} onPress={() => setIsPublic(prev => !prev)}>
+              <View style={[styles.toggle, isPublic && styles.toggleOn]}>
+                <View style={[styles.toggleThumb, isPublic && styles.toggleThumbOn]} />
+              </View>
+              <View style={{ flex: 1, marginLeft: 10 }}>
+                <Text style={styles.toggleLabel}>Make Public</Text>
                 <Text style={styles.toggleSub}>
                   {isPublic
-                    ? 'Visible on learner profile to future employers and peers.'
-                    : 'Visible only directly to the learner.'}
+                    ? 'This recommendation will be visible to potential employers.'
+                    : 'This recommendation will only be visible to the learner.'}
                 </Text>
               </View>
-              <Switch
-                value={isPublic}
-                onValueChange={setIsPublic}
-                trackColor={{ false: COLORS.borderSubtle, true: '#FC9174' }}
-                thumbColor={isPublic ? COLORS.primaryDark : COLORS.white}
-              />
-            </View>
+              <Ionicons name={isPublic ? 'globe-outline' : 'lock-closed-outline'} size={20} color={isPublic ? '#059669' : '#9CA3AF'} />
+            </TouchableOpacity>
 
-            {/* Submit Button */}
             <TouchableOpacity
               style={[styles.submitBtn, submitting && { opacity: 0.7 }]}
               onPress={handleSubmit}
               disabled={submitting}
-              activeOpacity={0.9}
             >
               {submitting ? (
-                <ActivityIndicator size="small" color={COLORS.white} />
+                <ActivityIndicator size="small" color="#fff" />
               ) : (
                 <>
-                  <Ionicons name="ribbon-outline" size={18} color={COLORS.white} />
+                  <Ionicons name="ribbon-outline" size={18} color="#fff" />
                   <Text style={styles.submitBtnText}>
-                    {editingRec ? 'Update Recommendation' : 'Publish Endorsement →'}
+                    {editingRec ? 'Update Recommendation' : 'Send Recommendation'}
                   </Text>
                 </>
               )}
             </TouchableOpacity>
+          </View>
+        )}
+          </>
+        ) : (
+          <View style={styles.historySection}>
+            {loadingHistory ? (
+              <View style={styles.historyLoading}>
+                <ActivityIndicator color="#B3310D" />
+                <Text style={styles.noDataText}>Loading created recommendations...</Text>
+              </View>
+            ) : history.length === 0 ? (
+              <View style={styles.emptyBox}>
+                <Ionicons name="ribbon-outline" size={42} color="#D1D5DB" />
+                <Text style={styles.emptyHistoryTitle}>No recommendations created yet</Text>
+                <Text style={styles.noDataText}>Your saved recommendations will appear here.</Text>
+              </View>
+            ) : (
+              history.map((recommendation: any) => {
+                const learnerName = recommendation.learner?.name || 'Learner';
+                const courseName = recommendation.course?.title || 'Course';
+                const date = recommendation.updatedAt || recommendation.createdAt;
+
+                return (
+                  <View key={recommendation.id} style={styles.historyCard}>
+                    <View style={styles.historyCardHeader}>
+                      <View style={styles.historyIcon}>
+                        <Ionicons name="ribbon-outline" size={19} color="#B3310D" />
+                      </View>
+                      <View style={styles.historyTitleWrap}>
+                        <Text style={styles.historyTitle}>{recommendation.title || 'Recommendation'}</Text>
+                        <Text style={styles.historyMeta}>{learnerName} · {courseName}</Text>
+                      </View>
+                      <View style={recommendation.isPublic !== false ? styles.publicBadge : styles.privateBadge}>
+                        <Text style={recommendation.isPublic !== false ? styles.publicText : styles.privateText}>
+                          {recommendation.isPublic !== false ? 'Public' : 'Private'}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={styles.historyContent} numberOfLines={4}>
+                      {recommendation.content || recommendation.message || 'No content provided.'}
+                    </Text>
+                    <View style={styles.historyFooter}>
+                      <Text style={styles.historyDate}>
+                        {date ? new Date(date).toLocaleDateString() : ''}
+                      </Text>
+                      <View style={styles.historyActions}>
+                        <TouchableOpacity style={styles.historyAction} onPress={() => handleEdit(recommendation)}>
+                          <Ionicons name="create-outline" size={16} color="#B3310D" />
+                          <Text style={styles.historyActionText}>Edit</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.historyAction} onPress={() => handleDelete(recommendation.id)}>
+                          <Ionicons name="trash-outline" size={16} color="#B91C1C" />
+                          <Text style={styles.deleteActionText}>Delete</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </View>
+                );
+              })
+            )}
           </View>
         )}
       </ScrollView>
@@ -422,434 +489,176 @@ export function RecommendationScreen({ navigation }: any) {
   );
 }
 
-export default RecommendationScreen;
-
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.bgWarm,
-    ...Platform.select({
-      web: {
-        height: '100vh' as any,
-        maxHeight: '100vh' as any,
-        overflow: 'hidden' as any,
-      },
-    }),
-  },
+  container: { flex: 1, backgroundColor: '#FFF9F7' },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingTop: 12,
-    paddingBottom: 10,
-    backgroundColor: COLORS.bgWarm,
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#B3310D', paddingHorizontal: 16, paddingVertical: 16,
   },
   backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.borderSubtle,
-    elevation: 2,
-    shadowColor: COLORS.shadowColor,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center', justifyContent: 'center',
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: COLORS.neutralDark,
-    letterSpacing: -0.3,
-  },
-  headerSub: {
-    fontSize: 12,
-    color: COLORS.neutralMedium,
-    fontWeight: '500',
-    marginTop: 1,
-  },
-  scrollArea: {
-    flex: 1,
-    ...Platform.select({
-      web: {
-        overflowY: 'auto' as any,
-        WebkitOverflowScrolling: 'touch' as any,
-      },
-    }),
-  },
-  content: {
-    paddingHorizontal: 18,
-    paddingBottom: 40,
-    gap: 16,
-  },
+  headerTitle: { fontSize: 17, fontWeight: '700', color: '#fff' },
+  headerSub: { fontSize: 12, color: '#FFE5DE', marginTop: 2 },
 
-  // Info Philosophy Banner
+  createButton: {
+    marginHorizontal: 16, marginTop: 14, backgroundColor: '#B3310D',
+    borderRadius: 12, paddingVertical: 13, flexDirection: 'row',
+    alignItems: 'center', justifyContent: 'center', gap: 8,
+  },
+  createButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+
+  content: { padding: 16, gap: 16, paddingBottom: 40 },
+
+  historySection: { gap: 12 },
+  historyLoading: { alignItems: 'center', paddingVertical: 30, gap: 10 },
+  historyCard: {
+    backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16,
+    borderWidth: 1, borderColor: '#F1C6B9',
+    shadowColor: '#8B3F2B', shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
+  },
+  historyCardHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  historyIcon: {
+    width: 38, height: 38, borderRadius: 19, backgroundColor: '#FFF0EC',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  historyTitleWrap: { flex: 1 },
+  historyTitle: { fontSize: 15, fontWeight: '700', color: '#1D1412' },
+  historyMeta: { fontSize: 12, color: '#6B7280', marginTop: 4 },
+  publicBadge: { backgroundColor: '#D1FAE5', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 4 },
+  privateBadge: { backgroundColor: '#F3F4F6', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 4 },
+  publicText: { fontSize: 10, fontWeight: '700', color: '#047857' },
+  privateText: { fontSize: 10, fontWeight: '700', color: '#6B7280' },
+  historyContent: { fontSize: 14, lineHeight: 21, color: '#374151', marginTop: 14 },
+  historyFooter: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    borderTopWidth: 1, borderTopColor: '#F3F4F6', marginTop: 14, paddingTop: 12,
+  },
+  historyDate: { fontSize: 11, color: '#9CA3AF' },
+  historyActions: { flexDirection: 'row', gap: 14 },
+  historyAction: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  historyActionText: { fontSize: 12, fontWeight: '700', color: '#B3310D' },
+  deleteActionText: { fontSize: 12, fontWeight: '700', color: '#B91C1C' },
+  emptyHistoryTitle: { fontSize: 16, fontWeight: '700', color: '#374151', marginTop: 8 },
+
   infoBanner: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: COLORS.honeyBg,
-    borderRadius: 18,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#FBE8C4',
+    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
+    backgroundColor: '#FFF0EC', borderRadius: 12, padding: 14,
+    borderWidth: 1, borderColor: '#F1C6B9',
   },
-  infoIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#F7DCAB',
-  },
-  infoTitle: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: COLORS.honeyText,
-    marginBottom: 2,
-  },
-  infoText: {
-    fontSize: 12,
-    color: COLORS.neutralDark,
-    lineHeight: 18,
-  },
+  infoText: { flex: 1, fontSize: 13, color: '#5D2B1E', lineHeight: 19 },
 
-  // Step Card
   card: {
-    backgroundColor: COLORS.surfaceCard,
-    borderRadius: 22,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: COLORS.borderSubtle,
-    elevation: 2,
-    shadowColor: COLORS.shadowColor,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
+    backgroundColor: '#fff', borderRadius: 16, padding: 18,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3,
   },
-  stepHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 4,
-  },
-  stepNumberBadge: {
-    backgroundColor: COLORS.badgeOrangeBg,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  stepNumberBadgeText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: COLORS.primary,
-    letterSpacing: 0.5,
-  },
-  stepLabel: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: COLORS.neutralDark,
-    letterSpacing: -0.2,
-  },
-  stepSub: {
-    fontSize: 12,
-    color: COLORS.neutralMedium,
-    marginBottom: 12,
-    marginTop: 2,
-  },
+  stepLabel: { fontSize: 15, fontWeight: '700', color: '#1D1412', marginBottom: 4 },
+  stepSub: { fontSize: 12, color: '#6B7280', marginBottom: 12 },
 
-  // Course Selector
-  courseChipsContainer: {
-    gap: 8,
-    paddingVertical: 4,
+  dropdownButton: {
+    minHeight: 50, borderWidth: 1.5, borderColor: '#D1D5DB', borderRadius: 11,
+    backgroundColor: '#FFFFFF', paddingHorizontal: 13, flexDirection: 'row',
+    alignItems: 'center', justifyContent: 'space-between', marginTop: 8,
   },
+  dropdownButtonContent: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 9 },
+  dropdownValue: { flex: 1, fontSize: 14, fontWeight: '600', color: '#1D1412' },
+  dropdownPlaceholder: { flex: 1, fontSize: 14, color: '#9CA3AF' },
+  dropdownMenu: {
+    marginTop: 6, borderWidth: 1, borderColor: '#F1C6B9', borderRadius: 11,
+    backgroundColor: '#FFFFFF', overflow: 'hidden',
+  },
+  dropdownOption: {
+    minHeight: 56, paddingHorizontal: 13, paddingVertical: 10,
+    flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  dropdownOptionText: { flex: 1 },
+  dropdownOptionTitle: { fontSize: 14, fontWeight: '600', color: '#1D1412' },
+  dropdownOptionMeta: { fontSize: 11, color: '#6B7280', marginTop: 3 },
+
   courseChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 18,
-    backgroundColor: COLORS.surfaceMuted,
-    borderWidth: 1,
-    borderColor: COLORS.borderSubtle,
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 14, paddingVertical: 8,
+    borderRadius: 20, borderWidth: 1.5, borderColor: '#B3310D',
+    backgroundColor: '#FFF0EC',
   },
-  courseChipActive: {
-    backgroundColor: COLORS.primaryDark,
-    borderColor: COLORS.primaryDark,
-  },
-  courseChipText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: COLORS.neutralDark,
-  },
-  courseChipTextActive: {
-    color: COLORS.white,
-  },
-  loadingBoxMini: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 12,
-  },
-  loadingTextMini: {
-    fontSize: 12,
-    color: COLORS.neutralMedium,
-    fontWeight: '600',
-  },
-  noCoursesBox: {
-    paddingVertical: 12,
-  },
-  noDataText: {
-    fontSize: 13,
-    color: COLORS.neutralMedium,
-    fontStyle: 'italic',
-  },
+  courseChipActive: { backgroundColor: '#B3310D' },
+  courseChipText: { fontSize: 13, fontWeight: '600', color: '#B3310D' },
+  courseChipTextActive: { color: '#fff' },
 
-  // Graduate Selection
-  emptyGraduatesBox: {
-    backgroundColor: COLORS.cardBgSoft,
-    borderRadius: 16,
-    padding: 16,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.borderWarm,
-    borderStyle: 'dashed',
-    marginTop: 6,
-  },
-  emptyGraduatesIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  emptyGraduatesTitle: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: COLORS.neutralDark,
-    marginBottom: 3,
-  },
-  emptyGraduatesSub: {
-    fontSize: 11,
-    color: COLORS.neutralMedium,
-    textAlign: 'center',
-    lineHeight: 16,
-  },
-  learnersGrid: {
-    gap: 8,
-    marginTop: 6,
-  },
   learnerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 16,
-    backgroundColor: COLORS.cardBgSoft,
-    borderWidth: 1,
-    borderColor: COLORS.borderWarm,
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    padding: 12, borderRadius: 12, borderWidth: 1.5, borderColor: '#F1C6B9',
+    backgroundColor: '#FFF9F7',
   },
-  learnerRowActive: {
-    backgroundColor: COLORS.badgeOrangeBg,
-    borderColor: COLORS.primary,
-  },
+  learnerRowActive: { borderColor: '#B3310D', backgroundColor: '#FFF0EC' },
   learnerAvatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: COLORS.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-    borderWidth: 1,
-    borderColor: COLORS.borderWarm,
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: '#FFE5DE', alignItems: 'center', justifyContent: 'center',
   },
-  learnerAvatarActive: {
-    backgroundColor: COLORS.primaryDark,
-    borderColor: COLORS.primaryDark,
-  },
-  learnerAvatarText: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: COLORS.primaryDark,
-  },
-  learnerAvatarTextActive: {
-    color: COLORS.white,
-  },
-  learnerName: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: COLORS.neutralDark,
-  },
-  learnerNameActive: {
-    color: COLORS.primaryDark,
-  },
-  learnerEmail: {
-    fontSize: 11,
-    color: COLORS.neutralMedium,
-    marginTop: 1,
-  },
-  unselectedCircle: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 1.5,
-    borderColor: COLORS.borderSubtle,
-  },
+  learnerAvatarText: { fontSize: 16, fontWeight: '700', color: '#B3310D' },
+  learnerName: { fontSize: 14, fontWeight: '600', color: '#1D1412' },
+  learnerEmail: { fontSize: 12, color: '#6B7280', marginTop: 1 },
 
-  // Form Fields
-  recommendingBanner: {
-    backgroundColor: COLORS.cardBgSoft,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: COLORS.borderWarm,
+  titleInput: {
+    borderWidth: 1.5, borderColor: '#F1C6B9', borderRadius: 10,
+    paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, color: '#1D1412',
+    marginBottom: 2, marginTop: 12,
   },
-  recommendingText: {
-    fontSize: 12,
-    color: COLORS.neutralMedium,
+  contentInput: {
+    borderWidth: 1.5, borderColor: '#F1C6B9', borderRadius: 10,
+    padding: 14, fontSize: 14, color: '#1D1412',
+    minHeight: 130, marginBottom: 2, marginTop: 12,
   },
-  fieldGroup: {
-    marginBottom: 14,
-  },
-  fieldLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: COLORS.neutralDark,
-    marginBottom: 6,
-  },
-  textInput: {
-    backgroundColor: COLORS.surfaceMuted,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
-    fontSize: 13,
-    color: COLORS.neutralDark,
-    borderWidth: 1,
-    borderColor: COLORS.borderSubtle,
-  },
-  textArea: {
-    minHeight: 110,
-    textAlignVertical: 'top',
-  },
-  charCount: {
-    fontSize: 10,
-    color: COLORS.neutralMedium,
-    textAlign: 'right',
-    marginTop: 4,
-  },
+  charCount: { fontSize: 11, color: '#9CA3AF', textAlign: 'right', marginBottom: 12 },
 
-  // Preview
-  previewContainer: {
-    marginBottom: 16,
-  },
-  previewHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  previewHeaderLabel: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: COLORS.honeyText,
-    letterSpacing: 0.6,
-  },
   previewCard: {
-    backgroundColor: COLORS.cardBgSoft,
-    borderRadius: 16,
-    padding: 16,
-    borderLeftWidth: 4,
-    borderLeftColor: COLORS.primary,
-    borderWidth: 1,
-    borderColor: COLORS.borderWarm,
+    borderRadius: 12, overflow: 'hidden', marginBottom: 16,
+    borderWidth: 1, borderColor: '#F1C6B9',
   },
-  previewTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: COLORS.neutralDark,
-    marginBottom: 6,
+  previewLabel: {
+    backgroundColor: '#FFF0EC', paddingHorizontal: 12, paddingVertical: 6,
+    fontSize: 11, fontWeight: '700', color: '#B3310D',
+    textTransform: 'uppercase', letterSpacing: 1,
   },
-  previewQuote: {
-    fontSize: 13,
-    color: COLORS.neutralDark,
-    fontStyle: 'italic',
-    lineHeight: 19,
-    marginBottom: 10,
+  previewInner: { padding: 14, backgroundColor: '#fff', borderLeftWidth: 4, borderLeftColor: '#B3310D' },
+  previewTitle: { fontSize: 14, fontWeight: '700', color: '#1D1412', marginBottom: 6 },
+  previewContent: { fontSize: 13, color: '#374151', fontStyle: 'italic', lineHeight: 20, marginBottom: 12 },
+  previewFooter: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  previewAvatar: {
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: '#B3310D', alignItems: 'center', justifyContent: 'center',
   },
-  previewFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  previewBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  previewBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: COLORS.neutralMedium,
-  },
+  previewAvatarText: { fontSize: 13, fontWeight: '700', color: '#fff' },
+  previewAuthor: { fontSize: 12, color: '#6B7280' },
 
-  // Toggle
-  toggleCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.cardBgSoft,
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: COLORS.borderWarm,
-    marginBottom: 16,
+  toggleRow: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#FFF9F7', borderRadius: 12,
+    padding: 12, marginBottom: 16,
+    borderWidth: 1, borderColor: '#F1C6B9',
   },
-  toggleLabel: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: COLORS.neutralDark,
-    marginRight: 8,
+  toggle: {
+    width: 44, height: 24, borderRadius: 12,
+    backgroundColor: '#F1C6B9', padding: 2,
   },
-  visibilityPill: {
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 6,
+  toggleOn: { backgroundColor: '#059669' },
+  toggleThumb: {
+    width: 20, height: 20, borderRadius: 10,
+    backgroundColor: '#fff',
   },
-  visibilityPillText: {
-    fontSize: 10,
-    fontWeight: '800',
-  },
-  toggleSub: {
-    fontSize: 11,
-    color: COLORS.neutralMedium,
-    marginTop: 3,
-    lineHeight: 16,
-  },
+  toggleThumbOn: { transform: [{ translateX: 20 }] },
+  toggleLabel: { fontSize: 14, fontWeight: '600', color: '#1D1412' },
+  toggleSub: { fontSize: 11, color: '#6B7280', marginTop: 2 },
 
   submitBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: COLORS.primaryDark,
-    paddingVertical: 14,
-    borderRadius: 22,
-    elevation: 3,
-    shadowColor: COLORS.primaryDark,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: '#B3310D', paddingVertical: 14, borderRadius: 12,
   },
-  submitBtnText: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: COLORS.white,
-    letterSpacing: 0.2,
-  },
+  submitBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+
+  noDataText: { fontSize: 13, color: '#9CA3AF', textAlign: 'center', marginTop: 8 },
+  emptyBox: { alignItems: 'center', gap: 6, paddingVertical: 16 },
 });

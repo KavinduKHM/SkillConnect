@@ -1,8 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import type { LearningMaterial } from '@prisma/client';
-import cloudinary from '../config/cloudinary.js';
 import type { CreateMaterialInput, UpdateMaterialInput } from '../types/index.js';
-import { Readable } from 'stream';
+import { uploadFile } from './upload.service.js';
 
 const prisma = new PrismaClient();
 
@@ -33,19 +32,24 @@ async createMaterial(
   let fileSize: number | undefined;
 
   if (data.file) {
-    const result = await this.uploadToCloudinary(data.file);
-    fileUrl = result.secure_url;
-    fileSize = data.file.size;
+    const result = await uploadFile(data.file as Express.Multer.File, 'materials');
+    fileUrl = result.url;
+    fileSize = result.fileSize;
   } else if (data.externalUrl) {
     fileUrl = data.externalUrl;
   }
 
-  // ✅ Ensure order is a number
-  const order = typeof data.order === 'string' ? parseInt(data.order, 10) : data.order;
-
-  if (isNaN(order)) {
-    throw new Error('Order must be a valid number');
-  }
+  const requestedOrder = typeof data.order === 'string' ? parseInt(data.order, 10) : data.order;
+  const lastMaterial = await prisma.learningMaterial.findFirst({
+    where: { lessonId },
+    orderBy: { order: 'desc' },
+    select: { order: true },
+  });
+  const order = lastMaterial
+    ? lastMaterial.order + 1
+    : Number.isFinite(requestedOrder) && requestedOrder > 0
+      ? requestedOrder
+      : 1;
 
   return prisma.learningMaterial.create({
     data: {
@@ -60,25 +64,6 @@ async createMaterial(
     },
   });
 }
-
-  // Upload to Cloudinary
-  private async uploadToCloudinary(file: UploadFile): Promise<any> {
-    return new Promise((resolve, reject) => {
-      const uploadStream = cloudinary.uploader.upload_stream(
-        {
-          folder: 'skillconnect',
-          resource_type: 'auto',
-          allowed_formats: ['mp4', 'webm', 'pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'ppt', 'pptx', 'doc', 'docx'],
-        },
-        (error, result) => {
-          if (error) reject(error);
-          else resolve(result);
-        }
-      );
-
-      Readable.from(file.buffer).pipe(uploadStream);
-    });
-  }
 
   // Get all materials for a lesson
   async getMaterialsByLessonId(lessonId: string, userId: string): Promise<LearningMaterial[]> {
@@ -144,7 +129,7 @@ async createMaterial(
 
   // Delete material
   async deleteMaterial(id: string, userId: string): Promise<LearningMaterial> {
-    return prisma.learningMaterial.delete({
+    const material = await prisma.learningMaterial.findFirst({
       where: {
         id,
         lesson: {
@@ -155,6 +140,14 @@ async createMaterial(
           },
         },
       },
+    });
+
+    if (!material) {
+      throw new Error('Material not found or you do not own its course');
+    }
+
+    return prisma.learningMaterial.delete({
+      where: { id },
     });
   }
 }

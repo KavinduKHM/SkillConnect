@@ -7,11 +7,20 @@ const prisma = new PrismaClient();
 export class CourseService {
   // Create a course draft
   async createCourse(creatorId: string, data: CreateCourseInput): Promise<Course> {
+    const creator = await prisma.user.findUnique({
+      where: { id: creatorId },
+      select: { verifiedBadge: true },
+    });
+
+    if (!creator?.verifiedBadge) {
+      throw new Error('Admin verification is required before creating a course');
+    }
+
     return prisma.course.create({
       data: {
         title: data.title,
         description: data.description,
-        categoryId: data.categoryId,
+        categoryId: data.categoryId ,
         difficulty: data.difficulty,
         duration: data.duration ?? null,
         estimatedHours: data.estimatedHours ?? null,

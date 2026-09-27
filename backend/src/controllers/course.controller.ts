@@ -29,6 +29,12 @@ export class CourseController {
       } as ApiResponse<any>);
     } catch (error) {
       console.error('Error creating course:', error);
+      if (error instanceof Error && error.message.includes('Admin verification is required')) {
+        return res.status(403).json({
+          success: false,
+          error: error.message,
+        } as ApiResponse<null>);
+      }
       return res.status(500).json({
         success: false,
         error: 'Internal server error',

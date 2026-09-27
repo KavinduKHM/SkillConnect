@@ -34,6 +34,9 @@ router.post(
 // Get my recommendations
 router.get('/me', recommendationController.getMyRecommendations);
 
+// Get recommendations created by the current Skill Sharer
+router.get('/created', isSkillSharer, recommendationController.getMyCreatedRecommendations);
+
 // Get recommendations for a specific learner
 router.get('/learner/:learnerId', recommendationController.getRecommendationsForLearner);
 

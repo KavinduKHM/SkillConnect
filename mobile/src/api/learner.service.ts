@@ -176,6 +176,11 @@ export const updateCourseReview = async (reviewId: string, data: { rating: numbe
   return response.data;
 };
 
+export const replyToCourseReview = async (reviewId: string, reply: string) => {
+  const response = await client.put(`/recognition/reviews/${reviewId}/reply`, { reply });
+  return response.data;
+};
+
 export const deleteCourseReview = async (reviewId: string) => {
   const response = await client.delete(`/recognition/reviews/${reviewId}`);
   return response.data;

@@ -811,6 +811,7 @@ model CourseReview {
   learner               User                   @relation(fields: [learnerId], references: [id])
   rating                Int
   review                String?
+  reply                 String?
   isVerified            Boolean                @default(false)
   isEdited              Boolean                @default(false)
   editedAt              DateTime?

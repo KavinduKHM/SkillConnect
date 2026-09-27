@@ -44,12 +44,15 @@ export const ALLOWED_EXTENSIONS = [
   '.mp4',
   '.webm',
   '.mov',
+  '.m4v',
+  '.mkv',
+  '.avi',
   '.mp3',
   '.wav',
 ];
 
-// Maximum allowed file size: 10MB (10,485,760 bytes)
-export const DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024;
+// Maximum allowed file size: 500MB
+export const DEFAULT_MAX_FILE_SIZE = 500 * 1024 * 1024;
 
 // Memory storage keeps file in memory buffer for streaming to Cloudinary or writing to disk
 const storage = multer.memoryStorage();
@@ -66,7 +69,7 @@ const fileFilter = (
   } else {
     cb(
       new Error(
-        `File type '${ext}' is not allowed. Allowed types: PDF, DOC, DOCX, ZIP, Code files, Images, CSV, JSON.`
+        `File type '${ext}' is not allowed. Allowed types include PDF, documents, images, and videos.`
       )
     );
   }
@@ -81,7 +84,23 @@ export const upload = multer({
 });
 
 // Single file upload middleware
-export const uploadSingle = (fieldName: string) => upload.single(fieldName);
+export const uploadSingle = (fieldName: string) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    upload.single(fieldName)(req, res, (error: any) => {
+      if (!error) {
+        next();
+        return;
+      }
+
+      if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
+        res.status(400).json({ error: 'Video or material file exceeds the 500MB limit' });
+        return;
+      }
+
+      res.status(400).json({ error: error.message || 'File upload failed' });
+    });
+  };
+};
 
 // Multiple files upload middleware
 export const uploadMultiple = (fieldName: string, maxCount: number) =>

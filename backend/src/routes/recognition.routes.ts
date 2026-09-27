@@ -6,6 +6,7 @@ import { validate } from '../middleware/validation.middleware.js';
 import {
   createReviewValidator,
   updateReviewValidator,
+  replyToReviewValidator,
   createRecommendationValidator,
   updateRecommendationValidator,
 } from '../validators/recognition.validator.js';
@@ -13,6 +14,7 @@ import {
 import {
   createReview,
   updateReview,
+  replyToReview,
   deleteReview,
   getCourseReviews,
   createRecommendation,
@@ -43,6 +45,9 @@ router.post('/reviews', createReviewValidator, validate, createReview);
 
 // PUT /api/recognition/reviews/:id
 router.put('/reviews/:id', updateReviewValidator, validate, updateReview);
+
+// PUT /api/recognition/reviews/:id/reply
+router.put('/reviews/:id/reply', isSkillSharer, replyToReviewValidator, validate, replyToReview);
 
 // DELETE /api/recognition/reviews/:id
 router.delete('/reviews/:id', deleteReview);
