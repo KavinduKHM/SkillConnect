@@ -1,5 +1,7 @@
 import React from 'react';
 import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
+import { COLORS } from '../../theme/colors';
+import { TYPOGRAPHY } from '../../theme/typography';
 
 interface LoadingSpinnerProps {
   message?: string;
@@ -12,8 +14,8 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
 }) => {
   return (
     <View style={styles.container}>
-      <ActivityIndicator size={size} color="#4F46E5" />
-      {message && <Text style={styles.message}>{message}</Text>}
+      <ActivityIndicator size={size} color={COLORS.primary} />
+      {message ? <Text style={styles.message}>{message}</Text> : null}
     </View>
   );
 };
@@ -23,11 +25,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 24,
+    backgroundColor: COLORS.bgWarm,
   },
   message: {
-    marginTop: 12,
-    fontSize: 14,
-    color: '#6B7280',
+    marginTop: 14,
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.neutralMedium,
   },
 });

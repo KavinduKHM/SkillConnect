@@ -2,16 +2,20 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
-  TouchableOpacity,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  Alert,
-  ActivityIndicator,
+  TouchableOpacity,
+  ScrollView,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authService } from '../../api/auth.service';
+import { Input } from '../../components/common/Input';
+import { Button } from '../../components/common/Button';
+import { Card } from '../../components/common/Card';
+import { COLORS } from '../../theme/colors';
+import { TYPOGRAPHY } from '../../theme/typography';
+import { RADIUS, SHADOWS } from '../../theme/shadows';
 
 export const LoginScreen = ({ navigation }: any) => {
   const [email, setEmail] = useState('');
@@ -22,7 +26,7 @@ export const LoginScreen = ({ navigation }: any) => {
   const handleLogin = async () => {
     setErrorMsg('');
     if (!email || !password) {
-      setErrorMsg('Please fill in all fields');
+      setErrorMsg('Please fill in all required fields');
       return;
     }
 
@@ -43,7 +47,7 @@ export const LoginScreen = ({ navigation }: any) => {
         navigation.replace('Learner');
       }
     } catch (error: any) {
-      setErrorMsg(error.error || 'Invalid credentials');
+      setErrorMsg(error.error || 'Invalid credentials. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -52,63 +56,73 @@ export const LoginScreen = ({ navigation }: any) => {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <View style={styles.card}>
-        <View style={styles.logoContainer}>
-          <Text style={styles.logoText}>SC</Text>
-          <Text style={styles.title}>SkillConnect</Text>
-        </View>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <Card variant="elevated" style={styles.card}>
+          <View style={styles.logoContainer}>
+            <View style={styles.logoBadge}>
+              <Text style={styles.logoText}>SC</Text>
+            </View>
+            <Text style={styles.title}>SkillConnect</Text>
+            <Text style={styles.subtitle}>
+              Empowering bite-sized microlearning & skill sharing
+            </Text>
+          </View>
 
-        <Text style={styles.subtitle}>Sign in to your account</Text>
+          <View style={styles.form}>
+            {errorMsg ? (
+              <View style={styles.errorBox}>
+                <Text style={styles.errorText}>⚠️ {errorMsg}</Text>
+              </View>
+            ) : null}
 
-        <View style={styles.form}>
-          {errorMsg ? <Text style={{ color: '#ef4444', textAlign: 'center', marginBottom: 10, fontWeight: '500' }}>{errorMsg}</Text> : null}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="admin@skillconnect.com"
+            <Input
+              label="Email Address"
+              placeholder="e.g. learner@skillconnect.com"
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
               keyboardType="email-address"
+              icon="mail-outline"
+              required
             />
-          </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Password</Text>
-            <TextInput
-              style={styles.input}
+            <Input
+              label="Password"
               placeholder="••••••••"
               value={password}
               onChangeText={setPassword}
               secureTextEntry
+              icon="lock-closed-outline"
+              required
             />
+
+            <Button
+              title="Sign In to Account"
+              onPress={handleLogin}
+              loading={loading}
+              variant="primary"
+              size="large"
+              style={styles.loginButton}
+            />
+
+            <TouchableOpacity
+              style={styles.registerLink}
+              onPress={() => navigation.navigate('Register')}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.registerLinkText}>
+                Don't have an account?{' '}
+                <Text style={styles.registerHighlight}>Create Account</Text>
+              </Text>
+            </TouchableOpacity>
           </View>
-
-          <TouchableOpacity
-            style={styles.loginButton}
-            onPress={handleLogin}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.loginButtonText}>Sign In</Text>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={{ alignItems: 'center', marginTop: 12 }}
-            onPress={() => navigation.navigate('Register')}
-          >
-            <Text style={{ color: '#3b82f6', fontSize: 14, fontWeight: '500' }}>
-              Don't have an account? Sign Up
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+        </Card>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 };
@@ -116,76 +130,81 @@ export const LoginScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: COLORS.bgWarm,
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 32,
   },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    padding: 28,
+    borderRadius: RADIUS.xl,
+    backgroundColor: COLORS.surfaceCard,
+    ...SHADOWS.level2,
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 28,
+  },
+  logoBadge: {
+    width: 64,
+    height: 64,
+    borderRadius: RADIUS.lg,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+    ...SHADOWS.level1,
   },
   logoText: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#3b82f6',
-    backgroundColor: '#eff6ff',
-    width: 56,
-    height: 56,
-    textAlign: 'center',
-    lineHeight: 56,
-    borderRadius: 12,
+    ...TYPOGRAPHY.headlineLg,
+    color: COLORS.white,
+    fontWeight: '800',
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    marginTop: 8,
+    ...TYPOGRAPHY.displayLg,
+    fontSize: 26,
+    color: COLORS.neutralDark,
+    textAlign: 'center',
   },
   subtitle: {
-    fontSize: 14,
-    color: '#6b7280',
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.neutralMedium,
     textAlign: 'center',
-    marginBottom: 24,
+    marginTop: 4,
   },
   form: {
-    gap: 16,
-  },
-  inputGroup: {
-    gap: 4,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-  },
-  loginButton: {
-    backgroundColor: '#3b82f6',
-    borderRadius: 8,
-    paddingVertical: 14,
-    alignItems: 'center',
     marginTop: 8,
   },
-  loginButtonText: {
-    color: '#fff',
-    fontSize: 16,
+  errorBox: {
+    backgroundColor: COLORS.errorBg,
+    padding: 12,
+    borderRadius: RADIUS.md,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: COLORS.error,
+  },
+  errorText: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.error,
     fontWeight: '600',
+    textAlign: 'center',
+  },
+  loginButton: {
+    marginTop: 12,
+  },
+  registerLink: {
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  registerLinkText: {
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.neutralMedium,
+  },
+  registerHighlight: {
+    color: COLORS.primary,
+    fontWeight: '700',
   },
 });

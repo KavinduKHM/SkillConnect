@@ -1,5 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { COLORS } from '../../theme/colors';
+import { TYPOGRAPHY } from '../../theme/typography';
+import { RADIUS } from '../../theme/shadows';
 
 interface StatusBadgeProps {
   status: string | boolean;
@@ -7,24 +10,35 @@ interface StatusBadgeProps {
 }
 
 export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, type = 'status' }) => {
-  const getStyles = () => {
+  const getBadgeStyle = () => {
     if (type === 'role') {
-      switch (status) {
-        case 'ADMIN': return styles.admin;
-        case 'SKILL_SHARER': return styles.skillSharer;
-        case 'LEARNER': return styles.learner;
-        default: return styles.default;
+      switch (String(status).toUpperCase()) {
+        case 'ADMIN': return { bg: '#F3E8FF', text: '#7E22CE' };
+        case 'SKILL_SHARER': return { bg: COLORS.honeyBg, text: COLORS.honeyText };
+        case 'LEARNER': return { bg: COLORS.badgeOrangeBg, text: COLORS.primary };
+        default: return { bg: COLORS.surfaceMuted, text: COLORS.neutralMedium };
       }
     }
 
     if (type === 'badge') {
-      return status ? styles.verified : styles.unverified;
+      return status
+        ? { bg: COLORS.badgeGreenBg, text: COLORS.badgeGreenText }
+        : { bg: COLORS.surfaceMuted, text: COLORS.neutralLight };
     }
 
-    switch (status) {
-      case 'ACTIVE': return styles.active;
-      case 'SUSPENDED': return styles.suspended;
-      default: return styles.default;
+    switch (String(status).toUpperCase()) {
+      case 'ACTIVE':
+      case 'APPROVED':
+      case 'PUBLISHED':
+        return { bg: COLORS.badgeGreenBg, text: COLORS.badgeGreenText };
+      case 'SUSPENDED':
+      case 'REJECTED':
+        return { bg: COLORS.errorBg, text: COLORS.error };
+      case 'PENDING':
+      case 'DRAFT':
+        return { bg: COLORS.honeyBg, text: COLORS.honeyText };
+      default:
+        return { bg: COLORS.surfaceMuted, text: COLORS.neutralMedium };
     }
   };
 
@@ -34,31 +48,23 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, type = 'status
     return String(status);
   };
 
+  const config = getBadgeStyle();
+
   return (
-    <View style={[styles.badge, getStyles()]}>
-      <Text style={styles.text}>{getLabel()}</Text>
+    <View style={[styles.badge, { backgroundColor: config.bg }]}>
+      <Text style={[styles.text, { color: config.text }]}>{getLabel()}</Text>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   badge: {
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: RADIUS.full,
     alignSelf: 'flex-start',
   },
   text: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#fff',
+    ...TYPOGRAPHY.labelSm,
   },
-  active: { backgroundColor: '#22c55e' },
-  suspended: { backgroundColor: '#ef4444' },
-  admin: { backgroundColor: '#8b5cf6' },
-  skillSharer: { backgroundColor: '#3b82f6' },
-  learner: { backgroundColor: '#22c55e' },
-  verified: { backgroundColor: '#f59e0b' },
-  unverified: { backgroundColor: '#9ca3af' },
-  default: { backgroundColor: '#6b7280' },
 });
