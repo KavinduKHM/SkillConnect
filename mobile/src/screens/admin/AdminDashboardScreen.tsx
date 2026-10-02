@@ -9,11 +9,19 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery } from '@tanstack/react-query';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { adminService } from '../../api/admin.service';
+import { Card } from '../../components/common/Card';
+import { COLORS } from '../../theme/colors';
+import { TYPOGRAPHY } from '../../theme/typography';
+import { RADIUS, SHADOWS } from '../../theme/shadows';
 
 const StatCard = ({ label, value, icon, color }: any) => (
   <View style={[styles.statCard, { borderLeftColor: color }]}>
-    <Text style={styles.statValue}>{value}</Text>
+    <View style={styles.statHeader}>
+      <Ionicons name={icon} size={20} color={color} />
+      <Text style={styles.statValue}>{value}</Text>
+    </View>
     <Text style={styles.statLabel}>{label}</Text>
   </View>
 );
@@ -29,177 +37,217 @@ export const AdminDashboardScreen = ({ navigation }: any) => {
     queryFn: () => adminService.getPendingCourses(),
   });
 
+  const { data: allCoursesData } = useQuery({
+    queryKey: ['all-admin-courses-count'],
+    queryFn: () => adminService.getAllCourses({ limit: 1 }),
+  });
+
   const { data: pendingQualificationsData } = useQuery({
     queryKey: ['pending-qualifications'],
     queryFn: () => adminService.getPendingQualifications(),
   });
 
   const totalUsers = usersData?.data?.pagination?.total || 0;
+  const totalCourses = allCoursesData?.data?.pagination?.total || 0;
   const pendingCourses = pendingCoursesData?.data?.length || 0;
   const pendingQualifications = pendingQualificationsData?.data?.length || 0;
 
   const handleLogout = async () => {
-  Alert.alert(
-    'Logout',
-    'Are you sure you want to logout?',
-    [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Logout',
-        style: 'destructive',
-        onPress: async () => {
-          await AsyncStorage.removeItem('token');
-          await AsyncStorage.removeItem('user');
-          navigation.replace('Login');
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to sign out of the Admin Panel?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            await AsyncStorage.removeItem('token');
+            await AsyncStorage.removeItem('user');
+            navigation.replace('Login');
+          },
         },
-      },
-    ]
-  );
-};
+      ]
+    );
+  };
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.contentPadding} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
-        <Text style={styles.title}>Dashboard</Text>
-        <Text style={styles.subtitle}>Platform overview</Text>
+        <Text style={styles.title}>Admin Control Center</Text>
+        <Text style={styles.subtitle}>Overview of platform safety, users, and content quality</Text>
       </View>
 
       <View style={styles.statsGrid}>
         <StatCard
           label="Total Users"
           value={totalUsers}
-          color="#3b82f6"
+          icon="people"
+          color={COLORS.primary}
         />
         <StatCard
-          label="Pending Courses"
+          label="Total Courses"
+          value={totalCourses}
+          icon="book"
+          color={COLORS.terracottaGold}
+        />
+        <StatCard
+          label="Pending Approvals"
           value={pendingCourses}
-          color="#f59e0b"
+          icon="time"
+          color={COLORS.terracottaSand}
         />
         <StatCard
-          label="Pending Qualifications"
+          label="Pending Quals"
           value={pendingQualifications}
-          color="#8b5cf6"
+          icon="ribbon"
+          color="#8B5CF6"
         />
       </View>
 
       <View style={styles.actionsContainer}>
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
+        <Text style={styles.sectionTitle}>User & Content Governance</Text>
 
         <TouchableOpacity
           style={styles.actionCard}
           onPress={() => navigation.navigate('Users')}
+          activeOpacity={0.8}
         >
+          <View style={[styles.actionIconBg, { backgroundColor: COLORS.badgeOrangeBg }]}>
+            <Ionicons name="people-outline" size={22} color={COLORS.primary} />
+          </View>
           <View style={styles.actionContent}>
             <Text style={styles.actionTitle}>Manage Users</Text>
-            <Text style={styles.actionDescription}>View, suspend, and restore users</Text>
+            <Text style={styles.actionDescription}>View, suspend, restore users & assign badges</Text>
           </View>
-          <Text style={styles.actionArrow}>→</Text>
+          <Ionicons name="chevron-forward" size={18} color={COLORS.neutralLight} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.actionCard}
+          onPress={() => navigation.navigate('AdminCourses')}
+          activeOpacity={0.8}
+        >
+          <View style={[styles.actionIconBg, { backgroundColor: '#FFF3E0' }]}>
+            <Ionicons name="shield-checkmark-outline" size={22} color="#E65100" />
+          </View>
+          <View style={styles.actionContent}>
+            <Text style={styles.actionTitle}>Manage Courses (Suspend / Hold)</Text>
+            <Text style={styles.actionDescription}>Moderate, approve, suspend or hold courses</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={COLORS.neutralLight} />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.actionCard}
           onPress={() => navigation.navigate('Qualifications')}
+          activeOpacity={0.8}
         >
+          <View style={[styles.actionIconBg, { backgroundColor: '#F3E8FF' }]}>
+            <Ionicons name="ribbon-outline" size={22} color="#7C3AED" />
+          </View>
           <View style={styles.actionContent}>
             <Text style={styles.actionTitle}>Review Qualifications</Text>
             <Text style={styles.actionDescription}>
               {pendingQualifications > 0
                 ? `${pendingQualifications} pending verification`
-                : 'No pending qualifications'}
+                : 'All qualifications reviewed'}
             </Text>
           </View>
-          <Text style={styles.actionArrow}>→</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.actionCard}
-          onPress={() => navigation.navigate('CourseApproval')}
-        >
-          <View style={styles.actionContent}>
-            <Text style={styles.actionTitle}>Course Approval</Text>
-            <Text style={styles.actionDescription}>
-              {pendingCourses > 0
-                ? `${pendingCourses} courses awaiting approval`
-                : 'No pending courses'}
-            </Text>
-          </View>
-          <Text style={styles.actionArrow}>→</Text>
+          <Ionicons name="chevron-forward" size={18} color={COLORS.neutralLight} />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.actionCard}
           onPress={() => navigation.navigate('Categories')}
+          activeOpacity={0.8}
         >
+          <View style={[styles.actionIconBg, { backgroundColor: '#E0F2FE' }]}>
+            <Ionicons name="folder-open-outline" size={22} color="#0284C7" />
+          </View>
           <View style={styles.actionContent}>
             <Text style={styles.actionTitle}>Categories</Text>
-            <Text style={styles.actionDescription}>Manage course categories</Text>
+            <Text style={styles.actionDescription}>Organize course category structure</Text>
           </View>
-          <Text style={styles.actionArrow}>→</Text>
+          <Ionicons name="chevron-forward" size={18} color={COLORS.neutralLight} />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.actionCard}
           onPress={() => navigation.navigate('Skills')}
+          activeOpacity={0.8}
         >
-          <View style={styles.actionContent}>
-            <Text style={styles.actionTitle}>Skills</Text>
-            <Text style={styles.actionDescription}>Manage platform skills</Text>
+          <View style={[styles.actionIconBg, { backgroundColor: '#DCFCE7' }]}>
+            <Ionicons name="sparkles-outline" size={22} color="#15803D" />
           </View>
-          <Text style={styles.actionArrow}>→</Text>
+          <View style={styles.actionContent}>
+            <Text style={styles.actionTitle}>Skills Management</Text>
+            <Text style={styles.actionDescription}>Manage skill tags and taxonomy</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={COLORS.neutralLight} />
         </TouchableOpacity>
       </View>
 
-      {/* Profile & Logout Section */}
+      {/* Account Section */}
       <View style={styles.profileSection}>
         <Text style={styles.sectionTitle}>Account</Text>
-        
+
         <TouchableOpacity
           style={styles.actionCard}
           onPress={() => navigation.navigate('Profile')}
+          activeOpacity={0.8}
         >
-          <View style={styles.actionContent}>
-            <Text style={styles.actionTitle}>👤 My Profile</Text>
-            <Text style={styles.actionDescription}>View and edit your profile</Text>
+          <View style={[styles.actionIconBg, { backgroundColor: COLORS.surfaceMuted }]}>
+            <Ionicons name="person-outline" size={22} color={COLORS.neutralDark} />
           </View>
-          <Text style={styles.actionArrow}>→</Text>
+          <View style={styles.actionContent}>
+            <Text style={styles.actionTitle}>My Profile</Text>
+            <Text style={styles.actionDescription}>View administrator details</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={COLORS.neutralLight} />
         </TouchableOpacity>
 
-        
         <TouchableOpacity
-        style={styles.logoutCard}
-        onPress={handleLogout}
+          style={styles.logoutCard}
+          onPress={handleLogout}
+          activeOpacity={0.8}
         >
-        <View style={styles.actionContent}>
-            <Text style={[styles.actionTitle, { color: '#dc2626' }]}>🚪 Logout</Text>
-            <Text style={styles.actionDescription}>Sign out of your account</Text>
-        </View>
-        <Text style={styles.actionArrow}>→</Text>
+          <View style={[styles.actionIconBg, { backgroundColor: COLORS.errorBg }]}>
+            <Ionicons name="log-out-outline" size={22} color={COLORS.error} />
+          </View>
+          <View style={styles.actionContent}>
+            <Text style={[styles.actionTitle, { color: COLORS.error }]}>Sign Out</Text>
+            <Text style={styles.actionDescription}>Log out of Admin panel</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={COLORS.error} />
         </TouchableOpacity>
       </View>
     </ScrollView>
-    
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: COLORS.bgWarm,
+  },
+  contentPadding: {
     paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 32,
   },
   header: {
-    paddingTop: 20,
-    paddingBottom: 16,
+    marginBottom: 20,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1f2937',
+    ...TYPOGRAPHY.displayLg,
+    fontSize: 26,
+    color: COLORS.neutralDark,
   },
   subtitle: {
-    fontSize: 14,
-    color: '#6b7280',
-    marginTop: 4,
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.neutralMedium,
+    marginTop: 2,
   },
   statsGrid: {
     flexDirection: 'row',
@@ -209,26 +257,27 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    minWidth: '30%',
-    backgroundColor: '#fff',
+    minWidth: '45%',
+    backgroundColor: COLORS.surfaceCard,
     padding: 16,
-    borderRadius: 12,
+    borderRadius: RADIUS.lg,
     borderLeftWidth: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    ...SHADOWS.card,
+  },
+  statHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
   },
   statValue: {
+    ...TYPOGRAPHY.displayLg,
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1f2937',
+    color: COLORS.neutralDark,
   },
   statLabel: {
-    fontSize: 12,
-    color: '#6b7280',
-    marginTop: 4,
+    ...TYPOGRAPHY.caption,
+    color: COLORS.neutralMedium,
   },
   actionsContainer: {
     marginBottom: 24,
@@ -237,56 +286,49 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1f2937',
+    ...TYPOGRAPHY.headlineSm,
+    color: COLORS.neutralDark,
     marginBottom: 12,
   },
   actionCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: COLORS.surfaceCard,
+    borderRadius: RADIUS.lg,
+    padding: 14,
     marginBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    ...SHADOWS.card,
   },
   logoutCard: {
-    backgroundColor: '#fef2f2',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: COLORS.surfaceCard,
+    borderRadius: RADIUS.lg,
+    padding: 14,
     marginBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
     borderWidth: 1,
-    borderColor: '#fecaca',
+    borderColor: COLORS.errorBg,
+    ...SHADOWS.card,
+  },
+  actionIconBg: {
+    width: 42,
+    height: 42,
+    borderRadius: RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
   },
   actionContent: {
     flex: 1,
   },
   actionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1f2937',
+    ...TYPOGRAPHY.headlineSm,
+    fontSize: 15,
+    color: COLORS.neutralDark,
   },
   actionDescription: {
-    fontSize: 13,
-    color: '#6b7280',
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.neutralMedium,
     marginTop: 2,
-  },
-  actionArrow: {
-    fontSize: 20,
-    color: '#9ca3af',
   },
 });

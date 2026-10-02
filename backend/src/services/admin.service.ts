@@ -431,6 +431,149 @@ export const rejectCourse = async (courseId: string, reason: string, adminId: st
   return course;
 };
 
+export const getAllCoursesAdmin = async (filters: {
+  search?: string;
+  status?: string;
+  categoryId?: string;
+  page?: number;
+  limit?: number;
+}) => {
+  const { search, status, categoryId, page = 1, limit = 10 } = filters;
+  const skip = (page - 1) * limit;
+
+  const where: any = {};
+
+  if (search) {
+    where.OR = [
+      { title: { contains: search, mode: 'insensitive' } },
+      { description: { contains: search, mode: 'insensitive' } },
+    ];
+  }
+
+  if (status) {
+    where.status = status as CourseStatus;
+  }
+
+  if (categoryId) {
+    where.categoryId = categoryId;
+  }
+
+  const [courses, total] = await Promise.all([
+    prisma.course.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        creator: {
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            verifiedBadge: true,
+          },
+        },
+        category: true,
+        _count: {
+          select: {
+            enrollments: true,
+            reports: true,
+          },
+        },
+      },
+    }),
+    prisma.course.count({ where }),
+  ]);
+
+  return {
+    courses,
+    pagination: {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit),
+    },
+  };
+};
+
+export const suspendCourse = async (courseId: string, reason: string, adminId: string) => {
+  const course = await prisma.course.update({
+    where: { id: courseId },
+    data: { status: CourseStatus.SUSPENDED },
+  });
+
+  await prisma.adminAction.create({
+    data: {
+      adminId,
+      actionType: 'SUSPEND',
+      entityType: 'COURSE',
+      entityId: courseId,
+      description: `Suspended course: ${course.title}. Reason: ${reason}`,
+    },
+  });
+
+  logger.info(`Course suspended: ${course.title} by admin ${adminId}`);
+
+  return course;
+};
+
+export const holdCourse = async (courseId: string, reason: string, adminId: string) => {
+  const course = await prisma.course.update({
+    where: { id: courseId },
+    data: { status: CourseStatus.UNDER_REVIEW },
+  });
+
+  await prisma.courseApproval.upsert({
+    where: { courseId },
+    create: {
+      courseId,
+      adminId,
+      status: CourseStatus.UNDER_REVIEW,
+      comments: reason,
+    },
+    update: {
+      adminId,
+      status: CourseStatus.UNDER_REVIEW,
+      comments: reason,
+    },
+  });
+
+  await prisma.adminAction.create({
+    data: {
+      adminId,
+      actionType: 'HOLD',
+      entityType: 'COURSE',
+      entityId: courseId,
+      description: `Placed course on hold: ${course.title}. Reason: ${reason}`,
+    },
+  });
+
+  logger.info(`Course placed on hold: ${course.title} by admin ${adminId}`);
+
+  return course;
+};
+
+export const restoreCourse = async (courseId: string, adminId: string) => {
+  const course = await prisma.course.update({
+    where: { id: courseId },
+    data: { status: CourseStatus.PUBLISHED },
+  });
+
+  await prisma.adminAction.create({
+    data: {
+      adminId,
+      actionType: 'RESTORE',
+      entityType: 'COURSE',
+      entityId: courseId,
+      description: `Restored course to published: ${course.title}`,
+    },
+  });
+
+  logger.info(`Course restored to published: ${course.title} by admin ${adminId}`);
+
+  return course;
+};
+
 // ============================================================
 // CATEGORY MANAGEMENT
 // ============================================================

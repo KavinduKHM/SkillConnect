@@ -79,13 +79,21 @@ export const adminService = {
   rejectQualification: (id: string, reason: string) =>
     api.put(`/admin/qualifications/${id}/reject`, { reason }),
 
-  // Course Approval
+  // Course Management & Approval
   getPendingCourses: () =>
     api.get('/admin/courses/pending'),
+  getAllCourses: (params?: { search?: string; status?: string; categoryId?: string; page?: number; limit?: number }) =>
+    api.get('/admin/courses', { params }),
   approveCourse: (id: string) =>
     api.put(`/admin/courses/${id}/approve`),
   rejectCourse: (id: string, reason: string) =>
     api.put(`/admin/courses/${id}/reject`, { reason }),
+  suspendCourse: (id: string, reason: string) =>
+    api.put(`/admin/courses/${id}/suspend`, { reason }),
+  holdCourse: (id: string, reason: string) =>
+    api.put(`/admin/courses/${id}/hold`, { reason }),
+  restoreCourse: (id: string) =>
+    api.put(`/admin/courses/${id}/restore`),
 
   // Category Management
   getCategories: () =>
