@@ -7,6 +7,8 @@ import {
   CreateQualificationInput,
   UpdateQualificationInput,
   Course,
+  CourseLesson,
+  CourseModule,
   CreateCourseInput,
   UpdateCourseInput,
   ApiResponse,
@@ -123,22 +125,49 @@ export const courseService = courseApi;
 export const moduleService = {
   getModules: (courseId: string): Promise<ApiResponse<any[]>> =>
     apiClient.get(`/modules/course/${courseId}`),
-  createModule: (data: any): Promise<ApiResponse<any>> =>
+  createModule: (data: {
+    courseId: string;
+    title: string;
+    description?: string;
+    order: number;
+  }): Promise<ApiResponse<CourseModule>> =>
     apiClient.post('/modules', data),
+  updateModule: (id: string, data: { title?: string; description?: string; order?: number }): Promise<ApiResponse<any>> =>
+    apiClient.put(`/modules/${id}`, data),
   deleteModule: (id: string): Promise<ApiResponse<null>> =>
     apiClient.delete(`/modules/${id}`),
 };
 
 export const lessonService = {
-  createLesson: (data: any): Promise<ApiResponse<any>> =>
+  createLesson: (data: {
+    moduleId: string;
+    title: string;
+    description?: string;
+    content?: string;
+    order: number;
+  }): Promise<ApiResponse<CourseLesson>> =>
     apiClient.post('/lessons', data),
+  updateLesson: (
+    id: string,
+    data: { title?: string; description?: string; content?: string; order?: number; isRequired?: boolean; estimatedMinutes?: number }
+  ): Promise<ApiResponse<any>> => apiClient.put(`/lessons/${id}`, data),
   deleteLesson: (id: string): Promise<ApiResponse<null>> =>
     apiClient.delete(`/lessons/${id}`),
 };
 
 export const materialService = {
-  uploadMaterial: (data: FormData): Promise<ApiResponse<any>> =>
-    apiClient.post('/materials', data),
+  uploadMaterial: (
+    data: FormData | {
+      lessonId: string;
+      type: 'EXTERNAL';
+      title: string;
+      description?: string;
+      externalUrl: string;
+    }
+    ): Promise<ApiResponse<any>> =>
+      apiClient.post('/materials', data),
+  updateMaterial: (id: string, data: { title?: string; description?: string; order?: number; duration?: number }): Promise<ApiResponse<any>> =>
+    apiClient.put(`/materials/${id}`, data),
   deleteMaterial: (id: string): Promise<ApiResponse<null>> =>
     apiClient.delete(`/materials/${id}`),
 };
@@ -216,6 +245,8 @@ export const certificateApi = {
 // ============================================================
 
 export const progressApi = {
+  getCourseLearners: (courseId: string): Promise<ApiResponse<any[]>> =>
+    apiClient.get(`/progress/course/${courseId}/learners`),
   getCourseAnalytics: (courseId: string): Promise<ApiResponse<any>> => {
     return apiClient.get(`/progress/course/${courseId}/analytics`);
   },
@@ -227,13 +258,14 @@ export const progressApi = {
 
 export const recommendationApi = {
   // Create a recommendation for a learner
-  create: (data: { learnerId: string; courseId: string; title: string; content: string; isPublic?: boolean }): Promise<ApiResponse<any>> => {
+  create: (data: {
+    learnerId: string;
+    courseId: string;
+    skillDemonstrated: string;
+    message: string;
+    isPublic?: boolean;
+  }): Promise<ApiResponse<any>> => {
     return apiClient.post('/recommendations', data);
-  },
-
-  // Get all learners who completed my courses (to recommend)
-  getMyCourseLearners: (courseId: string): Promise<ApiResponse<any>> => {
-    return apiClient.get(`/recommendations/course/${courseId}/learners`);
   },
 
   // Get recommendations already created by the current Skill Sharer
@@ -242,7 +274,11 @@ export const recommendationApi = {
   },
 
   // Update a recommendation
-  update: (id: string, data: { title?: string; content?: string; isPublic?: boolean }): Promise<ApiResponse<any>> => {
+  update: (id: string, data: {
+    skillDemonstrated?: string;
+    message?: string;
+    isPublic?: boolean;
+  }): Promise<ApiResponse<any>> => {
     return apiClient.put(`/recommendations/${id}`, data);
   },
 

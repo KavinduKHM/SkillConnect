@@ -29,20 +29,31 @@ export class RecommendationService {
       throw new Error('Course not found or you do not own it');
     }
 
-    // Verify learner is enrolled
+    // Recommendations are for learners who have completed or are taking the course.
     const enrollment = await prisma.enrollment.findFirst({
-      where: { courseId, learnerId, status: 'ACTIVE' },
+      where: { courseId, learnerId, status: { in: ['ACTIVE', 'COMPLETED'] } },
     });
 
     if (!enrollment) {
-      throw new Error('Learner is not enrolled in this course');
+      throw new Error('Learner is not enrolled in or has not completed this course');
     }
 
-    return prisma.learnerRecommendation.create({
-      data: {
+    return prisma.learnerRecommendation.upsert({
+      where: {
+        instructorId_learnerId_courseId: { instructorId, learnerId, courseId },
+      },
+      create: {
         instructorId,
         learnerId,
         courseId,
+        skillDemonstrated: data.skillDemonstrated ?? null,
+        strengths: data.strengths ?? null,
+        qualityOfAssignments: data.qualityOfAssignments ?? null,
+        participation: data.participation ?? null,
+        message: data.message,
+        isPublic: data.isPublic ?? true,
+      },
+      update: {
         skillDemonstrated: data.skillDemonstrated ?? null,
         strengths: data.strengths ?? null,
         qualityOfAssignments: data.qualityOfAssignments ?? null,

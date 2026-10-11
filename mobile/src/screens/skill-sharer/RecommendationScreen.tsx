@@ -1,32 +1,50 @@
 import React, { useState, useCallback } from 'react';
 import {
   StyleSheet, Text, View, ScrollView, SafeAreaView,
-  StatusBar, TouchableOpacity, TextInput, ActivityIndicator,
+  StatusBar, TouchableOpacity, TextInput, ActivityIndicator, Platform,
   Alert, FlatList,
 } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { certificateApi, recommendationApi } from '../../api/skill-sharer.service';
+import { certificateApi, progressApi, recommendationApi } from '../../api/skill-sharer.service';
 import { courseApi } from '../../api/skill-sharer.service';
 
-export function RecommendationScreen({ navigation }: any) {
+function getArrayResponse(response: any, key: string): any[] {
+  const candidates = [
+    response?.[key],
+    response?.data?.[key],
+    response?.data,
+    response?.data?.data,
+    response,
+  ];
+  return candidates.find(Array.isArray) || [];
+}
+
+export function RecommendationScreen({ navigation, route }: any) {
+  const initialRecommendation = route?.params?.recommendation;
+  const [showForm, setShowForm] = useState(Boolean(initialRecommendation));
   const [myCourses, setMyCourses] = useState<any[]>([]);
-  const [selectedCourse, setSelectedCourse] = useState<any | null>(null);
+  const [selectedCourse, setSelectedCourse] = useState<any | null>(initialRecommendation?.course || null);
   const [completedLearners, setCompletedLearners] = useState<any[]>([]);
-  const [selectedLearner, setSelectedLearner] = useState<any | null>(null);
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [isPublic, setIsPublic] = useState(true);
+  const [selectedLearner, setSelectedLearner] = useState<any | null>(
+    initialRecommendation
+      ? { learnerId: initialRecommendation.learner?.id, learner: initialRecommendation.learner }
+      : null,
+  );
+  const [title, setTitle] = useState(initialRecommendation?.title || initialRecommendation?.skillDemonstrated || '');
+  const [content, setContent] = useState(initialRecommendation?.content || initialRecommendation?.message || '');
+  const [isPublic, setIsPublic] = useState(initialRecommendation?.isPublic !== false);
   const [loadingCourses, setLoadingCourses] = useState(true);
   const [loadingLearners, setLoadingLearners] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [showForm, setShowForm] = useState(false);
+  const [deletingRecommendationId, setDeletingRecommendationId] = useState<string | null>(null);
   const [courseDropdownOpen, setCourseDropdownOpen] = useState(false);
   const [learnerDropdownOpen, setLearnerDropdownOpen] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
-  const [editingRec, setEditingRec] = useState<any | null>(null);
+  const [historyError, setHistoryError] = useState('');
+  const [editingRec, setEditingRec] = useState<any | null>(initialRecommendation || null);
 
   useFocusEffect(useCallback(() => {
     loadMyCourses();
@@ -50,51 +68,60 @@ export function RecommendationScreen({ navigation }: any) {
     }
   };
 
-  const loadHistory = async () => {
+  const loadHistory = async (): Promise<any[] | null> => {
     try {
       setLoadingHistory(true);
+      setHistoryError('');
       const res: any = await recommendationApi.getCreated();
-      const recommendations =
-        res?.data?.data ??
-        res?.data?.recommendations ??
-        res?.recommendations ??
-        (Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : []);
-      setHistory(Array.isArray(recommendations) ? recommendations : []);
+      if (!res?.success) {
+        throw new Error(res?.error || 'Could not load your recommendations.');
+      }
+      const recommendations = getArrayResponse(res, 'recommendations');
+      setHistory(recommendations);
+      return recommendations;
     } catch (err) {
-      console.log('Failed to load recommendation history', err);
-      setHistory([]);
+      console.error('Failed to load recommendation history', err);
+      setHistoryError(err instanceof Error ? err.message : 'Could not load your recommendations.');
+      return null;
     } finally {
       setLoadingHistory(false);
     }
   };
 
   const loadCourseLearners = async (courseId: string) => {
+    let progressError: any;
+    setLoadingLearners(true);
+    setCompletedLearners([]);
     try {
-      setLoadingLearners(true);
-      setCompletedLearners([]);
-      const res: any = await recommendationApi.getMyCourseLearners(courseId);
-      const learners =
-        res?.data?.data ??
-        res?.data?.learners ??
-        res?.learners ??
-        (Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : []);
-      if (Array.isArray(learners) && learners.length > 0) {
-        setCompletedLearners(learners);
-      } else {
-        // Fallback to completion requests
-        const reqRes: any = await certificateApi.getCourseCompletionRequests(courseId);
-        const requests = reqRes?.data || reqRes?.requests || [];
-        setCompletedLearners(requests);
-      }
-    } catch (err) {
-      console.log('Failed to load learners', err);
+      let completed: any[] = [];
       try {
-        const reqRes: any = await certificateApi.getCourseCompletionRequests(courseId);
-        const requests = reqRes?.data || reqRes?.requests || [];
-        setCompletedLearners(requests);
-      } catch (e) {
-        console.log('Fallback failed too', e);
+        const res: any = await progressApi.getCourseLearners(courseId);
+        const learners = getArrayResponse(res, 'learners');
+        completed = learners.filter((item: any) => {
+          const progress = Number(item?.progress?.progressPercentage ?? item?.progressPercentage);
+          return progress >= 100 || (
+            Number(item?.totalLessons) > 0 &&
+            Number(item?.completedLessons) >= Number(item?.totalLessons)
+          );
+        });
+      } catch (err) {
+        progressError = err;
       }
+
+      if (completed.length > 0) {
+        setCompletedLearners(completed);
+        return;
+      }
+
+      const reqRes: any = await certificateApi.getCourseCompletionRequests(courseId);
+      setCompletedLearners(getArrayResponse(reqRes, 'requests'));
+    } catch (fallbackError: any) {
+      console.error('Failed to load eligible learners', { progressError, fallbackError });
+      Toast.show({
+        type: 'error',
+        text1: 'Could not load learners',
+        text2: fallbackError?.error || fallbackError?.message || 'Please try again.',
+      });
     } finally {
       setLoadingLearners(false);
     }
@@ -124,35 +151,74 @@ export function RecommendationScreen({ navigation }: any) {
       Toast.show({ type: 'error', text1: 'Title Required', text2: 'Please provide a short title for the recommendation.' });
       return;
     }
-    if (!content.trim() || content.trim().length < 5) {
-      Toast.show({ type: 'error', text1: 'Content Required', text2: 'Please write at least 5 characters for the recommendation.' });
+    if (!content.trim() || content.trim().length < 20) {
+      Toast.show({ type: 'error', text1: 'Content Required', text2: 'Please write at least 20 characters for the recommendation.' });
       return;
     }
     try {
       setSubmitting(true);
       const learnerId = selectedLearner.learnerId || selectedLearner.learner?.id || selectedLearner.id;
+      if (!selectedCourse?.id || !learnerId) {
+        throw new Error('Select a course and learner before sending.');
+      }
       const data = {
         learnerId,
         courseId: selectedCourse.id,
-        title: title.trim(),
-        content: content.trim(),
         message: content.trim(),
         skillDemonstrated: title.trim(),
         isPublic,
       };
+      let savedRecommendation: any;
       if (editingRec) {
-        await recommendationApi.update(editingRec.id, { title: data.title, content: data.content, message: data.message, isPublic } as any);
+        const response = await recommendationApi.update(editingRec.id, {
+          skillDemonstrated: title.trim(),
+          message: data.message,
+          isPublic,
+        });
+        if (!response?.success) {
+          throw new Error(response?.error || 'Could not update the recommendation.');
+        }
+        savedRecommendation = {
+          ...editingRec,
+          ...response.data,
+          title: title.trim(),
+          content: content.trim(),
+          learner: selectedLearner.learner || selectedLearner,
+          course: selectedCourse,
+        };
         Toast.show({ type: 'success', text1: 'Updated!', text2: 'Recommendation updated successfully.' });
       } else {
-        await recommendationApi.create(data);
+        const response = await recommendationApi.create(data);
+        if (!response?.success || !response.data?.id) {
+          throw new Error(response?.error || 'The recommendation could not be confirmed as saved.');
+        }
+        const created = response.data;
+        savedRecommendation = {
+          ...created,
+          title: created.skillDemonstrated || data.skillDemonstrated,
+          content: created.message || data.message,
+          learner: selectedLearner.learner || selectedLearner,
+          course: selectedCourse,
+          isPublic: data.isPublic,
+        };
         Toast.show({ type: 'success', text1: 'Sent!', text2: `Your recommendation for ${selectedLearner.learner?.name || 'the learner'} has been submitted.` });
       }
+      setHistory((current) => [
+        savedRecommendation,
+        ...current.filter((recommendation) => recommendation.id !== savedRecommendation.id),
+      ]);
       setTitle('');
       setContent('');
       setSelectedLearner(null);
       setEditingRec(null);
-      await loadHistory();
       setShowForm(false);
+      const recommendations = await loadHistory();
+      if (!recommendations || !recommendations.some((item) => item.id === savedRecommendation.id)) {
+        setHistory((current) => [
+          savedRecommendation,
+          ...current.filter((item) => item.id !== savedRecommendation.id),
+        ]);
+      }
     } catch (err: any) {
       Toast.show({ type: 'error', text1: 'Error', text2: err?.error || err?.message || 'Failed to submit recommendation.' });
     } finally {
@@ -161,20 +227,31 @@ export function RecommendationScreen({ navigation }: any) {
   };
 
   const handleDelete = (id: string) => {
-    Alert.alert('Delete Recommendation', 'Are you sure you want to delete this recommendation?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete', style: 'destructive',
-        onPress: async () => {
-          try {
-            await recommendationApi.delete(id);
-            setHistory(prev => prev.filter(r => r.id !== id));
-            Toast.show({ type: 'success', text1: 'Deleted', text2: 'Recommendation deleted.' });
-          } catch (err: any) {
-            Toast.show({ type: 'error', text1: 'Error', text2: err?.error || 'Failed to delete.' });
-          }
+    const confirmDelete = async () => {
+      setDeletingRecommendationId(id);
+      try {
+        const response = await recommendationApi.delete(id);
+        if (!response?.success) {
+          throw new Error(response?.error || 'Could not delete the recommendation.');
         }
+        setHistory((current) => current.filter((recommendation) => recommendation.id !== id));
+        Toast.show({ type: 'success', text1: 'Deleted', text2: 'Recommendation deleted.' });
+      } catch (err: any) {
+        Toast.show({ type: 'error', text1: 'Could not delete recommendation', text2: err?.error || err?.message || 'Please try again.' });
+      } finally {
+        setDeletingRecommendationId(null);
       }
+    };
+
+    const message = 'Are you sure you want to delete this recommendation?';
+    if (Platform.OS === 'web') {
+      if (window.confirm(message)) void confirmDelete();
+      return;
+    }
+
+    Alert.alert('Delete Recommendation', message, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => void confirmDelete() },
     ]);
   };
 
@@ -209,7 +286,10 @@ export function RecommendationScreen({ navigation }: any) {
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backBtn}>
+        <TouchableOpacity
+          onPress={() => showForm ? setShowForm(false) : navigation?.goBack()}
+          style={styles.backBtn}
+        >
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
         <View style={{ flex: 1, marginLeft: 12 }}>
@@ -225,7 +305,12 @@ export function RecommendationScreen({ navigation }: any) {
         </TouchableOpacity>
       )}
 
-      <ScrollView contentContainerStyle={[styles.content, { flexGrow: 1 }]}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator
+        keyboardShouldPersistTaps="handled"
+      >
         {showForm ? (
           <>
         {/* Info Banner */}
@@ -287,13 +372,13 @@ export function RecommendationScreen({ navigation }: any) {
         {selectedCourse && (
           <View style={styles.card}>
             <Text style={styles.stepLabel}>Step 2: Select Learner</Text>
-            <Text style={styles.stepSub}>Learners enrolled in "{selectedCourse.title}" are shown.</Text>
+            <Text style={styles.stepSub}>Learners who completed "{selectedCourse.title}" are shown.</Text>
             {loadingLearners ? (
               <ActivityIndicator color="#B3310D" style={{ marginTop: 8 }} />
             ) : completedLearners.length === 0 ? (
               <View style={styles.emptyBox}>
                 <Ionicons name="people-outline" size={32} color="#D1D5DB" />
-                <Text style={styles.noDataText}>No enrolled learners found for this course.</Text>
+                <Text style={styles.noDataText}>No completed learners found for this course.</Text>
               </View>
             ) : (
               <View>
@@ -307,7 +392,7 @@ export function RecommendationScreen({ navigation }: any) {
                   <View style={styles.dropdownButtonContent}>
                     <Ionicons name="person-outline" size={18} color="#B3310D" />
                     <Text style={selectedLearner ? styles.dropdownValue : styles.dropdownPlaceholder} numberOfLines={1}>
-                      {selectedLearner?.learner?.name || 'Select an enrolled learner'}
+                      {selectedLearner?.learner?.name || 'Select a completed learner'}
                     </Text>
                   </View>
                   <Ionicons name={learnerDropdownOpen ? 'chevron-up' : 'chevron-down'} size={18} color="#6B7280" />
@@ -319,7 +404,7 @@ export function RecommendationScreen({ navigation }: any) {
                       const itemLearnerId = item.learnerId || learner.id || item.id;
                       const selectedId = selectedLearner?.learnerId || selectedLearner?.learner?.id;
                       const isSelected = selectedId === itemLearnerId;
-                      const progress = item.progressPercentage;
+                      const progress = item.progress?.progressPercentage ?? item.progressPercentage;
                       return (
                     <TouchableOpacity
                       key={item.id || itemLearnerId}
@@ -427,10 +512,28 @@ export function RecommendationScreen({ navigation }: any) {
           </>
         ) : (
           <View style={styles.historySection}>
-            {loadingHistory ? (
+            {history.length > 0 && historyError ? (
+              <View style={styles.historyErrorBanner}>
+                <Text style={styles.noDataText}>{historyError}</Text>
+                <TouchableOpacity onPress={() => void loadHistory()}>
+                  <Text style={styles.historyRetryText}>Retry</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
+            {history.length === 0 && loadingHistory ? (
               <View style={styles.historyLoading}>
                 <ActivityIndicator color="#B3310D" />
                 <Text style={styles.noDataText}>Loading created recommendations...</Text>
+              </View>
+            ) : history.length === 0 && historyError ? (
+              <View style={styles.emptyBox}>
+                <Ionicons name="cloud-offline-outline" size={36} color="#B91C1C" />
+                <Text style={styles.emptyHistoryTitle}>Could not load recommendations</Text>
+                <Text style={styles.noDataText}>{historyError}</Text>
+                <TouchableOpacity style={styles.retryButton} onPress={() => void loadHistory()}>
+                  <Ionicons name="refresh-outline" size={16} color="#FFFFFF" />
+                  <Text style={styles.retryButtonText}>Try again</Text>
+                </TouchableOpacity>
               </View>
             ) : history.length === 0 ? (
               <View style={styles.emptyBox}>
@@ -472,9 +575,19 @@ export function RecommendationScreen({ navigation }: any) {
                           <Ionicons name="create-outline" size={16} color="#B3310D" />
                           <Text style={styles.historyActionText}>Edit</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.historyAction} onPress={() => handleDelete(recommendation.id)}>
-                          <Ionicons name="trash-outline" size={16} color="#B91C1C" />
-                          <Text style={styles.deleteActionText}>Delete</Text>
+                        <TouchableOpacity
+                          style={styles.historyAction}
+                          onPress={() => handleDelete(recommendation.id)}
+                          disabled={deletingRecommendationId === recommendation.id}
+                        >
+                          {deletingRecommendationId === recommendation.id ? (
+                            <ActivityIndicator size="small" color="#B91C1C" />
+                          ) : (
+                            <Ionicons name="trash-outline" size={16} color="#B91C1C" />
+                          )}
+                          <Text style={styles.deleteActionText}>
+                            {deletingRecommendationId === recommendation.id ? 'Deleting…' : 'Delete'}
+                          </Text>
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -490,7 +603,17 @@ export function RecommendationScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF9F7' },
+  container: {
+    flex: 1,
+    backgroundColor: '#FFF9F7',
+    ...Platform.select({
+      web: {
+        height: '100vh' as any,
+        maxHeight: '100vh' as any,
+        overflow: 'hidden' as any,
+      },
+    }),
+  },
   header: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: '#B3310D', paddingHorizontal: 16, paddingVertical: 16,
@@ -509,8 +632,29 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', gap: 8,
   },
   createButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  retryButton: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
+    marginTop: 12, paddingHorizontal: 16, paddingVertical: 10,
+    borderRadius: 10, backgroundColor: '#B3310D',
+  },
+  retryButtonText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
+  historyErrorBanner: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    padding: 12, borderRadius: 10, backgroundColor: '#FEF2F2',
+  },
+  historyRetryText: { color: '#B3310D', fontSize: 12, fontWeight: '700', marginLeft: 10 },
 
-  content: { padding: 16, gap: 16, paddingBottom: 40 },
+  scroll: {
+    flex: 1,
+    minHeight: 0,
+    ...Platform.select({
+      web: {
+        overflowY: 'auto' as any,
+        WebkitOverflowScrolling: 'touch' as any,
+      },
+    }),
+  },
+  content: { flexGrow: 1, padding: 16, gap: 16, paddingBottom: 40 },
 
   historySection: { gap: 12 },
   historyLoading: { alignItems: 'center', paddingVertical: 30, gap: 10 },

@@ -1,9 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  StyleSheet,
-  ScrollView,
-} from 'react-native';
+import { Platform, View, StyleSheet } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { Header } from '../../components/common/Header';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
@@ -100,15 +96,13 @@ export const CourseCreatorScreen: React.FC = ({ navigation, route }: any) => {
     <View style={styles.container}>
       <Header title={courseId ? 'Edit Course' : 'Create Course'} showBack />
       
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1 }}>
-        <CourseForm
-          onSubmit={handleSubmit}
-          loading={loading}
-          categories={categories}
-          initialCourse={initialCourse}
-          submitLabel={courseId ? 'Update Course' : 'Create Course Draft  →'}
-        />
-      </ScrollView>
+      <CourseForm
+        onSubmit={handleSubmit}
+        loading={loading}
+        categories={categories}
+        initialCourse={initialCourse}
+        submitLabel={courseId ? 'Update Course' : 'Create Course Draft  →'}
+      />
     </View>
   );
 };
@@ -120,5 +114,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFF9F7',
+    ...Platform.select({
+      web: {
+        height: '100vh' as any,
+        maxHeight: '100vh' as any,
+        overflow: 'hidden' as any,
+      },
+    }),
   },
 });

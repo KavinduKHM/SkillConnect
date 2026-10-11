@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { courseApi } from '../../api/skill-sharer.service';
@@ -88,21 +89,23 @@ export const DashboardScreen = ({ navigation }: any) => {
   }
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={() => {
-            setRefreshing(true);
-            loadCourses();
-          }}
-          tintColor={COLORS.primary}
-        />
-      }
-    >
+    <View style={styles.screen}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator
+        keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              loadCourses();
+            }}
+            tintColor={COLORS.primary}
+          />
+        }
+      >
       <View style={styles.topBar}>
         <View>
           <Text style={styles.eyebrow}>CREATOR STUDIO ✧</Text>
@@ -228,7 +231,8 @@ export const DashboardScreen = ({ navigation }: any) => {
           </Text>
         </View>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 };
 
@@ -294,12 +298,20 @@ function Action({
 
       <View style={styles.actionCopy}>
         <Text
-          style={[styles.actionLabel, (isPrimary || isGold) && styles.whiteText]}
+          style={[
+            styles.actionLabel,
+            isPrimary && styles.whiteText,
+            isGold && styles.goldActionLabel,
+          ]}
         >
           {label}
         </Text>
         <Text
-          style={[styles.actionDetail, (isPrimary || isGold) && styles.whiteTextSub]}
+          style={[
+            styles.actionDetail,
+            isPrimary && styles.whiteTextSub,
+            isGold && styles.goldActionDetail,
+          ]}
         >
           {detail}
         </Text>
@@ -309,9 +321,28 @@ function Action({
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    minHeight: 0,
+    backgroundColor: COLORS.bgWarm,
+    ...Platform.select({
+      web: {
+        height: '100vh' as any,
+        maxHeight: '100vh' as any,
+        overflow: 'hidden' as any,
+      },
+    }),
+  },
   container: {
     flex: 1,
+    minHeight: 0,
     backgroundColor: COLORS.bgWarm,
+    ...Platform.select({
+      web: {
+        overflowY: 'auto' as any,
+        WebkitOverflowScrolling: 'touch' as any,
+      },
+    }),
   },
   content: {
     flexGrow: 1,
@@ -493,6 +524,12 @@ const styles = StyleSheet.create({
   goldAction: {
     backgroundColor: COLORS.honeyBg,
     borderColor: COLORS.borderSubtle,
+  },
+  goldActionLabel: {
+    color: COLORS.honeyText,
+  },
+  goldActionDetail: {
+    color: COLORS.neutralMedium,
   },
   actionIcon: {
     width: 38,
