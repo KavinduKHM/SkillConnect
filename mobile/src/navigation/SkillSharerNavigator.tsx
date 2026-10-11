@@ -4,7 +4,7 @@ import { COLORS } from '../theme/colors';
 
 // Import screens
 import { DashboardScreen } from '../screens/skill-sharer/DashboardScreen';
-import { ProfileScreen } from '../screens/skill-sharer/ProfileScreen';
+import ProfileScreen from '../screens/skill-sharer/ProfileScreen';
 import { CourseCreatorScreen } from '../screens/skill-sharer/CourseCreatorScreen';
 import { MyCoursesScreen } from '../screens/skill-sharer/MyCoursesScreen';
 import { AssessmentsScreen } from '../screens/skill-sharer/AssessmentsScreen';
@@ -12,6 +12,9 @@ import { AssignmentsScreen } from '../screens/skill-sharer/AssignmentsScreen';
 import { AssignmentSubmissionsScreen } from '../screens/skill-sharer/AssignmentSubmissionsScreen';
 import { CompletionRequestsScreen } from '../screens/skill-sharer/CompletionRequestsScreen';
 import { RecommendationScreen } from '../screens/skill-sharer/RecommendationScreen';
+import CourseContentScreen from '../screens/skill-sharer/CourseContentScreen';
+import CourseAnalyticsScreen from '../screens/skill-sharer/CourseAnalyticsScreen';
+import CourseReviewScreen from '../screens/learner/CourseReviewScreen';
 
 const Stack = createStackNavigator();
 
@@ -32,6 +35,9 @@ export const SkillSharerNavigator: React.FC = () => {
       <Stack.Screen name="AssignmentSubmissions" component={AssignmentSubmissionsScreen} />
       <Stack.Screen name="CompletionRequests" component={CompletionRequestsScreen} />
       <Stack.Screen name="Recommendations" component={RecommendationScreen} />
+      <Stack.Screen name="CourseContent" component={CourseContentScreen} />
+      <Stack.Screen name="CourseAnalytics" component={CourseAnalyticsScreen} />
+      <Stack.Screen name="CourseReview" component={CourseReviewScreen} />
     </Stack.Navigator>
   );
 };
