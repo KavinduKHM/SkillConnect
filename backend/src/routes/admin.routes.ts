@@ -26,8 +26,12 @@ import {
   rejectQual,
   // Course Approval
   getPendingCoursesList,
+  getCoursesList,
   approveCourse,
   rejectCourse,
+  suspendCourseHandler,
+  holdCourseHandler,
+  restoreCourseHandler,
   // Category Management
   createCategory,
   updateCategory,
@@ -72,12 +76,16 @@ router.put('/qualifications/:id/verify', verifyQual);
 router.put('/qualifications/:id/reject', rejectQual);
 
 // ============================================================
-// COURSE APPROVAL
+// COURSE MANAGEMENT & APPROVAL
 // ============================================================
 
+router.get('/courses', getCoursesList);
 router.get('/courses/pending', getPendingCoursesList);
 router.put('/courses/:id/approve', approveCourse);
 router.put('/courses/:id/reject', rejectCourse);
+router.put('/courses/:id/suspend', suspendCourseHandler);
+router.put('/courses/:id/hold', holdCourseHandler);
+router.put('/courses/:id/restore', restoreCourseHandler);
 
 // ============================================================
 // CATEGORY MANAGEMENT

@@ -1,48 +1,59 @@
 import React from 'react';
-import { View, StyleSheet, ViewStyle } from 'react-native';
+import { View, StyleSheet, ViewStyle, TouchableOpacity } from 'react-native';
+import { COLORS } from '../../theme/colors';
+import { RADIUS, SHADOWS } from '../../theme/shadows';
 
 interface CardProps {
   children: React.ReactNode;
   style?: ViewStyle;
-  variant?: 'default' | 'elevated' | 'outlined';
+  variant?: 'default' | 'elevated' | 'outlined' | 'flat';
+  onPress?: () => void;
 }
 
 export const Card: React.FC<CardProps> = ({
   children,
   style,
   variant = 'default',
+  onPress,
 }) => {
   const getVariantStyles = () => {
     switch (variant) {
       case 'elevated':
-        return styles.elevated;
+        return [styles.cardBase, SHADOWS.level2, styles.outlinedBorder];
       case 'outlined':
-        return styles.outlined;
+        return [styles.cardBase, styles.outlinedBorder];
+      case 'flat':
+        return [styles.cardBase, { backgroundColor: COLORS.surfaceMuted }];
+      case 'default':
       default:
-        return styles.default;
+        return [styles.cardBase, SHADOWS.level1, styles.outlinedBorder];
     }
   };
 
-  return <View style={[styles.card, getVariantStyles(), style]}>{children}</View>;
+  if (onPress) {
+    return (
+      <TouchableOpacity
+        style={[getVariantStyles(), style]}
+        onPress={onPress}
+        activeOpacity={0.88}
+      >
+        {children}
+      </TouchableOpacity>
+    );
+  }
+
+  return <View style={[getVariantStyles(), style]}>{children}</View>;
 };
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+  cardBase: {
+    backgroundColor: COLORS.surfaceCard,
+    borderRadius: RADIUS.lg,
     padding: 16,
     marginBottom: 12,
   },
-  default: {},
-  elevated: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  outlined: {
+  outlinedBorder: {
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: COLORS.borderSubtle,
   },
 });

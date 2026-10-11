@@ -13,8 +13,12 @@ import {
   verifyQualification,
   rejectQualification,
   getPendingCourses,
+  getAllCoursesAdmin,
   approveCourse as approveCourseService,
   rejectCourse as rejectCourseService,
+  suspendCourse as suspendCourseService,
+  holdCourse as holdCourseService,
+  restoreCourse as restoreCourseService,
   createCategory as createCategoryService,
   updateCategory as updateCategoryService,
   deleteCategory as deleteCategoryService,
@@ -248,6 +252,73 @@ export const rejectCourse = async (req: Request, res: Response): Promise<void> =
     res.status(200).json({ message: 'Course rejected', course });
   } catch (error: any) {
     logger.error('Reject course error:', error);
+    res.status(400).json({ error: error.message });
+  }
+};
+
+export const getCoursesList = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { search, status, categoryId, page, limit } = req.query;
+    const result = await getAllCoursesAdmin({
+      ...(search ? { search: search as string } : {}),
+      ...(status ? { status: status as string } : {}),
+      ...(categoryId ? { categoryId: categoryId as string } : {}),
+      page: page ? parseInt(page as string) : 1,
+      limit: limit ? parseInt(limit as string) : 10,
+    });
+    res.status(200).json(result);
+  } catch (error: any) {
+    logger.error('Get all courses error:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const suspendCourseHandler = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    if (!id) {
+      res.status(400).json({ error: 'Missing course id' });
+      return;
+    }
+    const { reason } = req.body;
+    const adminId = (req as any).user.id;
+    const course = await suspendCourseService(id, reason || 'Suspended by administrator', adminId);
+    res.status(200).json({ message: 'Course suspended', course });
+  } catch (error: any) {
+    logger.error('Suspend course error:', error);
+    res.status(400).json({ error: error.message });
+  }
+};
+
+export const holdCourseHandler = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    if (!id) {
+      res.status(400).json({ error: 'Missing course id' });
+      return;
+    }
+    const { reason } = req.body;
+    const adminId = (req as any).user.id;
+    const course = await holdCourseService(id, reason || 'Placed on hold for revision', adminId);
+    res.status(200).json({ message: 'Course placed on hold', course });
+  } catch (error: any) {
+    logger.error('Hold course error:', error);
+    res.status(400).json({ error: error.message });
+  }
+};
+
+export const restoreCourseHandler = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    if (!id) {
+      res.status(400).json({ error: 'Missing course id' });
+      return;
+    }
+    const adminId = (req as any).user.id;
+    const course = await restoreCourseService(id, adminId);
+    res.status(200).json({ message: 'Course restored', course });
+  } catch (error: any) {
+    logger.error('Restore course error:', error);
     res.status(400).json({ error: error.message });
   }
 };

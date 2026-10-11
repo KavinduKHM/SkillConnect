@@ -1,5 +1,6 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
+import { COLORS } from '../theme/colors';
 
 // Import screens
 import { DashboardScreen } from '../screens/skill-sharer/DashboardScreen';
@@ -19,7 +20,7 @@ export const SkillSharerNavigator: React.FC = () => {
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
-        cardStyle: { backgroundColor: '#F9FAFB' },
+        cardStyle: { backgroundColor: COLORS.bgWarm },
       }}
     >
       <Stack.Screen name="Dashboard" component={DashboardScreen} />
